@@ -8,6 +8,7 @@ export interface ClientFormData {
   site: string;
   primary_phone_number: string;
   daily_rent_price?: number;
+  is_hidden?: boolean;
 }
 
 interface ClientFormProps {
@@ -25,6 +26,7 @@ const ClientForm: React.FC<ClientFormProps> = ({ initialData, onSubmit, onCancel
     site: '',
     primary_phone_number: '',
     daily_rent_price: 1,
+    is_hidden: false,
   });
   const [errors, setErrors] = useState<Partial<ClientFormData>>({});
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -68,6 +70,7 @@ const ClientForm: React.FC<ClientFormProps> = ({ initialData, onSubmit, onCancel
         site: '',
         primary_phone_number: '',
         daily_rent_price: 1,
+        is_hidden: false,
       });
       setErrors({});
     } finally {

@@ -141,6 +141,11 @@ export default function ClientLedgerCard({ ledger }: ClientLedgerCardProps) {
             <div className="flex-1">
               <h3 className="text-base font-bold text-gray-900">
                 {ledger.clientNicName}
+                {ledger.is_hidden && (
+                  <span className="ml-2 px-1.5 py-0.5 text-[10px] font-medium text-gray-500 bg-gray-100 rounded">
+                    Hidden
+                  </span>
+                )}
               </h3>
               <p className="text-xs text-gray-500">
                 {ledger.clientFullName}
@@ -223,6 +228,11 @@ export default function ClientLedgerCard({ ledger }: ClientLedgerCardProps) {
             <div className="flex-1 min-w-0">
               <h4 className="text-base font-bold text-gray-900 truncate">
                 {ledger.clientNicName}
+                {ledger.is_hidden && (
+                  <span className="ml-2 px-1 py-0.5 text-[8px] font-medium text-gray-500 bg-gray-100 rounded">
+                    Hidden
+                  </span>
+                )}
               </h4>
               <p className="text-[10px] sm:text-xs text-gray-600 truncate">
                 {ledger.clientFullName}

@@ -62,6 +62,7 @@ export interface ClientLedgerData {
   jamaCount: number;
   transactions: Transaction[];
   transactionsLoaded?: boolean;
+  is_hidden?: boolean;
 }
 
 // Skeleton Cards
@@ -160,7 +161,10 @@ export default function ClientLedger() {
 
   // Helper function to filter clients based on search query
   const getFilteredClients = useCallback((clients: any[]) => {
-    if (!searchQuery.trim()) return clients;
+    // Filter out hidden clients by default in Ledger (no toggle here)
+    const filtered = clients.filter(c => !c.is_hidden);
+
+    if (!searchQuery.trim()) return filtered;
 
     const query = searchQuery.toLowerCase().trim();
 
@@ -168,7 +172,7 @@ export default function ClientLedger() {
     const searchNum = parseInt(query);
     const isSearchingNumber = !isNaN(searchNum);
 
-    return clients.filter(client => {
+    return filtered.filter(client => {
       // If searching for a number, try to match it against the numeric part of client_nic_name
       if (isSearchingNumber) {
         const nicName = client.client_nic_name || '';
@@ -310,7 +314,8 @@ export default function ClientLedger() {
       udharCount: transactions.filter(t => t.type === 'udhar').length,
       jamaCount: transactions.filter(t => t.type === 'jama').length,
       transactions,
-      transactionsLoaded: loadTransactions
+      transactionsLoaded: loadTransactions,
+      is_hidden: client.is_hidden
     };
   }, [calculateTotalsFromChallans]);
 
@@ -665,6 +670,8 @@ export default function ClientLedger() {
                     <div className="flex items-center justify-center w-4 h-4">×</div>
                   </button>
                 )}
+
+
 
                 <div className="relative sort-menu-container flex items-center gap-2">
                   <button

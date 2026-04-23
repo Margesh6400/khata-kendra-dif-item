@@ -1,5 +1,5 @@
 import React from 'react';
-import { Edit, Trash2, Phone, MapPin, Plus } from 'lucide-react';
+import { Edit, Trash2, Phone, MapPin, Plus, Eye, EyeOff } from 'lucide-react';
 import { useLanguage } from '../contexts/LanguageContext';
 import { ClientFormData } from './ClientForm';
 import { useNavigate } from 'react-router-dom';
@@ -8,9 +8,10 @@ interface ClientListProps {
   clients: ClientFormData[];
   onEdit: (client: ClientFormData) => void;
   onDelete: (id: string) => void;
+  onToggleHide: (client: ClientFormData) => void;
 }
 
-const ClientList: React.FC<ClientListProps> = ({ clients, onEdit, onDelete }) => {
+const ClientList: React.FC<ClientListProps> = ({ clients, onEdit, onDelete, onToggleHide }) => {
   const { t } = useLanguage();
   const navigate = useNavigate();
 
@@ -68,8 +69,17 @@ const ClientList: React.FC<ClientListProps> = ({ clients, onEdit, onDelete }) =>
               </thead>
               <tbody>
                 {clients.map((client: ClientFormData) => (
-                  <tr key={client.id} className="border-t border-gray-200 hover:bg-gray-50">
-                    <td className="px-4 py-3 text-sm">{client.client_nic_name}</td>
+                  <tr key={client.id} className={`border-t border-gray-200 hover:bg-gray-50 ${client.is_hidden ? 'bg-gray-50 opacity-75' : ''}`}>
+                    <td className="px-4 py-3 text-sm">
+                      <div className="flex items-center gap-2">
+                        {client.client_nic_name}
+                        {client.is_hidden && (
+                          <span className="px-1.5 py-0.5 text-[10px] font-medium text-gray-500 bg-gray-200 rounded">
+                            {t('hidden') || 'Hidden'}
+                          </span>
+                        )}
+                      </div>
+                    </td>
                     <td className="px-4 py-3 text-sm">{client.client_name}</td>
                     <td className="px-4 py-3 text-sm">{client.site}</td>
                     <td className="px-4 py-3 text-sm">{client.primary_phone_number}</td>
@@ -92,6 +102,13 @@ const ClientList: React.FC<ClientListProps> = ({ clients, onEdit, onDelete }) =>
                           Jama
                         </button>
                         <div className="w-px h-6 bg-gray-300 mx-1"></div>
+                        <button
+                          onClick={() => onToggleHide(client)}
+                          className={`p-2 transition-colors rounded hover:bg-gray-100 touch-manipulation active:scale-95 ${client.is_hidden ? 'text-orange-600' : 'text-gray-500'}`}
+                          title={client.is_hidden ? t('unhide') || 'Unhide' : t('hide') || 'Hide'}
+                        >
+                          {client.is_hidden ? <Eye size={18} /> : <EyeOff size={18} />}
+                        </button>
                         <button
                           onClick={() => onEdit(client)}
                           className="p-2 text-blue-600 transition-colors rounded hover:bg-blue-50 touch-manipulation active:scale-95"
@@ -147,6 +164,13 @@ const ClientList: React.FC<ClientListProps> = ({ clients, onEdit, onDelete }) =>
                       <span className="text-base font-bold leading-none">−</span>
                     </button>
                     <div className="w-px h-6 bg-gray-200 mx-0.5"></div>
+                    <button
+                      onClick={() => onToggleHide(client)}
+                      className={`p-1.5 sm:p-2 rounded-md transition-colors touch-manipulation active:scale-95 ${client.is_hidden ? 'text-orange-600 bg-orange-50' : 'text-gray-500 bg-gray-50'}`}
+                      aria-label={client.is_hidden ? 'Unhide' : 'Hide'}
+                    >
+                      {client.is_hidden ? <Eye className="w-3.5 h-3.5 sm:w-4 sm:h-4" /> : <EyeOff className="w-3.5 h-3.5 sm:w-4 sm:h-4" />}
+                    </button>
                     <button
                       onClick={() => onEdit(client)}
                       className="p-1.5 sm:p-2 text-blue-600 bg-blue-50 hover:bg-blue-100 rounded-md transition-colors touch-manipulation active:scale-95"

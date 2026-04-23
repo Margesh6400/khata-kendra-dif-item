@@ -34,6 +34,7 @@ interface ClientFormData {
   client_name: string;
   site: string;
   primary_phone_number: string;
+  is_hidden?: boolean;
 }
 
 
@@ -60,6 +61,7 @@ const ClientSelectionStep: React.FC<ClientSelectionStepProps> = ({
 }) => {
   const { t } = useLanguage();
   const filteredClients = clients
+    .filter(client => !client.is_hidden)
     .filter(client => {
       const searchLower = searchQuery.toLowerCase().trim();
 

@@ -25,6 +25,11 @@ const ClientCard: React.FC<ClientCardProps> = ({ client, balance, onClick }) => 
       <div className="flex-1 min-w-0">
         <h4 className="text-sm font-semibold text-gray-900 truncate transition-colors sm:text-base lg:text-lg group-hover:text-blue-600">
           {client.client_nic_name}
+          {client.is_hidden && (
+            <span className="ml-2 px-1.5 py-0.5 text-[10px] font-medium text-gray-500 bg-gray-100 rounded">
+              Hidden
+            </span>
+          )}
         </h4>
         <p className="text-[10px] sm:text-xs lg:text-sm text-gray-600 truncate">{client.client_name}</p>
       </div>

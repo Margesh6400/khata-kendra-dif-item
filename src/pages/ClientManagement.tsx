@@ -5,7 +5,9 @@ import {
   UserPlus,
   Search,
   Plus,
-  Filter
+  Filter,
+  Eye,
+  EyeOff
 } from 'lucide-react';
 
 type SortOption = 'nameAZ' | 'nameZA';
@@ -64,6 +66,7 @@ const ClientManagement: React.FC = () => {
   const [allClients, setAllClients] = useState<ClientFormData[]>([]);
   const [sortOption, setSortOption] = useState<SortOption>('nameAZ');
   const [showSortMenu, setShowSortMenu] = useState(false);
+  const [showHidden, setShowHidden] = useState(false);
   const ITEMS_PER_PAGE = 10;
 
   // Scroll handler for infinite loading
@@ -325,6 +328,27 @@ const ClientManagement: React.FC = () => {
       fetchClients();
     }
   };
+  
+  const handleToggleHide = async (client: ClientFormData) => {
+    if (!client.id) return;
+    
+    const loadingToast = toast.loading(client.is_hidden ? 'Unhiding client...' : 'Hiding client...');
+    
+    const { error } = await supabase
+      .from('clients')
+      .update({ is_hidden: !client.is_hidden })
+      .eq('id', client.id);
+      
+    toast.dismiss(loadingToast);
+    
+    if (error) {
+      console.error('Error toggling hide status:', error);
+      toast.error('Failed to update hide status');
+    } else {
+      toast.success(client.is_hidden ? 'Client unhidden' : 'Client hidden');
+      fetchClients();
+    }
+  };
 
   const handleCancel = () => {
     setEditingClient(undefined);
@@ -333,31 +357,33 @@ const ClientManagement: React.FC = () => {
 
   const filteredClients = useMemo(() => {
     // First filter the clients
-    const filteredAllClients = !searchQuery
-      ? allClients
-      : allClients.filter(client => {
-        const searchLower = searchQuery.toLowerCase().trim();
+    const filteredAllClients = allClients.filter(client => {
+      // Respect showHidden toggle
+      if (!showHidden && client.is_hidden) return false;
 
-        // Try to parse the search term as a number
-        const searchNum = parseInt(searchLower);
-        const isSearchingNumber = !isNaN(searchNum);
+      const searchLower = searchQuery.toLowerCase().trim();
+      if (!searchLower) return true;
 
-        // If searching for a number, try to match it against the numeric part of client_nic_name
-        if (isSearchingNumber) {
-          const nicNameMatch = client.client_nic_name?.match(/^(\d+)/);
-          if (nicNameMatch) {
-            const clientNum = parseInt(nicNameMatch[1]);
-            if (clientNum === searchNum) return true;
-          }
+      // Try to parse the search term as a number
+      const searchNum = parseInt(searchLower);
+      const isSearchingNumber = !isNaN(searchNum);
+
+      // If searching for a number, try to match it against the numeric part of client_nic_name
+      if (isSearchingNumber) {
+        const nicNameMatch = client.client_nic_name?.match(/^(\d+)/);
+        if (nicNameMatch) {
+          const clientNum = parseInt(nicNameMatch[1]);
+          if (clientNum === searchNum) return true;
         }
+      }
 
-        // Standard text search
-        return (
-          (client.client_nic_name || '').toLowerCase().includes(searchLower) ||
-          (client.client_name || '').toLowerCase().includes(searchLower) ||
-          (client.site || '').toLowerCase().includes(searchLower)
-        );
-      });
+      // Standard text search
+      return (
+        (client.client_nic_name || '').toLowerCase().includes(searchLower) ||
+        (client.client_name || '').toLowerCase().includes(searchLower) ||
+        (client.site || '').toLowerCase().includes(searchLower)
+      );
+    });
 
     // Sort using natural sort
     const sortedClients = [...filteredAllClients].sort((a, b) => {
@@ -372,7 +398,7 @@ const ClientManagement: React.FC = () => {
     const start = 0;
     const end = currentPage * ITEMS_PER_PAGE;
     return sortedClients.slice(start, end);
-  }, [allClients, searchQuery, currentPage, sortOption]);
+  }, [allClients, searchQuery, currentPage, sortOption, showHidden]);
 
 
 
@@ -447,9 +473,17 @@ const ClientManagement: React.FC = () => {
                 placeholder={t('searchClients')}
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                className="w-full pl-10 pr-28 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm"
+                className="w-full pl-10 pr-48 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm"
               />
               <div className="absolute flex items-center gap-2 right-2">
+                <button
+                  onClick={() => setShowHidden(!showHidden)}
+                  className={`flex items-center gap-1 px-2 py-1.5 rounded-md text-xs font-medium transition-colors ${showHidden ? 'bg-orange-100 text-orange-700' : 'bg-gray-100 text-gray-600'
+                    }`}
+                >
+                  {showHidden ? <Eye className="w-3.5 h-3.5" /> : <EyeOff className="w-3.5 h-3.5" />}
+                  <span className="hidden sm:inline">{showHidden ? 'Hide Hidden' : 'Show Hidden'}</span>
+                </button>
                 {searchQuery && (
                   <button
                     onClick={() => setSearchQuery('')}
@@ -574,7 +608,7 @@ const ClientManagement: React.FC = () => {
                 </button>
               </div>
             ) : (
-              <ClientList clients={filteredClients} onEdit={handleEdit} onDelete={handleDelete} />
+              <ClientList clients={filteredClients} onEdit={handleEdit} onDelete={handleDelete} onToggleHide={handleToggleHide} />
             )}
           </div>
         </div>
