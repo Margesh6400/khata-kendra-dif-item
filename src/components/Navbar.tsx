@@ -123,9 +123,9 @@ const Navbar: React.FC = () => {
 
   const renderSidebarContent = () => (
     <>
-      <div className="p-4" style={{ height: '80px', borderBottom: '1px solid rgba(255,255,255,0.1)' }}>
+      <div className="p-4" style={{ minHeight: '90px', borderBottom: '1px solid rgba(255,255,255,0.1)' }}>
         <div className="flex items-center gap-3">
-          <div className="flex items-center justify-center p-2 overflow-hidden transition-colors w-14 h-14 rounded-xl bg-white/10 hover:bg-white/20">
+          <div className="flex items-center justify-center p-1 overflow-hidden transition-colors w-16 h-16 rounded-xl bg-white/10 hover:bg-white/20">
             <img
               src={logo}
               alt="Company Logo"
