@@ -58,11 +58,11 @@ const StockHistory: React.FC = () => {
     }, [filterType, searchQuery]);
 
     const handleDelete = async (item: StockHistoryItem) => {
-        if (!window.confirm(t("confirmDeleteStockHistory") || "Are you sure you want to delete this entry? This will reverse the stock changes.")) return;
+        if (!window.confirm(t("confirmDeleteStockHistory"))) return;
 
         try {
             setLoading(true);
-            const loadingToast = toast.loading("Reversing stock changes...");
+            const loadingToast = toast.loading(t("reversingStock"));
 
             // 1. Revert stock changes
             // Iterate sequentially to avoid race conditions on DB if any, though parallel is likely fine here.
@@ -109,12 +109,12 @@ const StockHistory: React.FC = () => {
             if (deleteError) throw deleteError;
 
             toast.dismiss(loadingToast);
-            toast.success("Entry deleted and stock reversed successfully");
+            toast.success(t("entryDeletedStockReversed"));
             fetchHistory(); // Refresh list
 
         } catch (error) {
             console.error("Error deleting stock history:", error);
-            toast.error("Failed to delete entry");
+            toast.error(t("failedToDeleteEntry"));
             setLoading(false); // Ensure loading is off if error
         }
     };
@@ -190,7 +190,7 @@ const StockHistory: React.FC = () => {
                                             <th className="px-4 py-3 font-medium text-gray-500 whitespace-nowrap">{t("partyOrReason")}</th>
                                             <th className="px-4 py-3 font-medium text-gray-500 text-right whitespace-nowrap">{t("amount")}</th>
                                             <th className="px-4 py-3 font-medium text-gray-500 whitespace-nowrap">{t("note")}</th>
-                                            <th className="px-4 py-3 font-medium text-gray-500 text-center whitespace-nowrap">{t("action") || "Action"}</th>
+                                            <th className="px-4 py-3 font-medium text-gray-500 text-center whitespace-nowrap">{t("action")}</th>
                                         </tr>
                                     </thead>
                                     <tbody className="divide-y divide-gray-100">
@@ -227,7 +227,7 @@ const StockHistory: React.FC = () => {
                                                         <button
                                                             onClick={() => handleDelete(item)}
                                                             className="p-1.5 text-gray-500 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors"
-                                                            title="Delete and reverse stock"
+                                                            title={t("deleteAndReverseStock")}
                                                         >
                                                             <Trash2 className="w-4 h-4" />
                                                         </button>

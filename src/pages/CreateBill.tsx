@@ -156,7 +156,7 @@ export default function CreateBill() {
   const [showPreview, setShowPreview] = useState(false);
   const [pendingAmount, setPendingAmount] = useState<number>(0);
   const [lastUnpaidBillNumber, setLastUnpaidBillNumber] = useState<string>("");
-  const [billingMode, setBillingMode] = useState<'standard' | 'skip_first_jama'>('standard');
+  // billingMode is standard
 
   useEffect(() => {
     if (clientId) {
@@ -232,7 +232,7 @@ export default function CreateBill() {
       // 5. Populate State 
       setBillData({
         billNumber: bill.bill_number,
-        billDate: bill.billing_date || bill.created_at.split('T')[0],
+        billDate: bill.billdate || bill.billing_date || bill.created_at.split('T')[0],
         toDate: bill.to_date,
         fromDate: bill.from_date,
         dailyRent: bill.daily_rent,
@@ -532,18 +532,16 @@ export default function CreateBill() {
       if (isEditMode) {
         // UPDATE EXISTING BILL
 
-        // 1. Update Main Bill Record
         const { error: billUpdateError } = await supabase.from("bills").update({
-          // bill_number: billData.billNumber, // READ ONLY
-          billing_date: billData.billDate,
+          billdate: billData.billDate,
           from_date: billData.fromDate,
           to_date: billData.toDate,
           daily_rent: billData.dailyRent,
-          // client_id: clientId, // Unchanged
-          total_rent_amount: fullSummary.totalRent,
-          total_extra_cost: fullSummary.totalExtraCosts,
-          total_discount: fullSummary.discounts,
-          total_payment: fullSummary.totalPaid,
+          total_rent: fullSummary.totalRent,
+          extra_costs_total: fullSummary.totalExtraCosts,
+          discounts_total: fullSummary.discounts,
+          grand_total: fullSummary.grandTotal,
+          total_paid: fullSummary.totalPaid,
           due_payment: Math.round(fullSummary.duePayment),
         }).eq('bill_number', billData.billNumber);
 
@@ -599,15 +597,16 @@ export default function CreateBill() {
         // CREATE NEW BILL (Existing Logic)
         const { error } = await supabase.from("bills").insert({
           bill_number: billData.billNumber,
-          billing_date: billData.billDate,
+          billdate: billData.billDate,
           from_date: billData.fromDate,
           to_date: billData.toDate,
           daily_rent: billData.dailyRent,
           client_id: clientId,
-          total_rent_amount: fullSummary.totalRent,
-          total_extra_cost: fullSummary.totalExtraCosts,
-          total_discount: fullSummary.discounts,
-          total_payment: fullSummary.totalPaid,
+          total_rent: fullSummary.totalRent,
+          extra_costs_total: fullSummary.totalExtraCosts,
+          discounts_total: fullSummary.discounts,
+          grand_total: fullSummary.grandTotal,
+          total_paid: fullSummary.totalPaid,
           due_payment: Math.round(fullSummary.duePayment),
         });
 
@@ -797,18 +796,8 @@ export default function CreateBill() {
 
       if (jamaError) throw jamaError;
 
-      // Apply billing mode filter
-      let jamaChallans = rawJamaChallans;
-      if (
-        billingMode === 'skip_first_jama' &&
-        rawJamaChallans &&
-        rawJamaChallans.length > 0 &&
-        !rawJamaChallans[0].is_all_return
-      ) {
-        jamaChallans = rawJamaChallans.slice(1);
-      }
-
-      console.log("Jama Challans (mode:", billingMode, "):", jamaChallans);
+      const jamaChallans = rawJamaChallans;
+      console.log("Jama Challans:", jamaChallans);
 
       if (udharChallans && udharChallans.length > 0) {
         const earliestDate = udharChallans[0].udhar_date;
@@ -1080,8 +1069,8 @@ export default function CreateBill() {
                     {t("dailyRent")}
                     <span className="text-red-500">*</span>
                   </label>
-                  <div className="flex gap-2">
-                    <div className="relative flex-1">
+                  <div className="flex items-center gap-2 w-full">
+                    <div className="relative flex-1 min-w-[120px]">
                       <CreditCard className="absolute w-5 h-5 text-gray-400 transform -translate-y-1/2 left-3 top-1/2" />
                       <input
                         type="number"
@@ -1101,10 +1090,25 @@ export default function CreateBill() {
                     <button
                       type="button"
                       onClick={handleUpdateDailyRent}
-                      className="p-2 text-white bg-blue-600 rounded-md hover:bg-blue-700"
+                      className="p-2 text-white bg-blue-600 rounded-md hover:bg-blue-700 flex items-center justify-center shrink-0"
                       title="Update Default Rent"
                     >
                       <Save className="w-5 h-5" />
+                    </button>
+                    <button
+                      type="button"
+                      onClick={calculateBill}
+                      disabled={
+                        isLoading ||
+                        !billData.billNumber ||
+                        !billData.billDate ||
+                        !billData.toDate ||
+                        !billData.dailyRent ||
+                        Object.keys(billData.errors).length > 0
+                      }
+                      className="px-4 py-2 text-sm font-medium text-white transition-colors bg-blue-600 rounded-md hover:bg-blue-700 disabled:bg-blue-300 flex items-center justify-center shrink-0 whitespace-nowrap"
+                    >
+                      {isLoading ? "ગણતરી થય રહી છે..." : `${t("calculateBill")}`}
                     </button>
                   </div>
                 </div>
@@ -1112,50 +1116,7 @@ export default function CreateBill() {
             </form>
           </div>
 
-          {/* Billing Mode Selector */}
-          <div className="p-3 bg-white border border-gray-200 rounded-xl">
-            <p className="mb-2 text-xs font-medium text-gray-600">Billing Method</p>
-            <div className="flex gap-2">
-              <button
-                onClick={() => setBillingMode('standard')}
-                className={`flex-1 px-3 py-2 text-xs font-medium rounded-lg border transition-colors ${
-                  billingMode === 'standard'
-                    ? 'bg-blue-600 text-white border-blue-600'
-                    : 'bg-gray-50 text-gray-700 border-gray-200 hover:bg-gray-100'
-                }`}
-              >
-                Standard
-              </button>
-              <button
-                onClick={() => setBillingMode('skip_first_jama')}
-                className={`flex-1 px-3 py-2 text-xs font-medium rounded-lg border transition-colors ${
-                  billingMode === 'skip_first_jama'
-                    ? 'bg-blue-600 text-white border-blue-600'
-                    : 'bg-gray-50 text-gray-700 border-gray-200 hover:bg-gray-100'
-                }`}
-              >
-                Skip First Jama (No All Return)
-              </button>
-            </div>
-          </div>
-
-          {/* Calculate Button */}
-          <div className="flex justify-end">
-            <button
-              onClick={calculateBill}
-              disabled={
-                isLoading ||
-                !billData.billNumber ||
-                !billData.billDate ||
-                !billData.toDate ||
-                !billData.dailyRent ||
-                Object.keys(billData.errors).length > 0
-              }
-              className="px-4 py-2 text-sm font-medium text-white transition-colors bg-blue-600 rounded-lg hover:bg-blue-700 disabled:bg-blue-300"
-            >
-              {isLoading ? "ગણતરી થય રહી છે..." : `${t("calculateBill")}`}
-            </button>
-          </div>
+          {/* Billing Mode Selector removed */}
 
           {/* Section C: Rental Calculation */}
           {showLedger && billData.fromDate && (

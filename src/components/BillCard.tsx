@@ -6,7 +6,8 @@ export interface BillRecord {
     id?: string;
     client_id: string;
     bill_number: string;
-    billing_date?: string; // Correct column name
+    billdate?: string; // Correct column name in DB
+    billing_date?: string; // Legacy/Alias support
     bill_date?: string; // Legacy/Alias support
     created_at: string;
     total_amount?: number;
@@ -40,7 +41,7 @@ export interface BillCardProps {
 const BillCard: React.FC<BillCardProps> = ({ bill, t, onView, onDownload, onDelete, onEdit }) => {
     const amount = bill.grand_total || bill.total_amount || 0;
     // Fallback chain for date
-    const date = bill.billing_date || bill.bill_date || bill.created_at;
+    const date = bill.billdate || bill.billing_date || bill.bill_date || bill.created_at;
 
     return (
         <div className="bg-white border border-gray-200 shadow-sm rounded-lg overflow-hidden hover:shadow-md transition-shadow">

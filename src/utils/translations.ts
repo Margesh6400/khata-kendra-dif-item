@@ -89,6 +89,8 @@ export const translations = {
     // Existing translations...
     dateNewOld: "તારીખ (નવું → જૂનું)",
     dateOldNew: "તારીખ (જૂનું → નવું)",
+    amountHighLow: "રકમ (વધુ → ઓછું)",
+    amountLowHigh: "રકમ (ઓછું → વધુ)",
     numberHighLow: "નંબર (વધુ → ઓછું)",
     numberLowHigh: "નંબર (ઓછું → વધુ)",
     tryAdjustingSearch: "તમારા શોધ માપદંડ સમાયોજિત કરવાનો પ્રયાસ કરો",
@@ -387,6 +389,35 @@ export const translations = {
     dailyRentPrice: 'દૈનિક ભાડા દર',
     dailyRentPriceHelp: 'બિલિંગ માટે દૈનિક ભાડા દર, ડિફોલ્ટ 1',
     stockManagement: 'ગોડાઉન સ્ટોક',
+
+    // BillBook page
+    manageViewBills: 'બધા જનરેટ થયેલ બિલ સંભાળો',
+    viewBill: 'બિલ જુઓ',
+    download: 'ડાઉનલોડ',
+    loadingDetails: 'વિગતો લોડ થઈ રહી છે...',
+    generateFirstBill: 'પ્રથમ બિલ જનરેટ કરો, અહીં દેખાશે',
+
+    // Stock History page
+    stockHistory: 'સ્ટોક ઇતિહાસ',
+    trackStockAdjustments: 'બધા સ્ટોક ફેરફારો ટ્રૅક કરો',
+    searchPartyOrNote: 'પાર્ટી અથવા નોંધ શોધો...',
+    confirmDeleteStockHistory: 'શું તમે ખરેખર આ એન્ટ્રી ડિલીટ કરવા માંગો છો? આ સ્ટોક ફેરફારો ઉલટાવશે.',
+    reversingStock: 'સ્ટોક ફેરફારો ઉલટાવવામાં આવી રહ્યા છે...',
+    entryDeletedStockReversed: 'એન્ટ્રી ડિલીટ અને સ્ટોક સફળતાપૂર્વક ઉલટાવ્યો',
+    failedToDeleteEntry: 'એન્ટ્રી ડિલીટ કરવામાં નિષ્ફળ',
+    action: 'ક્રિયા',
+    deleteAndReverseStock: 'ડિલીટ કરો અને સ્ટોક ઉલટાવો',
+
+    // Stock Management add/remove modal
+    noteOptional: 'નોંધ (વૈકલ્પિક)',
+    totalAmountOptional: 'કુલ રકમ (વૈકલ્પિક)',
+    sizesQuantities: 'સાઈઝ-વાઈઝ સંખ્યા',
+    confirmAddStock: 'પુષ્ટિ કરો અને સ્ટોક ઉમેરો',
+    confirmRemoveStock: 'પુષ્ટિ કરો અને સ્ટોક બાદ કરો',
+    loadingDistribution: 'વિતરણ લોડ થઈ રહ્યું છે...',
+    noActiveRentals: 'કોઈ સક્રિય ભાડા નથી',
+    noClientsHaveThisSize: 'હાલ કોઈ ગ્રાહક પાસે આ સાઈઝ નથી',
+    noStockFound: 'કોઈ સ્ટોક મળ્યો નથી',
   },
   en: {
     // Landing Page
@@ -440,6 +471,8 @@ export const translations = {
     // Existing translations...
     dateNewOld: "Date (New → Old)",
     dateOldNew: "Date (Old → New)",
+    amountHighLow: "Amount (High → Low)",
+    amountLowHigh: "Amount (Low → High)",
     numberHighLow: "Number (High → Low)",
     numberLowHigh: "Number (Low → High)",
     tryAdjustingSearch: "Try adjusting your search criteria",
@@ -695,7 +728,31 @@ export const translations = {
     dailyRentPrice: 'Daily Rent Price',
     dailyRentPriceHelp: 'Daily rent rate for billing, default is 1',
 
+    // BillBook page
+    manageViewBills: 'Manage and view all generated bills',
+    viewBill: 'View Bill',
+    download: 'Download',
+    loadingDetails: 'Loading details...',
+    generateFirstBill: 'Generate your first bill to see it here',
 
+    // Stock History page
+    confirmDeleteStockHistory: 'Are you sure you want to delete this entry? This will reverse the stock changes.',
+    reversingStock: 'Reversing stock changes...',
+    entryDeletedStockReversed: 'Entry deleted and stock reversed successfully',
+    failedToDeleteEntry: 'Failed to delete entry',
+    action: 'Action',
+    deleteAndReverseStock: 'Delete and reverse stock',
+
+    // Stock Management add/remove modal
+    noteOptional: 'Note (Optional)',
+    totalAmountOptional: 'Total Amount (Optional)',
+    sizesQuantities: 'Sizes Quantities',
+    confirmAddStock: 'Confirm & Add Stock',
+    confirmRemoveStock: 'Confirm & Remove Stock',
+    loadingDistribution: 'Loading distribution...',
+    noActiveRentals: 'No active rentals',
+    noClientsHaveThisSize: 'No clients currently have this size',
+    noStockFound: 'No stock found',
 
     //billing: "Billing",
     //billing: "Billing",

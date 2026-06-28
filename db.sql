@@ -30,6 +30,7 @@ CREATE TABLE IF NOT EXISTS jama_challans (
   secondary_phone_number text,
   jama_date date NOT NULL,
   driver_name text,
+  is_all_return boolean DEFAULT false NOT NULL,
   created_at timestamptz DEFAULT now()
 );
 

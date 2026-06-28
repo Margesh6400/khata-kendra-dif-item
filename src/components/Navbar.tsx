@@ -121,7 +121,7 @@ const Navbar: React.FC = () => {
     return currentNavItem?.label || t('appName');
   };
 
-  const SidebarContent = () => (
+  const renderSidebarContent = () => (
     <>
       <div className="p-4" style={{ height: '80px', borderBottom: '1px solid rgba(255,255,255,0.1)' }}>
         <div className="flex items-center gap-3">
@@ -209,7 +209,7 @@ const Navbar: React.FC = () => {
     <>
       {/* Desktop Sidebar */}
       <nav className="fixed top-0 left-0 z-50 flex-col hidden h-screen lg:flex" style={{ width: '250px', backgroundColor: '#1f2937' }}>
-        <SidebarContent />
+        {renderSidebarContent()}
       </nav>
 
       {/* Mobile Header - Slightly lower position with rounded corners */}
@@ -253,7 +253,7 @@ const Navbar: React.FC = () => {
               transition: 'transform 0.3s ease'
             }}
           >
-            <SidebarContent />
+            {renderSidebarContent()}
           </nav>
         </>
       )}

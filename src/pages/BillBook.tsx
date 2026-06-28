@@ -120,9 +120,8 @@ export default function BillBook() {
         if (bStarts && !aStarts) return 1;
       }
 
-      // Use proper date fallback
-      const dateA = new Date(a.billing_date || a.bill_date || a.created_at).getTime();
-      const dateB = new Date(b.billing_date || b.bill_date || b.created_at).getTime();
+      const dateA = new Date(a.billdate || a.billing_date || a.bill_date || a.created_at).getTime();
+      const dateB = new Date(b.billdate || b.billing_date || b.bill_date || b.created_at).getTime();
       const amountA = a.grand_total || a.total_amount || 0;
       const amountB = b.grand_total || b.total_amount || 0;
 
@@ -137,13 +136,7 @@ export default function BillBook() {
   }, [bills, searchQuery, sortOption]);
 
   const getSortLabel = (option: SortOption) => {
-    switch (option) {
-      case 'dateNewOld': return 'Date: New to Old';
-      case 'dateOldNew': return 'Date: Old to New';
-      case 'amountHighLow': return 'Amount: High to Low';
-      case 'amountLowHigh': return 'Amount: Low to High';
-      default: return '';
-    }
+    return t(option) || option;
   };
 
   // Fetch Full Bill Details
@@ -174,7 +167,7 @@ export default function BillBook() {
         .order('jama_date', { ascending: true });
 
       // resolve main date
-      const billDateStr = bill.billing_date || bill.bill_date || bill.created_at;
+      const billDateStr = bill.billdate || bill.billing_date || bill.bill_date || bill.created_at;
 
       // 3. Re-calculate Bill
       // ... (existing calc code) ...
@@ -359,8 +352,8 @@ export default function BillBook() {
           {/* Header */}
           <div className="hidden sm:flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
             <div>
-              <h1 className="text-2xl font-bold text-gray-900">Bill Book</h1>
-              <p className="text-sm text-gray-500 mt-1">Manage and view all generated bills</p>
+              <h1 className="text-2xl font-bold text-gray-900">{t("billBook")}</h1>
+              <p className="text-sm text-gray-500 mt-1">{t("manageViewBills")}</p>
             </div>
 
             <div className="flex items-center gap-3">
@@ -369,7 +362,7 @@ export default function BillBook() {
                 className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors shadow-sm"
               >
                 <Wallet className="w-4 h-4" />
-                Payments
+                {t("payments")}
               </button>
 
               <button
@@ -389,7 +382,7 @@ export default function BillBook() {
                 type="text"
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                placeholder="બિલ શોધો -> બિલ નંબર, ક્લાયન્ટ અથવા સાઇટ દ્વારા..."
+                placeholder={t('searchBills') || "Search bills..."}
                 className="w-full pl-10 pr-4 py-2.5 bg-white border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none shadow-sm"
               />
             </div>
@@ -399,6 +392,7 @@ export default function BillBook() {
               <button
                 onClick={() => setShowSortMenu(!showSortMenu)}
                 className="w-full flex items-center justify-between px-2 sm:px-4 py-2.5 bg-white border border-gray-200 rounded-xl shadow-sm hover:bg-gray-50 transition-colors"
+                title={t('sortBy')}
               >
                 <div className="flex items-center gap-2">
                   <Filter className="w-4 h-4 text-gray-500" />
@@ -409,7 +403,7 @@ export default function BillBook() {
               </button>
 
               {showSortMenu && (
-                <div className="absolute right-0 z-10 w-full mt-2 bg-white border border-gray-200 rounded-xl shadow-lg shadow-gray-200/50 py-1">
+                <div className="absolute right-0 z-10 w-48 sm:w-full mt-2 bg-white border border-gray-200 rounded-xl shadow-lg shadow-gray-200/50 py-1">
                   {(['dateNewOld', 'dateOldNew', 'amountHighLow', 'amountLowHigh'] as SortOption[]).map((option) => (
                     <button
                       key={option}
@@ -431,13 +425,13 @@ export default function BillBook() {
 
           {/* Results Count */}
           <div className="flex items-center justify-between text-sm text-gray-500 px-1">
-            <span className="hidden sm:inline">Showing {filteredAndSortedBills.length} bills</span>
+            <span className="hidden sm:inline">{t('showing')} {filteredAndSortedBills.length} {t('bills')}</span>
             {searchQuery && (
               <button
                 onClick={() => setSearchQuery('')}
                 className="text-blue-600 font-medium hover:underline"
               >
-                Clear Search
+                {t('clearSearch')}
               </button>
             )}
           </div>
@@ -454,9 +448,9 @@ export default function BillBook() {
               <div className="w-16 h-16 bg-gray-50 rounded-full flex items-center justify-center mx-auto mb-4">
                 <FileText className="w-8 h-8 text-gray-400" />
               </div>
-              <h3 className="text-lg font-medium text-gray-900 mb-1">No bills found</h3>
+              <h3 className="text-lg font-medium text-gray-900 mb-1">{t('noBillsFound')}</h3>
               <p className="text-gray-500">
-                {searchQuery ? 'Try adjusting your search terms' : 'Generate your first bill to see it here'}
+                {searchQuery ? t('tryAdjustingSearch') : t('noBillsCreated')}
               </p>
             </div>
           ) : (
@@ -483,7 +477,7 @@ export default function BillBook() {
         <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center">
           <div className="bg-white p-6 rounded-xl shadow-xl flex flex-col items-center">
             <div className="w-10 h-10 border-4 border-blue-600 border-t-transparent rounded-full animate-spin mb-4"></div>
-            <p className="text-gray-900 font-medium">Loading details...</p>
+            <p className="text-gray-900 font-medium">{t("loadingDetails")}</p>
           </div>
         </div>
       )}
@@ -494,7 +488,7 @@ export default function BillBook() {
           <div className="relative bg-white rounded-lg shadow-xl w-full max-w-5xl h-[90vh] flex flex-col">
             <div className="flex items-center justify-between p-4 border-b">
               <h3 className="text-lg font-medium text-gray-900 truncate pr-2">
-                View Bill: {selectedBill.billDetails.billNumber}
+                {t("viewBill")}: {selectedBill.billDetails.billNumber}
               </h3>
               <div className="flex gap-2 shrink-0">
                 <button
@@ -507,7 +501,7 @@ export default function BillBook() {
                   className="p-2 text-green-600 hover:bg-green-50 rounded-lg flex items-center gap-1"
                 >
                   <Download className="w-5 h-5" />
-                  <span className="text-sm font-medium hidden sm:inline">Download</span>
+                  <span className="text-sm font-medium hidden sm:inline">{t("download")}</span>
                 </button>
                 <button
                   onClick={() => setShowModal(false)}

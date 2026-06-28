@@ -719,7 +719,7 @@ const StockManagement: React.FC = () => {
                         className="mx-auto mb-2 text-gray-300"
                       />
                       <p className="text-xs font-medium text-gray-500">
-                        No stock found
+                        {t("noStockFound")}
                       </p>
                     </td>
                   </tr>
@@ -890,7 +890,7 @@ const StockManagement: React.FC = () => {
               <div className="space-y-3">
                 <div>
                   <label className="block text-xs font-semibold text-gray-700 mb-1">
-                    Date
+                    {t("date")}
                   </label>
                   <input
                     type="date"
@@ -901,7 +901,7 @@ const StockManagement: React.FC = () => {
                 </div>
                 <div>
                   <label className="block text-xs font-semibold text-gray-700 mb-1">
-                    Party Name / Reason <span className="text-red-500">*</span>
+                    {t("partyOrReason")} <span className="text-red-500">*</span>
                   </label>
                   <input
                     type="text"
@@ -913,7 +913,7 @@ const StockManagement: React.FC = () => {
                 </div>
                 <div>
                   <label className="block text-xs font-semibold text-gray-700 mb-1">
-                    Note (Optional)
+                    {t("noteOptional")}
                   </label>
                   <textarea
                     value={bulkAction.note}
@@ -925,7 +925,7 @@ const StockManagement: React.FC = () => {
                 </div>
                 <div>
                   <label className="block text-xs font-semibold text-gray-700 mb-1">
-                    Total Amount (Optional)
+                    {t("totalAmountOptional")}
                   </label>
                   <input
                     type="number"
@@ -940,7 +940,7 @@ const StockManagement: React.FC = () => {
               <div className="border-t border-gray-100 my-2"></div>
 
               {/* Sizes Grid */}
-              <h4 className="text-sm font-bold text-gray-800 mb-2">Sizes Quantities</h4>
+              <h4 className="text-sm font-bold text-gray-800 mb-2">{t("sizesQuantities")}</h4>
               <div className="grid grid-cols-3 gap-3">
                 {PLATE_SIZES.map((sizeStr, index) => {
                   const size = index + 1;
@@ -970,7 +970,7 @@ const StockManagement: React.FC = () => {
                     : 'bg-gradient-to-r from-red-600 to-red-700 hover:from-red-700 hover:to-red-800 shadow-red-200'
                     }`}
                 >
-                  {bulkAction.type === 'add' ? 'Confirm & Add Stock' : 'Confirm & Remove Stock'}
+                  {bulkAction.type === 'add' ? t("confirmAddStock") : t("confirmRemoveStock")}
                 </button>
               </div>
             </div>
@@ -1011,14 +1011,14 @@ const StockManagement: React.FC = () => {
               {distributionModal.loading ? (
                 <div className="flex flex-col items-center justify-center py-8 text-gray-500">
                   <Loader2 className="w-8 h-8 mb-2 animate-spin text-blue-500" />
-                  <p className="text-sm">Loading distribution...</p>
+                  <p className="text-sm">{t("loadingDistribution")}</p>
                 </div>
               ) : distributionModal.data.length === 0 ? (
                 <div className="flex flex-col items-center justify-center py-8 text-gray-500 bg-gray-50 rounded-xl border-2 border-dashed border-gray-200">
                   <Users className="w-8 h-8 mb-2 text-gray-400" />
-                  <p className="text-sm font-medium">No active rentals</p>
+                  <p className="text-sm font-medium">{t("noActiveRentals")}</p>
                   <p className="text-xs text-gray-400">
-                    No clients currently have this size
+                    {t("noClientsHaveThisSize")}
                   </p>
                 </div>
               ) : (

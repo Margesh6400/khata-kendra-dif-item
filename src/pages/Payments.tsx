@@ -106,7 +106,7 @@ export default function Payments() {
                 .order('jama_date', { ascending: true });
 
             // resolve main date
-            const billDateStr = bill.billing_date || bill.bill_date || bill.created_at;
+            const billDateStr = bill.billdate || bill.billing_date || bill.bill_date || bill.created_at;
 
             // 3. Re-calculate Bill
             const calcExtra = (extraCosts || []).map((c: any) => ({ amount: (c.total_amount || (c.pieces * c.price_per_piece)) }));
