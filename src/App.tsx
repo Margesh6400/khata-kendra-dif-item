@@ -4,7 +4,6 @@ import { AuthProvider, useAuth } from './contexts/AuthContext';
 import { LanguageProvider } from './contexts/LanguageContext';
 
 // Lazy-load every page so the initial bundle only contains the shell + auth logic
-const Landing = lazy(() => import('./pages/Landing'));
 const Login = lazy(() => import('./pages/Login'));
 const Dashboard = lazy(() => import('./pages/Dashboard'));
 const ClientManagement = lazy(() => import('./pages/ClientManagement'));
@@ -28,7 +27,7 @@ const LoadingSpinner: React.FC = () => (
 const ProtectedRoute: React.FC<{ children: React.ReactNode }> = memo(({ children }) => {
   const { isAuthenticated, loading } = useAuth();
   if (loading) return <LoadingSpinner />;
-  return isAuthenticated ? <>{children}</> : <Navigate to="/login" replace />;
+  return isAuthenticated ? <>{children}</> : <Navigate to="/" replace />;
 });
 
 const RootRoute: React.FC<{ children: React.ReactNode }> = memo(({ children }) => {
@@ -44,8 +43,8 @@ function App() {
         <Router>
           <Suspense fallback={<LoadingSpinner />}>
             <Routes>
-              <Route path="/" element={<RootRoute><Landing /></RootRoute>} />
-              <Route path="/login" element={<Login />} />
+              <Route path="/" element={<RootRoute><Login /></RootRoute>} />
+              <Route path="/login" element={<Navigate to="/" replace />} />
               <Route
                 path="/dashboard"
                 element={<ProtectedRoute><Dashboard /></ProtectedRoute>}
