@@ -9,7 +9,7 @@ type BillInvoiceProps = React.ComponentProps<typeof BillInvoiceTemplate>;
 export const generateBillJPEG = async (
   billNumber: string,
   billData: BillInvoiceProps
-): Promise<void> => {
+): Promise<string> => {
   const container = document.createElement('div');
   Object.assign(container.style, {
     // Position off-screen to the left so it never flashes on mobile,
@@ -52,12 +52,7 @@ export const generateBillJPEG = async (
     });
 
     const dataUrl = canvas.toDataURL('image/jpeg', 0.95);
-    const link = document.createElement('a');
-    link.download = `Bill_${billNumber}.jpg`;
-    link.href = dataUrl;
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
+    return dataUrl;
   } finally {
     root.unmount();
     if (document.body.contains(container)) {

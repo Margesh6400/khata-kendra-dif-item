@@ -321,12 +321,19 @@ export default function BillBook() {
     try {
       const details = await fetchBillDetails(bill);
       if (details) {
-        await generateBillJPEG(bill.bill_number, details);
+        const dataUrl = await generateBillJPEG(bill.bill_number, details);
+        const link = document.createElement('a');
+        link.download = `Bill_${bill.bill_number}.jpg`;
+        link.href = dataUrl;
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
         toast.success(t("challanDownloadSuccess"), { id: toastId });
       } else {
         toast.dismiss(toastId);
       }
-    } catch {
+    } catch (e) {
+      console.error(e);
       toast.error(t("challanDownloadError"), { id: toastId });
     }
   };
@@ -357,29 +364,65 @@ export default function BillBook() {
     navigate(`/billing/create/${bill.client_id}?edit=${encodedBillNumber}`);
   };
 
-  const handleShareBill = (bill: BillRecord) => {
-    const phone = bill.client?.primary_phone_number || "";
-    const amount = bill.grand_total || bill.total_amount || 0;
-    const due = bill.due_payment || 0;
-    const dateStr = bill.billdate || bill.billing_date || bill.bill_date || bill.created_at;
-    const formattedDate = dateStr ? new Date(dateStr).toLocaleDateString('en-GB') : "";
+  const handleShareBill = async (bill: BillRecord) => {
+    const toastId = toast.loading("Generating photo for WhatsApp...");
+    try {
+      const details = await fetchBillDetails(bill);
+      if (!details) {
+        toast.dismiss(toastId);
+        return;
+      }
+      
+      const dataUrl = await generateBillJPEG(bill.bill_number, details);
+      
+      // Convert dataUrl (base64) to Blob
+      const res = await fetch(dataUrl);
+      const blob = await res.blob();
+      const file = new File([blob], `Bill_${bill.bill_number}.jpg`, { type: 'image/jpeg' });
 
-    const text = `*ખાતા કેન્દ્ર (Khata Kendra)*\n\n` +
-      `📄 *બિલ નંબર:* #${bill.bill_number}\n` +
-      `📅 *તારીખ:* ${formattedDate}\n` +
-      `👤 *ગ્રાહક:* ${bill.client?.client_name || ""}\n` +
-      `📍 *સાઇટ:* ${bill.client?.site || ""}\n\n` +
-      `💰 *કુલ રકમ:* ₹${amount.toLocaleString("en-IN")}\n` +
-      `🔴 *બાકી રકમ:* ₹${due.toLocaleString("en-IN")}\n\n` +
-      `આભાર! 🙏`;
+      toast.dismiss(toastId);
 
-    const encodedText = encodeURIComponent(text);
-    const cleanPhone = phone.replace(/\D/g, "");
-    
-    // Add country code if not present (defaulting to India +91)
-    const finalPhone = cleanPhone.length === 10 ? `91${cleanPhone}` : cleanPhone;
-    
-    window.open(`https://api.whatsapp.com/send?phone=${finalPhone}&text=${encodedText}`, "_blank");
+      // Check if Web Share API is available and can share this file
+      if (navigator.share && navigator.canShare && navigator.canShare({ files: [file] })) {
+        try {
+          await navigator.share({
+            files: [file],
+            title: `Bill #${bill.bill_number}`,
+            text: `ખાતા કેન્દ્ર બિલ #${bill.bill_number}`
+          });
+          toast.success("Shared successfully");
+          return;
+        } catch (shareError: any) {
+          // If the user cancelled the share, do nothing
+          if (shareError.name === 'AbortError') {
+            return;
+          }
+          console.warn("Navigator share failed, falling back", shareError);
+        }
+      }
+
+      // Fallback: download the image and prompt client to share it manually on WhatsApp
+      const link = document.createElement('a');
+      link.download = `Bill_${bill.bill_number}.jpg`;
+      link.href = dataUrl;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+
+      const phone = bill.client?.primary_phone_number || "";
+      const cleanPhone = phone.replace(/\D/g, "");
+      const finalPhone = cleanPhone.length === 10 ? `91${cleanPhone}` : cleanPhone;
+      
+      // Open WhatsApp to the contact to let user paste/attach the downloaded image
+      setTimeout(() => {
+        window.open(`https://api.whatsapp.com/send?phone=${finalPhone}&text=${encodeURIComponent("બિલ નીચે મોકલેલ છે:")}`, "_blank");
+      }, 500);
+
+      toast.success("Bill photo downloaded. Redirecting to WhatsApp...");
+    } catch (e) {
+      console.error(e);
+      toast.error("Failed to share photo", { id: toastId });
+    }
   };
 
   return (
@@ -535,7 +578,13 @@ export default function BillBook() {
                   onClick={async () => {
                     const toastId = toast.loading(t("loadingDetails"));
                     try {
-                      await generateBillJPEG(selectedBill.billDetails.billNumber, selectedBill);
+                      const dataUrl = await generateBillJPEG(selectedBill.billDetails.billNumber, selectedBill);
+                      const link = document.createElement('a');
+                      link.download = `Bill_${selectedBill.billDetails.billNumber}.jpg`;
+                      link.href = dataUrl;
+                      document.body.appendChild(link);
+                      link.click();
+                      document.body.removeChild(link);
                       toast.success(t("challanDownloadSuccess"), { id: toastId });
                     } catch {
                       toast.error(t("challanDownloadError"), { id: toastId });

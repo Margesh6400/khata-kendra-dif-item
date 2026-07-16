@@ -673,7 +673,13 @@ export default function CreateBill() {
 
       // Generate and download bill JPEG
       try {
-        await generateBillJPEG(billData.billNumber, invoiceProps);
+        const dataUrl = await generateBillJPEG(billData.billNumber, invoiceProps);
+        const link = document.createElement('a');
+        link.download = `Bill_${billData.billNumber}.jpg`;
+        link.href = dataUrl;
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
         toast.success(isEditMode ? 'Bill JPEG updated successfully' : 'Bill JPEG generated successfully');
         // Add a delay before navigating to ensure user sees the success message
         setTimeout(() => {
