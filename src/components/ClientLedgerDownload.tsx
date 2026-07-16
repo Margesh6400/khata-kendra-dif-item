@@ -294,21 +294,21 @@ export default function ClientLedgerDownload({
       {activeMode === 'split' ? (
         /* Side by Side Split Format */
         <div style={{ display: 'flex', gap: '24px', width: '100%', alignItems: 'flex-start' }}>
-          {/* Left Column: Udhar */}
-          <div style={{ flex: 1 }}>
-            {renderTable(udharTransactions, `${t.udhar || 'Udhar'} (Issues)`, {
-              bg: '#fef2f2',
-              dot: '#dc2626',
-              headerBorder: '#fca5a5'
-            })}
-          </div>
-
-          {/* Right Column: Jama */}
+          {/* Left Column: Jama */}
           <div style={{ flex: 1 }}>
             {renderTable(jamaTransactions, `${t.jama || 'Jama'} (Returns)`, {
               bg: '#f0fdf4',
               dot: '#16a34a',
               headerBorder: '#86efac'
+            })}
+          </div>
+
+          {/* Right Column: Udhar */}
+          <div style={{ flex: 1 }}>
+            {renderTable(udharTransactions, `${t.udhar || 'Udhar'} (Issues)`, {
+              bg: '#fef2f2',
+              dot: '#dc2626',
+              headerBorder: '#fca5a5'
             })}
           </div>
         </div>
