@@ -458,12 +458,12 @@ const Settings: React.FC = () => {
                   </div>
                   <button
                     onClick={() => setShowDriverDetails(!showDriverDetails)}
-                    className={`relative inline-flex h-6 w-11 flex-shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none ${
-                      showDriverDetails ? 'bg-blue-600' : 'bg-gray-200'
+                    className={`relative inline-flex h-7 w-12 flex-shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-300 ease-in-out focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 shadow-inner ${
+                      showDriverDetails ? 'bg-gradient-to-r from-blue-500 to-indigo-600' : 'bg-gray-300'
                     }`}
                   >
                     <span
-                      className={`pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out ${
+                      className={`pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow-md ring-0 transition duration-300 ease-in-out ${
                         showDriverDetails ? 'translate-x-5' : 'translate-x-0'
                       }`}
                     />
@@ -494,12 +494,12 @@ const Settings: React.FC = () => {
                   </div>
                   <button
                     onClick={() => setSecurityEnabled(!securityEnabled)}
-                    className={`relative inline-flex h-6 w-11 flex-shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none ${
-                      securityEnabled ? 'bg-blue-600' : 'bg-gray-200'
+                    className={`relative inline-flex h-7 w-12 flex-shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-300 ease-in-out focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 shadow-inner ${
+                      securityEnabled ? 'bg-gradient-to-r from-blue-500 to-indigo-600' : 'bg-gray-300'
                     }`}
                   >
                     <span
-                      className={`pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out ${
+                      className={`pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow-md ring-0 transition duration-300 ease-in-out ${
                         securityEnabled ? 'translate-x-5' : 'translate-x-0'
                       }`}
                     />
