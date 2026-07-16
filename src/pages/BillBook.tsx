@@ -1,23 +1,24 @@
 import { useState, useEffect, useMemo } from "react";
 import { Search, RefreshCw, Filter, Download, X, Wallet, FileText } from "lucide-react";
 import { useLanguage } from "../contexts/LanguageContext";
+import { useSettings } from "../contexts/SettingsContext";
 import { supabase } from "../utils/supabase";
 import Navbar from "../components/Navbar";
 import toast, { Toaster } from "react-hot-toast";
-import { subDays, parseISO } from "date-fns";
 import * as periodCalculations from "../utils/billingPeriodCalculations";
 import { generateBillJPEG } from "../utils/generateBillJPEG";
 import BillInvoiceTemplate from "../components/BillInvoiceTemplate";
 import { useNavigate } from "react-router-dom";
 import BillCard, { BillRecord } from "../components/BillCard";
+import { usePlateSizes } from "../hooks/usePlateSizes";
 
 type SortOption = 'dateNewOld' | 'dateOldNew' | 'amountHighLow' | 'amountLowHigh';
 
-
-
 export default function BillBook() {
   const { t } = useLanguage();
+  const { dateSortingMethod } = useSettings();
   const navigate = useNavigate();
+  const { sizes: plateSizes } = usePlateSizes();
 
   // State
   const [bills, setBills] = useState<BillRecord[]>([]);
@@ -163,6 +164,14 @@ export default function BillBook() {
         .eq('client_id', bill.client_id)
         .order('jama_date', { ascending: true });
 
+      // Fetch client jack rents
+      const { data: clientData } = await supabase
+        .from('clients')
+        .select('jack_rents')
+        .eq('id', bill.client_id)
+        .single();
+      const jackRents = clientData?.jack_rents || {};
+
       // resolve main date
       const billDateStr = bill.billdate || bill.billing_date || bill.bill_date || bill.created_at;
 
@@ -175,13 +184,16 @@ export default function BillBook() {
       const result = periodCalculations.calculateBill(
         udharChallans || [],
         jamaChallans || [],
-        bill.to_date || billDateStr, // End date fallback
+        bill.to_date || billDateStr,
         bill.daily_rent || 1.5,
         calcExtra,
         calcDisc,
         calcPay,
-        10, // serviceRate
-        bill.from_date // Important: Use bill's from_date for correct period calculation
+        10,
+        bill.from_date,
+        plateSizes,
+        jackRents,
+        dateSortingMethod === 'jamaFirst'
       );
 
       console.log('Calculated Periods:', result.billingPeriods.periods); // DEBUG LOG
@@ -239,12 +251,12 @@ export default function BillBook() {
         },
         previousBill: previousBillData, // Pass the previous bill data here
         rentalCharges: result.billingPeriods.periods.map((p: any) => ({
-          size: "All",
+          size: p.sizeName || "All",
           startDate: p.startDate,
-          endDate: subDays(parseISO(p.endDate), 1).toISOString(),
+          endDate: p.endDate,
           pieces: p.plateCount,
           days: p.days,
-          rate: bill.daily_rent || 1.5,
+          rate: p.rate || bill.daily_rent || 1.5,
           amount: p.rent,
           causeType: p.causeType,
           txnQty: (p.txnQty !== undefined && p.txnQty !== null) ? p.txnQty : 0,
@@ -252,6 +264,7 @@ export default function BillBook() {
           jamaQty: p.jamaQty,
           udharDetails: p.udharDetails,
           jamaDetails: p.jamaDetails,
+          sizeId: p.sizeId,
         })),
         extraCosts: (extraCosts || []).map((c: any) => ({
           id: c.id,

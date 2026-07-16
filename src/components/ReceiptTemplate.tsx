@@ -1,5 +1,6 @@
 import React from 'react';
-import { ItemsData, PLATE_SIZES } from './ItemsTable';
+import { usePlateSizes } from '../hooks/usePlateSizes';
+import { ItemsData } from './ItemsTable';
 import udharTemplate from '../assets/UdharReceiptTemplate_11zon.jpg';
 import jamaTemplate from '../assets/JamaReceiptTemplate_11zon.jpg';
 
@@ -26,6 +27,7 @@ const ReceiptTemplate: React.FC<ReceiptTemplateProps> = ({
   driverName,
   items
 }) => {
+  const { sizes: plateSizes } = usePlateSizes();
   const getQtyOrZero = (qty: number | undefined) => qty ? qty.toString() : '';
 
   // Helper function to convert coordinates to pixel positions
@@ -51,20 +53,32 @@ const ReceiptTemplate: React.FC<ReceiptTemplateProps> = ({
     mainNotes: { x: 150, y: 1534 }
   };
 
-  const sizes = PLATE_SIZES.reduce((acc, size, index) => {
-    const sizeNum = index + 1;
-    const qty = items?.[`size_${sizeNum}_qty` as keyof typeof items] as number | undefined;
-    const borrowedStock = items?.[`size_${sizeNum}_borrowed` as keyof typeof items] as number | undefined;
-    const note = items?.[`size_${sizeNum}_note` as keyof typeof items] as string | undefined;
+  const sizes = plateSizes.reduce((acc, ps, index) => {
+    // Only map up to 10 sizes since the physical receipt template only has 10 rows
+    if (index >= 10) return acc;
     
-    // Calculate total (main + borrowed) for the pattern display
+    let qty = 0;
+    let borrowedStock = 0;
+    let note = '';
+
+    if (items.items) {
+      const itemData = items.items[ps.id] || { qty: 0, borrowed: 0, note: '' };
+      qty = itemData.qty;
+      borrowedStock = itemData.borrowed;
+      note = itemData.note;
+    } else {
+      qty = (items as any)[`size_${ps.id}_qty`] || 0;
+      borrowedStock = (items as any)[`size_${ps.id}_borrowed`] || 0;
+      note = (items as any)[`size_${ps.id}_note`] || '';
+    }
+    
     const total = (qty || 0) + (borrowedStock || 0);
     
     return {
       ...acc,
-      [size]: {
-        pattern: getQtyOrZero(total),  // Show combined total in main column
-        borrowedStock: getQtyOrZero(borrowedStock),  // Still show borrowed separately
+      [ps.name]: {
+        pattern: getQtyOrZero(total),
+        borrowedStock: getQtyOrZero(borrowedStock),
         note: note || ''
       }
     };

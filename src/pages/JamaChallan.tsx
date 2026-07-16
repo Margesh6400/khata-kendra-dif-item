@@ -19,6 +19,8 @@ import {
 import { naturalSort } from '../utils/sortingUtils';
 import ClientForm from '../components/ClientForm';
 import ItemsTable, { ItemsData } from '../components/ItemsTable';
+import { usePlateSizes } from '../hooks/usePlateSizes';
+import { mapRecordToArray } from '../utils/challanOperations';
 import ReceiptTemplate from '../components/ReceiptTemplate';
 import { useLanguage } from '../contexts/LanguageContext';
 import { supabase } from '../utils/supabase';
@@ -243,6 +245,7 @@ interface ChallanDetailsStepProps {
   setHideExtraColumns: (value: boolean) => void;
   isAllReturn: boolean;
   onAllReturn: () => void;
+  stockData: any[];
 }
 
 
@@ -269,6 +272,7 @@ const ChallanDetailsStep: React.FC<ChallanDetailsStepProps> = ({
   setHideExtraColumns,
   isAllReturn,
   onAllReturn,
+  stockData,
 }) => {
   const { t } = useLanguage();
   const navigate = useNavigate();
@@ -476,6 +480,8 @@ const ChallanDetailsStep: React.FC<ChallanDetailsStepProps> = ({
             outstandingBalances={outstandingBalances}
             borrowedOutstanding={borrowedOutstanding}
             hideColumns={hideExtraColumns}
+            stockData={stockData}
+            showAvailable={false}
           />
         </div>
 
@@ -524,6 +530,7 @@ const JamaChallan: React.FC = () => {
   const navigate = useNavigate();
   const location = useLocation();
   const { t } = useLanguage();
+  const { sizes: plateSizes } = usePlateSizes();
 
 
   // Step management
@@ -584,15 +591,7 @@ const JamaChallan: React.FC = () => {
   const [hideExtraColumns, setHideExtraColumns] = useState(true);
 
 
-  const [items, setItems] = useState<ItemsData>({
-    size_1_qty: 0, size_2_qty: 0, size_3_qty: 0, size_4_qty: 0, size_5_qty: 0,
-    size_6_qty: 0, size_7_qty: 0, size_8_qty: 0, size_9_qty: 0,
-    size_1_borrowed: 0, size_2_borrowed: 0, size_3_borrowed: 0, size_4_borrowed: 0, size_5_borrowed: 0,
-    size_6_borrowed: 0, size_7_borrowed: 0, size_8_borrowed: 0, size_9_borrowed: 0,
-    size_1_note: '', size_2_note: '', size_3_note: '', size_4_note: '', size_5_note: '',
-    size_6_note: '', size_7_note: '', size_8_note: '', size_9_note: '',
-    main_note: '',
-  });
+  const [items, setItems] = useState<ItemsData>({ items: {}, main_note: '' });
   const [outstandingBalances, setOutstandingBalances] = useState<{ [key: number]: number }>({});
   const [borrowedOutstanding, setBorrowedOutstanding] = useState<{ [key: number]: number }>({});
   const [isAllReturn, setIsAllReturn] = useState(false);
@@ -634,11 +633,19 @@ const JamaChallan: React.FC = () => {
   };
 
 
+  const [stockData, setStockData] = useState<any[]>([]);
+
+
   useEffect(() => {
     const init = async () => {
       await fetchClients();
       await generateNextChallanNumber();
       await fetchPreviousDriverNames();
+
+      const { data } = await supabase.from('stock').select('*');
+      if (data) {
+        setStockData(data);
+      }
     };
     init();
   }, []);
@@ -728,30 +735,33 @@ const JamaChallan: React.FC = () => {
 
 
       const balances: { [key: number]: number } = {};
-      for (let i = 1; i <= 9; i++) {
-        balances[i] = 0;
-      }
+      plateSizes.forEach(ps => {
+        balances[ps.id] = 0;
+      });
 
 
       const borrowedBal: { [key: number]: number } = {};
-      for (let i = 1; i <= 9; i++) borrowedBal[i] = 0;
+      plateSizes.forEach(ps => {
+        borrowedBal[ps.id] = 0;
+      });
 
 
       transactions.forEach(transaction => {
-        for (let i = 1; i <= 9; i++) {
-          const qty = transaction.items[`size_${i}_qty`] || 0;
-          const borrowed = transaction.items[`size_${i}_borrowed`] || 0;
+        plateSizes.forEach(ps => {
+          const itemDetail = transaction.items?.items?.[ps.id] || {};
+          const qty = itemDetail.qty || 0;
+          const borrowed = itemDetail.borrowed || 0;
           const totalMain = qty;
 
 
           if (transaction.type === 'udhar') {
-            balances[i] += totalMain;
-            borrowedBal[i] += borrowed;
+            balances[ps.id] += totalMain;
+            borrowedBal[ps.id] += borrowed;
           } else {
-            balances[i] -= totalMain;
-            borrowedBal[i] -= borrowed;
+            balances[ps.id] -= totalMain;
+            borrowedBal[ps.id] -= borrowed;
           }
-        }
+        });
       });
 
 
@@ -820,10 +830,10 @@ const JamaChallan: React.FC = () => {
   const handleAllReturn = () => {
     setIsAllReturn(true);
     const newItems = { ...items };
-    for (let i = 1; i <= 9; i++) {
-      (newItems as any)[`size_${i}_qty`] = outstandingBalances[i] || 0;
-      (newItems as any)[`size_${i}_borrowed`] = borrowedOutstanding[i] || 0;
-    }
+    plateSizes.forEach(ps => {
+      (newItems as any)[`size_${ps.id}_qty`] = outstandingBalances[ps.id] || 0;
+      (newItems as any)[`size_${ps.id}_borrowed`] = borrowedOutstanding[ps.id] || 0;
+    });
     setItems(newItems);
   };
 
@@ -850,33 +860,27 @@ const JamaChallan: React.FC = () => {
     }
 
     // Validate against outstanding balances
-    for (let i = 1; i <= 9; i++) {
-      const qty = items[`size_${i}_qty` as keyof ItemsData] as number || 0;
-      const borrowed = items[`size_${i}_borrowed` as keyof ItemsData] as number || 0;
+    for (const ps of plateSizes) {
+      const sizeId = ps.id;
+      const qty = items.items?.[sizeId]?.qty || 0;
+      const borrowed = items.items?.[sizeId]?.borrowed || 0;
 
-      const currentBalance = outstandingBalances[i] || 0;
-      const currentBorrowedBalance = borrowedOutstanding[i] || 0;
+      const currentBalance = outstandingBalances[sizeId] || 0;
+      const currentBorrowedBalance = borrowedOutstanding[sizeId] || 0;
 
       if (qty > 0 && qty > currentBalance) {
-        toast.error(`Cannot return more than available stock for Size ${i}. Available: ${currentBalance}`);
+        toast.error(`Cannot return more than available stock for Size ${ps.name}. Available: ${currentBalance}`);
         return;
       }
 
       if (borrowed > 0 && borrowed > currentBorrowedBalance) {
-        toast.error(`Cannot return more than borrowed stock for Size ${i}. Available: ${currentBorrowedBalance}`);
+        toast.error(`Cannot return more than borrowed stock for Size ${ps.name}. Available: ${currentBorrowedBalance}`);
         return;
       }
     }
 
-
-    const hasQuantities = Object.entries(items)
-      .filter(([key]) => key.includes('_qty'))
-      .some(([_, value]) => value > 0);
-
-    const hasBorrowedItems = Object.entries(items)
-      .filter(([key]) => key.includes('_borrowed'))
-      .some(([_, value]) => value > 0);
-
+    const hasQuantities = Object.values(items.items || {}).some(item => (item.qty || 0) > 0);
+    const hasBorrowedItems = Object.values(items.items || {}).some(item => (item.borrowed || 0) > 0);
 
     if (!hasQuantities && !hasBorrowedItems) {
       newErrors.items = 'At least one item quantity or borrowed quantity must be greater than 0';
@@ -930,12 +934,37 @@ const JamaChallan: React.FC = () => {
       const { error: itemsError } = await supabase.from('jama_items').insert([
         {
           jama_challan_number: challanNumber,
-          ...items,
+          items: mapRecordToArray(items),
+          main_note: items.main_note,
         },
       ]);
 
 
       if (itemsError) throw itemsError;
+
+      try {
+        for (const [sizeIdStr, detail] of Object.entries(items.items || {})) {
+          const sizeId = parseInt(sizeIdStr);
+          const onRentQty = detail.qty || 0;
+          const borrowedQty = detail.borrowed || 0;
+
+          if (onRentQty > 0 || borrowedQty > 0) {
+            const { error: stockError } = await supabase.rpc('decrement_stock', {
+              p_size: sizeId,
+              p_on_rent_decrement: onRentQty,
+              p_borrowed_decrement: borrowedQty,
+            });
+
+            if (stockError) {
+              console.error(`Error updating stock for size ${sizeId}:`, stockError);
+              throw stockError;
+            }
+          }
+        }
+      } catch (error) {
+        console.error('Error updating stock:', error);
+        toast.error('Challan saved but stock update failed');
+      }
 
 
       toast.dismiss(loadingToast);
@@ -1002,35 +1031,16 @@ const JamaChallan: React.FC = () => {
               <div className="items-center justify-between hidden mb-6 sm:flex lg:mb-8">
                 <div>
                   <h2 className="text-2xl font-bold text-gray-900 lg:text-3xl">{t('jamaChallan')}</h2>
-                  <p className="mt-1 text-xs text-gray-600 lg:text-sm lg:mt-2">Create new jama challan for returned items</p>
+                  <p className="mt-1 text-xs text-gray-600 lg:text-sm lg:mt-2">{t('jamaChallanSubtitle')}</p>
                 </div>
-                {!showAddClient && (
-                  <button
-                    onClick={handleAddNewClick}
-                    className="inline-flex items-center gap-1.5 px-4 py-2 text-sm font-medium text-green-600 transition-colors bg-green-50 rounded-lg hover:bg-green-100 touch-manipulation active:scale-95"
-                  >
-                    <UserPlus className="w-4 h-4" />
-                    {t('addNewClient')}
-                  </button>
-                )}
               </div>
-              {showAddClient ? (
-                <div className="p-3 bg-white border border-gray-200 rounded-lg shadow-sm sm:p-4 lg:p-6 sm:rounded-xl">
-                  <ClientForm
-                    onSubmit={handleQuickAddClient}
-                    onCancel={() => setShowAddClient(false)}
-                  />
-                </div>
-              ) : (
-                <ClientSelectionStep
-                  clients={clients}
-                  onClientSelect={handleClientSelect}
-                  onAddNewClick={handleAddNewClick}
-                  searchQuery={searchQuery}
-                  onSearchChange={handleSearchChange}
-                  clientBalances={clientBalances}
-                />
-              )}
+              <ClientSelectionStep
+                clients={clients}
+                onClientSelect={handleClientSelect}
+                searchQuery={searchQuery}
+                onSearchChange={handleSearchChange}
+                clientBalances={clientBalances}
+              />
             </>
           ) : (
             selectedClient && (
@@ -1057,6 +1067,7 @@ const JamaChallan: React.FC = () => {
                 setHideExtraColumns={setHideExtraColumns}
                 isAllReturn={isAllReturn}
                 onAllReturn={handleAllReturn}
+                stockData={stockData}
               />
             )
           )}

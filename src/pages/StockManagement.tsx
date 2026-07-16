@@ -2,7 +2,8 @@ import React, { useState, useEffect, useMemo } from "react";
 import { Link } from "react-router-dom";
 import { useLanguage } from "../contexts/LanguageContext";
 import { supabase } from "../utils/supabase";
-import { PLATE_SIZES } from "../components/ItemsTable";
+import { PlateSize } from "../components/ItemsTable";
+import { usePlateSizes } from "../hooks/usePlateSizes";
 import {
   Package,
   AlertCircle,
@@ -16,6 +17,10 @@ import {
   X,
   Loader2,
   BookOpen,
+  ArrowUp,
+  ArrowDown,
+  Trash2,
+  Edit2,
 } from "lucide-react";
 import { fetchUdharChallansForClient, fetchJamaChallansForClient } from "../utils/challanFetching";
 import Navbar from "../components/Navbar";
@@ -23,6 +28,7 @@ import toast, { Toaster } from "react-hot-toast";
 
 interface StockData {
   size: number;
+  plate_size?: PlateSize;
   total_stock: number;
   on_rent_stock: number;
   borrowed_stock: number;
@@ -36,10 +42,118 @@ type SortField =
   | "total_stock"
   | "available_stock"
   | "on_rent_stock"
+  | "borrowed_stock"
   | "lost_stock";
 type SortOrder = "asc" | "desc";
 
 const StockManagement: React.FC = () => {
+  const { sizes: plateSizes, addSize: addNewSize, updateSizesOrder, deleteSize } = usePlateSizes();
+  const [newSizeName, setNewSizeName] = useState('');
+  const [isAddingSize, setIsAddingSize] = useState(false);
+  const [isReordering, setIsReordering] = useState(false);
+  const [tempSizes, setTempSizes] = useState<PlateSize[]>([]);
+  const [selectedCategory, setSelectedCategory] = useState<'shuttering' | 'jack' | 'other'>('shuttering');
+  const [newSizeCategory, setNewSizeCategory] = useState<'shuttering' | 'jack' | 'other'>('shuttering');
+  const [editingId, setEditingId] = useState<number | null>(null);
+  const [editName, setEditName] = useState('');
+
+  const handleDeleteSize = async (sizeId: number, sizeName: string) => {
+    const calculated = calculatedStocks.get(sizeId) || { rent: 0, borrowed: 0 };
+    if (calculated.rent > 0 || calculated.borrowed > 0) {
+      toast.error('આ સાઈઝના પ્લેટો ભાડા પર અથવા ઉધાર આપેલ છે. તેથી તે ડીલીટ કરી શકાશે નહિ.');
+      return;
+    }
+
+    const confirmed = window.confirm(`નક્કી સાઈઝ "${sizeName}" ને કાયમ માટે ડીલીટ કરવી છે?`);
+    if (!confirmed) return;
+
+    const loadingToast = toast.loading('સાઈઝ ડીલીટ થઈ રહી છે...');
+    try {
+      if (deleteSize) {
+        await deleteSize(sizeId);
+        toast.success('સાઈઝ સફળતાપૂર્વક ડીલીટ થઈ ગઈ!');
+        setTempSizes(prev => prev.filter(s => s.id !== sizeId));
+      }
+    } catch (err: any) {
+      console.error(err);
+      toast.error(err.message);
+    } finally {
+      toast.dismiss(loadingToast);
+    }
+  };
+
+  useEffect(() => {
+    if (isReordering) {
+      setTempSizes([...plateSizes]);
+    }
+  }, [isReordering, plateSizes]);
+
+  const handleAddSize = async () => {
+    if (!newSizeName.trim()) return;
+    try {
+      await addNewSize(newSizeName.trim(), newSizeCategory);
+      setNewSizeName('');
+      setNewSizeCategory('shuttering');
+      setIsAddingSize(false);
+      fetchStock();
+    } catch (err: any) {
+      toast.error("Error adding size: " + err.message);
+    }
+  };
+
+  const moveSize = (index: number, direction: 'up' | 'down') => {
+    const nextIndex = direction === 'up' ? index - 1 : index + 1;
+    if (nextIndex < 0 || nextIndex >= tempSizes.length) return;
+    const updated = [...tempSizes];
+    const [removed] = updated.splice(index, 1);
+    updated.splice(nextIndex, 0, removed);
+    setTempSizes(updated);
+  };
+
+  const handleStartEdit = (id: number, name: string) => {
+    setEditingId(id);
+    setEditName(name);
+  };
+
+  const handleFinishEdit = (index: number) => {
+    if (!editName.trim()) return;
+    setTempSizes(prev => {
+      const next = [...prev];
+      next[index] = { ...next[index], name: editName.trim() };
+      return next;
+    });
+    setEditingId(null);
+  };
+
+  const handleSaveOrder = async () => {
+    const loadingToast = toast.loading('સાઈઝ ક્રમ અપડેટ કરી રહ્યાં છીએ...');
+    try {
+      if (updateSizesOrder) {
+        await updateSizesOrder(tempSizes);
+        toast.success('સાઈઝ ક્રમ અપડેટ થઈ ગયો!');
+        setIsReordering(false);
+        window.location.reload();
+      }
+    } catch (err: any) {
+      console.error(err);
+      toast.error('ક્રમ અપડેટ કરવામાં ભુલ આવી: ' + err.message);
+    } finally {
+      toast.dismiss(loadingToast);
+    }
+  };
+
+  const handleAddMissingSize = async (sizeId: number) => {
+    try {
+      const { error } = await supabase
+        .from('stock')
+        .insert([{ size: sizeId, total_stock: 0, on_rent_stock: 0, borrowed_stock: 0, lost_stock: 0 }]);
+      if (error) throw error;
+      toast.success("Size added to stock successfully");
+      fetchStock();
+    } catch (err: any) {
+      toast.error("Error adding size to stock: " + err.message);
+    }
+  };
   const { t } = useLanguage();
   const [stocks, setStocks] = useState<StockData[]>([]);
   const [loading, setLoading] = useState(true);
@@ -85,17 +199,17 @@ const StockManagement: React.FC = () => {
       const calculations = new Map<number, { rent: number; borrowed: number }>();
 
       // Initialize for all sizes
-      for (const size of PLATE_SIZES) {
-        // Find index of size in PLATE_SIZES
-        const sizeIndex = PLATE_SIZES.indexOf(size) + 1;
-        calculations.set(sizeIndex, { rent: 0, borrowed: 0 });
+      for (const ps of plateSizes) {
+        calculations.set(ps.id, { rent: 0, borrowed: 0 });
       }
 
       // Process Udhar (Outgoing)
       allUdhar.forEach(challan => {
-        for (let i = 1; i <= 9; i++) {
-          const qty = (challan.items as any)[`size_${i}_qty`] || 0;
-          const borrowed = (challan.items as any)[`size_${i}_borrowed`] || 0;
+        for (const ps of plateSizes) {
+          const itemData = challan.items.items?.[ps.id] || { qty: 0, borrowed: 0 };
+          const qty = itemData.qty;
+          const borrowed = itemData.borrowed;
+          const i = ps.id;
 
           const current = calculations.get(i) || { rent: 0, borrowed: 0 };
           calculations.set(i, {
@@ -107,9 +221,11 @@ const StockManagement: React.FC = () => {
 
       // Process Jama (Incoming)
       allJama.forEach(challan => {
-        for (let i = 1; i <= 9; i++) {
-          const qty = (challan.items as any)[`size_${i}_qty`] || 0;
-          const borrowed = (challan.items as any)[`size_${i}_borrowed`] || 0;
+        for (const ps of plateSizes) {
+          const itemData = challan.items.items?.[ps.id] || { qty: 0, borrowed: 0 };
+          const qty = itemData.qty;
+          const borrowed = itemData.borrowed;
+          const i = ps.id;
 
           const current = calculations.get(i) || { rent: 0, borrowed: 0 };
           calculations.set(i, {
@@ -398,39 +514,57 @@ const StockManagement: React.FC = () => {
   };
 
   const filteredAndSortedStocks = useMemo(() => {
-    return [...stocks].sort((a, b) => {
-      const aVal = a[sortField];
-      const bVal = b[sortField];
+    return [...stocks]
+      .filter(stock => {
+        const cat = plateSizes.find(p => p.id === stock.size)?.category || 'shuttering';
+        return cat === selectedCategory;
+      })
+      .sort((a, b) => {
+        let aVal = a[sortField];
+        let bVal = b[sortField];
 
-      if (sortOrder === "asc") {
-        return aVal > bVal ? 1 : -1;
-      } else {
-        return aVal < bVal ? 1 : -1;
-      }
-    });
-  }, [stocks, sortField, sortOrder]);
+        if (sortField === "available_stock" || sortField === "on_rent_stock" || sortField === "borrowed_stock") {
+          const calcA = calculatedStocks.get(a.size) || { rent: 0, borrowed: 0 };
+          const calcB = calculatedStocks.get(b.size) || { rent: 0, borrowed: 0 };
+          
+          if (sortField === "on_rent_stock") {
+            aVal = calcA.rent;
+            bVal = calcB.rent;
+          } else if (sortField === "borrowed_stock") {
+            aVal = calcA.borrowed;
+            bVal = calcB.borrowed;
+          } else if (sortField === "available_stock") {
+            aVal = Math.max(0, a.total_stock - calcA.rent - a.lost_stock);
+            bVal = Math.max(0, b.total_stock - calcB.rent - b.lost_stock);
+          }
+        }
+
+        if (sortOrder === "asc") {
+          return aVal > bVal ? 1 : -1;
+        } else {
+          return aVal < bVal ? 1 : -1;
+        }
+      });
+  }, [stocks, sortField, sortOrder, plateSizes, selectedCategory, calculatedStocks]);
 
 
 
   const SkeletonRow = () => (
     <tr className="animate-pulse">
-      <td className="px-4 py-3 sm:px-6 sm:py-4">
-        <div className="w-12 h-4 bg-gray-200 rounded"></div>
+      <td className="px-6 py-4">
+        <div className="w-12 h-4 mx-auto bg-gray-200 rounded"></div>
       </td>
-      <td className="px-4 py-3 sm:px-6 sm:py-4">
-        <div className="w-16 h-4 bg-gray-200 rounded"></div>
+      <td className="px-6 py-4">
+        <div className="w-16 h-4 mx-auto bg-gray-200 rounded"></div>
       </td>
-      <td className="px-4 py-3 sm:px-6 sm:py-4">
-        <div className="w-20 h-6 bg-gray-200 rounded-full sm:w-24"></div>
+      <td className="px-6 py-4">
+        <div className="w-24 h-6 mx-auto bg-gray-200 rounded-full"></div>
       </td>
-      <td className="px-4 py-3 sm:px-6 sm:py-4">
-        <div className="w-16 h-4 bg-gray-200 rounded sm:w-20"></div>
+      <td className="px-6 py-4">
+        <div className="w-12 h-4 mx-auto bg-gray-200 rounded"></div>
       </td>
-      <td className="px-4 py-3 sm:px-6 sm:py-4">
-        <div className="w-12 h-4 bg-gray-200 rounded"></div>
-      </td>
-      <td className="px-4 py-3 sm:px-6 sm:py-4">
-        <div className="w-12 h-8 bg-gray-200 rounded sm:w-16"></div>
+      <td className="px-6 py-4">
+        <div className="w-12 h-4 mx-auto bg-gray-200 rounded"></div>
       </td>
     </tr>
   );
@@ -463,203 +597,274 @@ const StockManagement: React.FC = () => {
       />
       <Navbar />
       <main className="flex-1 w-full ml-0 overflow-auto pt-14 pb-20 sm:pt-0 sm:pb-0 lg:ml-64">
-        {/* Header - Desktop Only */}
-        <div className="items-center justify-between hidden mb-6 sm:flex lg:mb-8">
-          <div>
-            <h2 className="text-2xl font-bold text-gray-900 lg:text-3xl">
-              {t("stockManagement")}
-            </h2>
-            <p className="mt-1 text-xs text-gray-600">{t("stockOverview")}</p>
+        <div className="w-full h-full px-3 py-3 pb-20 mx-auto sm:px-4 sm:py-5 lg:px-8 lg:py-12 lg:pb-12 max-w-7xl">
+          {/* Header - Desktop Only */}
+          <div className="items-center justify-between hidden mb-6 lg:flex lg:mb-8">
+            <div>
+              <h2 className="text-2xl font-bold text-gray-900 lg:text-3xl">
+                {t("stockManagement")}
+              </h2>
+              <p className="mt-1 text-xs text-gray-600">{t("stockOverview")}</p>
+            </div>
+            <div className="flex gap-2">
+              <button
+                onClick={() => handleActionClick("add")}
+                className="inline-flex items-center gap-1.5 px-3 py-2 text-sm font-medium text-white bg-green-600 rounded-lg hover:bg-green-700 transition-colors shadow-sm"
+              >
+                <Plus className="w-4 h-4" />
+                {t("addStock")}
+              </button>
+              <button
+                onClick={() => setIsAddingSize(true)}
+                className="inline-flex items-center gap-1.5 px-3 py-2 text-sm font-medium text-white bg-blue-600 rounded-lg hover:bg-blue-700 transition-colors shadow-sm"
+              >
+                <Plus className="w-4 h-4" />
+                {t('newSize')}
+              </button>
+              <button
+                onClick={() => setIsReordering(true)}
+                className="inline-flex items-center gap-1.5 px-3 py-2 text-sm font-medium text-white bg-indigo-600 rounded-lg hover:bg-indigo-700 transition-colors shadow-sm"
+              >
+                <ArrowUpDown className="w-4 h-4" />
+                {t('reorderSizesButton')}
+              </button>
+              <button
+                onClick={() => handleActionClick("remove")}
+                className="inline-flex items-center gap-1.5 px-3 py-2 text-sm font-medium text-white bg-red-600 rounded-lg hover:bg-red-700 transition-colors shadow-sm"
+              >
+                <Minus className="w-4 h-4" />
+                {t("removeStock")}
+              </button>
+              <Link
+                to="/stock-history"
+                className="inline-flex items-center gap-1.5 px-3 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors shadow-sm"
+              >
+                <BookOpen className="w-4 h-4" />
+                {t("stockHistory")}
+              </Link>
+              <button
+                onClick={() => fetchStock(true)}
+                disabled={refreshing}
+                title={t("refreshStock")}
+                className="p-2 text-gray-700 transition-colors bg-white border border-gray-300 rounded-lg hover:bg-gray-50 disabled:opacity-50 touch-manipulation active:scale-95"
+              >
+                <RefreshCw
+                  className={`w-5 h-5 ${refreshing ? "animate-spin" : ""}`}
+                />
+              </button>
+            </div>
           </div>
-          <div className="flex gap-2">
-            <button
-              onClick={() => handleActionClick("add")}
-              className="inline-flex items-center gap-1.5 px-3 py-2 text-sm font-medium text-white bg-green-600 rounded-lg hover:bg-green-700 transition-colors shadow-sm"
-            >
-              <Plus className="w-4 h-4" />
-              {t("addStock")}
-            </button>
-            <button
-              onClick={() => handleActionClick("remove")}
-              className="inline-flex items-center gap-1.5 px-3 py-2 text-sm font-medium text-white bg-red-600 rounded-lg hover:bg-red-700 transition-colors shadow-sm"
-            >
-              <Minus className="w-4 h-4" />
-              {t("removeStock")}
-            </button>
-            <Link
-              to="/stock-history"
-              className="inline-flex items-center gap-1.5 px-3 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors shadow-sm"
-            >
-              <BookOpen className="w-4 h-4" />
-              {t("stockHistory")}
-            </Link>
-            <button
-              onClick={() => fetchStock(true)}
-              disabled={refreshing}
-              title={t("refreshStock")}
-              className="p-2 text-gray-700 transition-colors bg-white border border-gray-300 rounded-lg hover:bg-gray-50 disabled:opacity-50 touch-manipulation active:scale-95"
-            >
-              <RefreshCw
-                className={`w-5 h-5 ${refreshing ? "animate-spin" : ""}`}
-              />
-            </button>
-          </div>
-        </div>
 
-        {/* Summary Cards */}
+          {/* Summary Cards */}
 
 
-        {/* Table Container */}
-        <div className="">
-          {/* Table Header with Controls */}
-          <div className="p-3 border-b border-gray-200 sm:p-4 lg:p-6">
-            <div className="flex items-center justify-end"></div>
-          </div>
-          {/* Desktop Table */}
-          <div className="hidden overflow-x-auto lg:block">
-            <table className="min-w-full divide-y divide-gray-200">
-              <thead className="bg-gray-50">
-                <tr>
-                  <th
-                    onClick={() => handleSort("size")}
-                    className="px-6 py-4 text-xs font-medium tracking-wider text-center text-gray-500 uppercase transition-colors cursor-pointer hover:bg-gray-100 group"
-                  >
-                    <div className="flex items-center justify-center gap-2">
-                      {t("size")}
-                      <ArrowUpDown
-                        size={14}
-                        className="transition-opacity opacity-0 group-hover:opacity-100"
-                      />
-                    </div>
-                  </th>
-                  <th
-                    onClick={() => handleSort("total_stock")}
-                    className="px-6 py-4 text-xs font-medium tracking-wider text-center text-gray-500 uppercase transition-colors cursor-pointer hover:bg-gray-100 group"
-                  >
-                    <div className="flex items-center justify-center gap-2">
-                      {t("totalStock")}
-                      <ArrowUpDown
-                        size={14}
-                        className="transition-opacity opacity-0 group-hover:opacity-100"
-                      />
-                    </div>
-                  </th>
-                  <th
-                    onClick={() => handleSort("available_stock")}
-                    className="px-6 py-4 text-xs font-medium tracking-wider text-center text-gray-500 uppercase transition-colors cursor-pointer hover:bg-gray-100 group"
-                  >
-                    <div className="flex items-center justify-center gap-2">
-                      {t("available")}
-                      <ArrowUpDown
-                        size={14}
-                        className="transition-opacity opacity-0 group-hover:opacity-100"
-                      />
-                    </div>
-                  </th>
-                  <th
-                    onClick={() => handleSort("on_rent_stock")}
-                    className="px-6 py-4 text-xs font-medium tracking-wider text-center text-gray-500 uppercase transition-colors cursor-pointer hover:bg-gray-100 group"
-                  >
-                    <div className="flex items-center justify-center gap-2">
-                      {t("totalOnRent")}
-                      <ArrowUpDown
-                        size={14}
-                        className="transition-opacity opacity-0 group-hover:opacity-100"
-                      />
-                    </div>
-                  </th>
-                  {/* Lost Stock Column - Commented out
-                    <th 
-                      onClick={() => handleSort('lost_stock')}
+          {/* Table Container */}
+          <div className="bg-white rounded-xl border border-gray-200 overflow-hidden shadow-sm">
+            {/* Table Header with Controls */}
+            <div className="p-3 border-b border-gray-200 sm:p-4 lg:p-6 flex items-center justify-between">
+              <div className="flex bg-gray-100 p-1 rounded-lg">
+                <button
+                  onClick={() => setSelectedCategory('shuttering')}
+                  className={`px-4 py-2 text-xs sm:text-sm font-semibold rounded-md transition-colors ${
+                    selectedCategory === 'shuttering'
+                      ? 'bg-white text-blue-600 shadow-sm'
+                      : 'text-gray-500 hover:text-gray-900'
+                  }`}
+                >
+                  {t('shuttering')}
+                </button>
+                <button
+                  onClick={() => setSelectedCategory('jack')}
+                  className={`px-4 py-2 text-xs sm:text-sm font-semibold rounded-md transition-colors ${
+                    selectedCategory === 'jack'
+                      ? 'bg-white text-blue-600 shadow-sm'
+                      : 'text-gray-500 hover:text-gray-900'
+                  }`}
+                >
+                  {t('jack')}
+                </button>
+                <button
+                  onClick={() => setSelectedCategory('other')}
+                  className={`px-4 py-2 text-xs sm:text-sm font-semibold rounded-md transition-colors ${
+                    selectedCategory === 'other'
+                      ? 'bg-white text-blue-600 shadow-sm'
+                      : 'text-gray-500 hover:text-gray-900'
+                  }`}
+                >
+                  {t('other')}
+                </button>
+              </div>
+              <div className="flex items-center justify-end"></div>
+            </div>
+            {/* Desktop Table */}
+            <div className="hidden overflow-x-auto lg:block">
+              <table className="min-w-full divide-y divide-gray-200">
+                <thead className="bg-gray-50">
+                  <tr>
+                    <th
+                      onClick={() => handleSort("size")}
+                      className="px-6 py-4 text-xs font-medium tracking-wider text-center text-gray-500 uppercase transition-colors cursor-pointer hover:bg-gray-100 group border-r border-gray-200"
+                    >
+                      <div className="flex items-center justify-center gap-2">
+                        {t("size")}
+                        <ArrowUpDown
+                          size={14}
+                          className="transition-opacity opacity-0 group-hover:opacity-100"
+                        />
+                      </div>
+                    </th>
+                    <th
+                      onClick={() => handleSort("total_stock")}
+                      className="px-6 py-4 text-xs font-medium tracking-wider text-center text-gray-500 uppercase transition-colors cursor-pointer hover:bg-gray-100 group border-r border-gray-200"
+                    >
+                      <div className="flex items-center justify-center gap-2">
+                        {t("total_stock")}
+                        <ArrowUpDown
+                          size={14}
+                          className="transition-opacity opacity-0 group-hover:opacity-100"
+                        />
+                      </div>
+                    </th>
+                    <th
+                      onClick={() => handleSort("available_stock")}
+                      className="px-6 py-4 text-xs font-medium tracking-wider text-center text-gray-500 uppercase transition-colors cursor-pointer hover:bg-gray-100 group border-r border-gray-200"
+                    >
+                      <div className="flex items-center justify-center gap-2">
+                        {t("available_stock")}
+                        <ArrowUpDown
+                          size={14}
+                          className="transition-opacity opacity-0 group-hover:opacity-100"
+                        />
+                      </div>
+                    </th>
+                    <th
+                      onClick={() => handleSort("on_rent_stock")}
+                      className="px-6 py-4 text-xs font-medium tracking-wider text-center text-gray-500 uppercase transition-colors cursor-pointer hover:bg-gray-100 group border-r border-gray-200"
+                    >
+                      <div className="flex items-center justify-center gap-2">
+                        {t("on_rent_stock")}
+                        <ArrowUpDown
+                          size={14}
+                          className="transition-opacity opacity-0 group-hover:opacity-100"
+                        />
+                      </div>
+                    </th>
+                    <th
+                      onClick={() => handleSort("borrowed_stock")}
                       className="px-6 py-4 text-xs font-medium tracking-wider text-center text-gray-500 uppercase transition-colors cursor-pointer hover:bg-gray-100 group"
                     >
                       <div className="flex items-center justify-center gap-2">
-                        {t('lost')}
-                        <ArrowUpDown size={14} className="transition-opacity opacity-0 group-hover:opacity-100" />
+                        {t("borrowed_stock")}
+                        <ArrowUpDown
+                          size={14}
+                          className="transition-opacity opacity-0 group-hover:opacity-100"
+                        />
                       </div>
                     </th>
-                    */}
-                </tr>
-              </thead>
-              <tbody className="bg-white divide-y divide-gray-100">
-                {loading ? (
-                  <>
-                    <SkeletonRow />
-                    <SkeletonRow />
-                    <SkeletonRow />
-                    <SkeletonRow />
-                    <SkeletonRow />
-                  </>
-                ) : filteredAndSortedStocks.length === 0 ? (
-                  <tr>
-                    <td colSpan={6} className="px-6 py-12 text-center">
-                      <div className="flex flex-col items-center gap-3">
-                        <Package size={48} className="text-gray-300" />
-                        <p className="font-medium text-gray-500">
-                          {t("outOfStock")}
-                        </p>
-                        <p className="text-sm text-gray-400">
-                          {t("stockOverview")}
-                        </p>
-                      </div>
-                    </td>
                   </tr>
-                ) : (
-                  filteredAndSortedStocks.map((stock, index) => {
-                    const calculated = calculatedStocks.get(stock.size) || { rent: 0, borrowed: 0 };
-                    // Use calculated values if available, otherwise fallback (though fetchCalculatedStocks runs on mount)
-                    const rentStock = calculated.rent;
-                    const borrowedStock = calculated.borrowed;
-                    const availableStock = Math.max(0, stock.total_stock - rentStock - stock.lost_stock);
+                </thead>
+                <tbody className="bg-white divide-y divide-gray-100">
+                  {loading ? (
+                    <>
+                      <SkeletonRow />
+                      <SkeletonRow />
+                      <SkeletonRow />
+                      <SkeletonRow />
+                      <SkeletonRow />
+                    </>
+                  ) : filteredAndSortedStocks.length === 0 ? (
+                    <tr>
+                      <td colSpan={5} className="px-6 py-12 text-center">
+                        <div className="flex flex-col items-center gap-3">
+                          <Package size={48} className="text-gray-300" />
+                          <p className="font-medium text-gray-500">
+                            {t("outOfStock")}
+                          </p>
+                          <p className="text-sm text-gray-400">
+                            {t("stockOverview")}
+                          </p>
+                        </div>
+                      </td>
+                    </tr>
+                  ) : (
+                    filteredAndSortedStocks.map((stock, index) => {
+                      const calculated = calculatedStocks.get(stock.size) || { rent: 0, borrowed: 0 };
+                      const rentStock = calculated.rent;
+                      const borrowedStock = calculated.borrowed;
+                      const availableStock = Math.max(0, stock.total_stock - rentStock - stock.lost_stock);
 
-                    return (
-                      <tr
-                        key={stock.size}
-                        className={`hover:bg-gray-50 transition-colors ${index % 2 === 0 ? "bg-white" : "bg-gray-25"
-                          }`}
-                      >
-                        <td className="px-6 py-4 text-center whitespace-nowrap">
-                          <span className="text-lg font-bold text-gray-900">
-                            {PLATE_SIZES[stock.size - 1]}
-                          </span>
-                        </td>
-                        <td className="px-6 py-4 text-sm text-center text-gray-900 whitespace-nowrap">
-                          <span className="font-medium">
-                            {stock.total_stock}
-                          </span>
-                        </td>
-                        <td className="px-6 py-4 text-center whitespace-nowrap">
-                          {getAvailabilityBadge(availableStock)}
-                        </td>
-                        <td className="px-6 py-4 text-center">
-                          <div className="text-sm font-semibold text-gray-900">
-                            {rentStock + borrowedStock}
-                          </div>
-                          <div className="text-xs text-gray-500 mt-0.5 flex items-center justify-center gap-1">
-                            (
+                      return (
+                        <tr
+                          key={stock.size}
+                          className={`hover:bg-gray-50 transition-colors ${index % 2 === 0 ? "bg-white" : "bg-gray-50"
+                            }`}
+                        >
+                          <td className="px-6 py-4 text-center whitespace-nowrap border-r border-gray-100 font-bold text-gray-900">
+                            {(plateSizes.find(p => p.id === stock.size)?.name || `Size ${stock.size}`)}
+                          </td>
+                          <td className="px-6 py-4 text-sm text-center text-gray-900 whitespace-nowrap border-r border-gray-100">
+                            <span className="font-semibold">
+                              {stock.total_stock}
+                            </span>
+                          </td>
+                          <td className="px-6 py-4 text-center whitespace-nowrap border-r border-gray-100">
+                            {getAvailabilityBadge(availableStock)}
+                          </td>
+                          <td className="px-6 py-4 text-center border-r border-gray-100">
                             <button
                               onClick={() => fetchDistribution(stock.size, "rent")}
-                              className="font-medium hover:text-blue-600 hover:underline focus:outline-none transition-colors"
+                              className="text-orange-600 hover:underline font-bold text-sm focus:outline-none"
                             >
                               {rentStock}
                             </button>
-                            +
+                          </td>
+                          <td className="px-6 py-4 text-center">
                             <button
                               onClick={() => fetchDistribution(stock.size, "borrowed")}
-                              className="font-medium hover:text-purple-600 hover:underline focus:outline-none transition-colors"
+                              className="text-purple-600 hover:underline font-bold text-sm focus:outline-none"
                             >
                               {borrowedStock}
                             </button>
-                            )
-                          </div>
-                        </td>
-                      </tr>
-                    );
-                  })
-                )}
-              </tbody>
-            </table>
-          </div>
+                          </td>
+                        </tr>
+                      );
+                    })
+                  )}
+                  {!loading && filteredAndSortedStocks.length > 0 && (
+                    <tr className="bg-gray-100 border-t-2 border-gray-300 font-bold">
+                      <td className="px-6 py-4 text-center text-gray-900 border-r border-gray-200">
+                        {t("total") || "Total"}
+                      </td>
+                      <td className="px-6 py-4 text-center text-gray-900 border-r border-gray-200">
+                        {filteredAndSortedStocks.reduce(
+                          (sum, stock) => sum + stock.total_stock,
+                          0
+                        )}
+                      </td>
+                      <td className="px-6 py-4 text-center text-green-700 border-r border-gray-200">
+                        {filteredAndSortedStocks.reduce((sum, stock) => {
+                          const calculated = calculatedStocks.get(stock.size) || { rent: 0, borrowed: 0 };
+                          const available = Math.max(0, stock.total_stock - calculated.rent - stock.lost_stock);
+                          return sum + available;
+                        }, 0)}
+                      </td>
+                      <td className="px-6 py-4 text-center text-orange-600 border-r border-gray-200">
+                        {filteredAndSortedStocks.reduce((sum, stock) => {
+                          const calculated = calculatedStocks.get(stock.size) || { rent: 0, borrowed: 0 };
+                          return sum + calculated.rent;
+                        }, 0)}
+                      </td>
+                      <td className="px-6 py-4 text-center text-purple-600">
+                        {filteredAndSortedStocks.reduce((sum, stock) => {
+                          const calculated = calculatedStocks.get(stock.size) || { rent: 0, borrowed: 0 };
+                          return sum + calculated.borrowed;
+                        }, 0)}
+                      </td>
+                    </tr>
+                  )}
+                </tbody>
+              </table>
+            </div>
 
           {/* Mobile/Tablet Table - Horizontal Scroll */}
           <div className="overflow-x-auto lg:hidden">
@@ -736,7 +941,7 @@ const StockManagement: React.FC = () => {
                         className={index % 2 === 0 ? "bg-white" : "bg-gray-50"}
                       >
                         <td className="sticky left-0 z-10 px-1 py-1.5 text-xs font-bold text-center text-gray-900 border-r-2 border-gray-300 sm:px-2 sm:text-base bg-inherit">
-                          {PLATE_SIZES[stock.size - 1]}
+                          {(plateSizes.find(p => p.id === stock.size)?.name || `Size ${stock.size}`)}
                         </td>
                         <td className="px-1 py-1.5 text-center border-r border-gray-200">
                           <span className="text-xs font-semibold sm:text-sm">
@@ -812,8 +1017,8 @@ const StockManagement: React.FC = () => {
           {/* Footer */}
           {stocks.length > 0 && !loading && (
             <div className="px-3 py-3 border-t border-gray-200 sm:px-4 sm:py-4 lg:px-6 bg-gray-50">
-              {/* Mobile Legend Container */}
-              <div className="p-3 bg-white border border-gray-200 rounded-lg lg:hidden sm:p-4">
+              {/* Legend Container */}
+              <div className="p-3 bg-white border border-gray-200 rounded-lg sm:p-4">
                 <div className="flex flex-col gap-2 sm:flex-row sm:gap-4">
                   <div className="flex items-center gap-2">
                     <div className="w-2.5 h-2.5 rounded-full bg-orange-500 flex-shrink-0"></div>
@@ -834,7 +1039,8 @@ const StockManagement: React.FC = () => {
             </div>
           )}
         </div>
-      </main>
+      </div>
+    </main>
 
       {/* Mobile Bottom Action Bar */}
       <div className="fixed bottom-0 left-0 right-0 p-2 bg-white border-t border-gray-200 shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.1)] lg:hidden z-40 flex gap-2">
@@ -844,6 +1050,13 @@ const StockManagement: React.FC = () => {
         >
           <Plus className="w-4 h-4" />
           {t("addStock")}
+        </button>
+        <button
+          onClick={() => setIsAddingSize(true)}
+          className="flex-1 inline-flex items-center justify-center gap-1.5 px-3 py-2 text-sm font-bold text-white bg-blue-600 rounded-xl shadow-md hover:bg-blue-700 active:scale-95 transition-all"
+        >
+          <Plus className="w-4 h-4" />
+          નવી સાઈઝ
         </button>
         <button
           onClick={() => handleActionClick("remove")}
@@ -941,21 +1154,34 @@ const StockManagement: React.FC = () => {
 
               {/* Sizes Grid */}
               <h4 className="text-sm font-bold text-gray-800 mb-2">{t("sizesQuantities")}</h4>
-              <div className="grid grid-cols-3 gap-3">
-                {PLATE_SIZES.map((sizeStr, index) => {
-                  const size = index + 1;
+              <div className="space-y-2 max-h-[30vh] overflow-y-auto pr-1">
+                {plateSizes.map((ps) => {
+                  const sizeStr = ps.name;
+                  const index = ps.id;
+                  const exists = stocks.some(s => s.size === index);
+                  if (!exists) {
+                    return (
+                      <button
+                        key={index}
+                        type="button"
+                        onClick={() => handleAddMissingSize(index)}
+                        className="w-full px-4 py-2 bg-yellow-50 border border-yellow-250 rounded-xl hover:bg-yellow-100 transition-all font-semibold text-xs text-yellow-800 flex items-center justify-between group"
+                      >
+                        <span>નવી સાઈઝ {sizeStr} સ્ટોકમાં સેટઅપ કરો (Setup Size {sizeStr})</span>
+                        <Plus className="w-4 h-4 text-yellow-600 group-hover:scale-110 transition-transform" />
+                      </button>
+                    );
+                  }
                   return (
-                    <div key={size} className="space-y-1">
-                      <label className="block text-xs font-medium text-gray-500 text-center">
-                        {sizeStr}
-                      </label>
+                    <div key={index} className="flex items-center justify-between p-2.5 bg-gray-50 rounded-xl border border-gray-150">
+                      <span className="font-bold text-gray-800 text-sm">{sizeStr}</span>
                       <input
                         type="number"
                         min="0"
+                        value={bulkAction.quantities[index] || ""}
+                        onChange={(e) => handleQuantityChange(index, e.target.value)}
                         placeholder="0"
-                        value={bulkAction.quantities[size] || ""}
-                        onChange={(e) => handleQuantityChange(size, e.target.value)}
-                        className="w-full px-3 py-2 text-center text-sm font-semibold border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none"
+                        className="w-24 px-3 py-1.5 text-center border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none text-sm font-semibold"
                       />
                     </div>
                   );
@@ -990,7 +1216,7 @@ const StockManagement: React.FC = () => {
                   ગ્રાહક પ્રમાણે
                 </h3>
                 <div className="flex items-center gap-2 text-sm text-gray-500">
-                  <p>પ્લેટ: {PLATE_SIZES[distributionModal.size! - 1]}</p>
+                  <p>પ્લેટ: {(plateSizes.find(p => p.id === distributionModal.size!)?.name || `Size ${distributionModal.size!}`)}</p>
                   <span>•</span>
                   <p className="font-semibold text-gray-900">
                     કુલ: {distributionModal.data.reduce((sum, item) => sum + item.quantity, 0)}
@@ -1074,8 +1300,192 @@ const StockManagement: React.FC = () => {
           </div>
         </div>
       )}
+
+      {/* Add New Size Modal */}
+      {isAddingSize && (
+        <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-4 bg-black bg-opacity-50 backdrop-blur-sm">
+          <div className="w-full max-w-md bg-white rounded-t-xl sm:rounded-xl shadow-2xl overflow-y-auto">
+            <div className="sticky top-0 z-10 flex items-center justify-between p-4 bg-white border-b border-gray-100">
+              <h3 className="text-lg font-bold text-gray-900">
+                {t('createNewSize')}
+              </h3>
+              <button
+                onClick={() => setIsAddingSize(false)}
+                className="p-1 text-gray-400 rounded-full hover:bg-gray-100 hover:text-gray-600"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <div className="p-4 space-y-4">
+              <div>
+                <label className="block text-xs font-semibold text-gray-700 mb-1">
+                  {t('sizeName')} <span className="text-red-500">*</span>
+                </label>
+                <input
+                  type="text"
+                  value={newSizeName}
+                  onChange={(e) => setNewSizeName(e.target.value)}
+                  placeholder="e.g. 10x2 or 11"
+                  className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all"
+                />
+              </div>
+
+              <div>
+                <label className="block text-xs font-semibold text-gray-700 mb-1">
+                  {t('category')} <span className="text-red-500">*</span>
+                </label>
+                <div className="flex gap-4">
+                  <label className="flex items-center gap-1.5 text-sm font-medium text-gray-700 cursor-pointer">
+                    <input
+                      type="radio"
+                      name="newSizeCategory"
+                      value="shuttering"
+                      checked={newSizeCategory === 'shuttering'}
+                      onChange={() => setNewSizeCategory('shuttering')}
+                      className="text-blue-600 focus:ring-blue-500"
+                    />
+                    {t('shuttering')}
+                  </label>
+                  <label className="flex items-center gap-1.5 text-sm font-medium text-gray-700 cursor-pointer">
+                    <input
+                      type="radio"
+                      name="newSizeCategory"
+                      value="jack"
+                      checked={newSizeCategory === 'jack'}
+                      onChange={() => setNewSizeCategory('jack')}
+                      className="text-blue-600 focus:ring-blue-500"
+                    />
+                    {t('jack')}
+                  </label>
+                  <label className="flex items-center gap-1.5 text-sm font-medium text-gray-700 cursor-pointer">
+                    <input
+                      type="radio"
+                      name="newSizeCategory"
+                      value="other"
+                      checked={newSizeCategory === 'other'}
+                      onChange={() => setNewSizeCategory('other')}
+                      className="text-blue-600 focus:ring-blue-500"
+                    />
+                    {t('other')}
+                  </label>
+                </div>
+              </div>
+
+              <div className="pt-4 border-t border-gray-100">
+                <button
+                  onClick={handleAddSize}
+                  className="w-full py-2.5 px-4 text-sm font-bold text-white rounded-lg bg-blue-600 hover:bg-blue-700 transition-all active:scale-[0.98]"
+                >
+                  {t('confirmAddSize')}
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Reorder Sizes Modal */}
+      {isReordering && (
+        <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-4 bg-black bg-opacity-50 backdrop-blur-sm">
+          <div className="w-full max-w-md bg-white rounded-t-xl sm:rounded-xl shadow-2xl overflow-y-auto max-h-[85vh]">
+            <div className="sticky top-0 z-10 flex items-center justify-between p-4 bg-white border-b border-gray-100">
+              <h3 className="text-lg font-bold text-gray-900">
+                {t('reorderSizesTitle')}
+              </h3>
+              <button
+                onClick={() => setIsReordering(false)}
+                className="p-1 text-gray-400 rounded-full hover:bg-gray-100 hover:text-gray-600"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <div className="p-4 space-y-4">
+              <p className="text-xs text-gray-500">
+                સાઈઝનો જે ક્રમ અહીં રાખશો, તે જ ક્રમ આખા એપ્લીકેશનમાં (ચલણ બુક, સ્ટોક લિસ્ટ, વગેરે) બતાવશે.
+              </p>
+              
+              <div className="space-y-2 max-h-[50vh] overflow-y-auto pr-1">
+                {tempSizes.map((size, index) => (
+                  <div 
+                    key={size.id} 
+                    className="flex items-center justify-between p-3 border border-gray-100 bg-gray-50 rounded-lg"
+                  >
+                    <div className="flex-1 flex items-center gap-2 mr-2">
+                      {editingId === size.id ? (
+                        <input
+                          type="text"
+                          value={editName}
+                          onChange={(e) => setEditName(e.target.value)}
+                          onBlur={() => handleFinishEdit(index)}
+                          onKeyDown={(e) => {
+                            if (e.key === 'Enter') handleFinishEdit(index);
+                            if (e.key === 'Escape') setEditingId(null);
+                          }}
+                          className="px-2 py-1 text-sm border border-blue-500 rounded outline-none w-28 focus:ring-1 focus:ring-blue-500 bg-white"
+                          autoFocus
+                          onClick={(e) => e.stopPropagation()}
+                        />
+                      ) : (
+                        <div 
+                          onClick={() => handleStartEdit(size.id, size.name)}
+                          className="flex items-center gap-1.5 cursor-pointer group hover:text-blue-600"
+                          title="Click to rename"
+                        >
+                          <span className="font-bold text-gray-800 group-hover:underline">{size.name}</span>
+                          <Edit2 className="w-3.5 h-3.5 text-gray-400 opacity-60 group-hover:opacity-100 transition-opacity" />
+                        </div>
+                      )}
+                    </div>
+                    <div className="flex gap-1 flex-shrink-0">
+                      <button
+                        onClick={() => moveSize(index, 'up')}
+                        disabled={index === 0}
+                        className="p-1.5 bg-white border border-gray-200 rounded-md hover:bg-gray-100 disabled:opacity-30 transition-colors"
+                      >
+                        <ArrowUp className="w-4 h-4 text-gray-600" />
+                      </button>
+                      <button
+                        onClick={() => moveSize(index, 'down')}
+                        disabled={index === tempSizes.length - 1}
+                        className="p-1.5 bg-white border border-gray-200 rounded-md hover:bg-gray-100 disabled:opacity-30 transition-colors"
+                      >
+                        <ArrowDown className="w-4 h-4 text-gray-600" />
+                      </button>
+                      <button
+                        onClick={() => handleDeleteSize(size.id, size.name)}
+                        className="p-1.5 bg-white border border-red-200 text-red-600 rounded-md hover:bg-red-50 transition-colors ml-1"
+                        title="ડીલીટ સાઈઝ"
+                      >
+                        <Trash2 className="w-4 h-4" />
+                      </button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+
+              <div className="pt-4 border-t border-gray-100 flex gap-3">
+                <button
+                  onClick={() => setIsReordering(false)}
+                  className="flex-1 py-2 px-4 text-sm font-semibold text-gray-700 bg-gray-100 hover:bg-gray-200 rounded-lg transition-all"
+                >
+                  રદ્દ કરો (Cancel)
+                </button>
+                <button
+                  onClick={handleSaveOrder}
+                  className="flex-1 py-2 px-4 text-sm font-bold text-white bg-indigo-600 hover:bg-indigo-700 rounded-lg shadow-sm transition-all"
+                >
+                  સાચવો (Save)
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
 
 export default StockManagement;
+

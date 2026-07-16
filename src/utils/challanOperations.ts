@@ -1,3 +1,14 @@
+
+export const mapRecordToArray = (itemsData: any) => {
+  if (!itemsData || !itemsData.items) return [];
+  return Object.entries(itemsData.items).map(([sizeId, data]: [string, any]) => ({
+    size_id: parseInt(sizeId),
+    qty: data.qty || 0,
+    borrowed: data.borrowed || 0,
+    note: data.note || ''
+  })).filter(i => i.qty > 0 || i.borrowed > 0 || i.note !== '');
+};
+
 import { supabase } from './supabase';
 
 interface ItemsData {
@@ -25,9 +36,9 @@ interface ItemsData {
   size_8_qty?: number;
   size_8_borrowed?: number;
   size_8_note?: string;
-  size_9_qty?: number;
-  size_9_borrowed?: number;
-  size_9_note?: string;
+  size_9_qty?: number; size_10_qty?: number;
+  size_9_borrowed?: number; size_10_borrowed?: number;
+  size_9_note?: string; size_10_note?: string;
 }
 
 export const fetchUdharChallans = async () => {

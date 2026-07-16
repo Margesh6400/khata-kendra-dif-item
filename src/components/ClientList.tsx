@@ -88,18 +88,18 @@ const ClientList: React.FC<ClientListProps> = ({ clients, onEdit, onDelete, onTo
                         <button
                           onClick={() => handleCreateUdhar(client)}
                           className="px-2 py-1.5 text-xs font-medium text-white transition-colors bg-red-500 rounded hover:bg-red-600 flex items-center gap-1"
-                          title="Create Udhar"
+                          title={t('createUdhar')}
                         >
                           <Plus size={14} />
-                          Udhar
+                          {t('udhar')}
                         </button>
                         <button
                           onClick={() => handleCreateJama(client)}
                           className="px-2 py-1.5 text-xs font-medium text-white transition-colors bg-green-500 rounded hover:bg-green-600 flex items-center gap-1"
-                          title="Create Jama"
+                          title={t('createJama')}
                         >
                           <span className="flex items-center justify-center w-3.5 h-3.5 text-lg font-bold leading-none">-</span>
-                          Jama
+                          {t('jama')}
                         </button>
                         <div className="w-px h-6 bg-gray-300 mx-1"></div>
                         <button
@@ -130,7 +130,7 @@ const ClientList: React.FC<ClientListProps> = ({ clients, onEdit, onDelete, onTo
               </tbody>
             </table>
           </div>
-
+ 
           {/* Mobile Card View - Ultra Compact */}
           <div className="space-y-2 lg:hidden">
             {clients.map((client: ClientFormData) => (
@@ -151,15 +151,15 @@ const ClientList: React.FC<ClientListProps> = ({ clients, onEdit, onDelete, onTo
                   <div className="flex flex-shrink-0 gap-1">
                     <button
                       onClick={() => handleCreateUdhar(client)}
-                      className="p-1.5 text-[10px] font-medium text-white bg-red-300 hover:bg-red-600 rounded-md transition-colors touch-manipulation active:scale-95 flex items-center justify-center w-7 h-7"
-                      aria-label="Create Udhar"
+                      className="p-1.5 text-[10px] font-medium text-white bg-red-500 hover:bg-red-600 rounded-md transition-colors touch-manipulation active:scale-95 flex items-center justify-center w-7 h-7"
+                      title={t('createUdhar')}
                     >
                       <Plus className="w-3.5 h-3.5" />
                     </button>
                     <button
                       onClick={() => handleCreateJama(client)}
-                      className="p-1.5 text-[10px] font-medium text-white bg-green-300 hover:bg-green-600 rounded-md transition-colors touch-manipulation active:scale-95 flex items-center justify-center w-7 h-7"
-                      aria-label="Create Jama"
+                      className="p-1.5 text-[10px] font-medium text-white bg-green-500 hover:bg-green-600 rounded-md transition-colors touch-manipulation active:scale-95 flex items-center justify-center w-7 h-7"
+                      title={t('createJama')}
                     >
                       <span className="text-base font-bold leading-none">−</span>
                     </button>

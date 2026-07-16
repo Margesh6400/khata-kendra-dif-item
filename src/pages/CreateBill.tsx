@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { useParams, useNavigate, useSearchParams } from "react-router-dom";
-import { format, parseISO, differenceInDays, subDays, addDays } from "date-fns";
+import { format, parseISO, differenceInDays, addDays } from "date-fns";
+import { formatLocalDate, safeParseLocalDate } from "../utils/dateUtils";
 import { generateBillJPEG } from '../utils/generateBillJPEG';
 import BillInvoiceTemplate from '../components/BillInvoiceTemplate';
 import {
@@ -18,6 +19,7 @@ import {
   Save,
 } from "lucide-react";
 import { useLanguage } from "../contexts/LanguageContext";
+import { useSettings } from "../contexts/SettingsContext";
 
 import * as periodCalculations from "../utils/billingPeriodCalculations";
 import { validateClientData } from "../utils/dataValidation";
@@ -25,6 +27,7 @@ import { supabase } from "../utils/supabase";
 import Navbar from "../components/Navbar";
 import toast, { Toaster } from "react-hot-toast";
 import { ClientFormData } from "../components/ClientForm";
+import { usePlateSizes } from "../hooks/usePlateSizes";
 
 
 
@@ -46,7 +49,7 @@ interface ChallanItem {
   size_6_qty: number;
   size_7_qty: number;
   size_8_qty: number;
-  size_9_qty: number;
+  size_9_qty: number; size_10_qty: number;
   size_1_borrowed: number;
   size_2_borrowed: number;
   size_3_borrowed: number;
@@ -55,7 +58,7 @@ interface ChallanItem {
   size_6_borrowed: number;
   size_7_borrowed: number;
   size_8_borrowed: number;
-  size_9_borrowed: number;
+  size_9_borrowed: number; size_10_borrowed: number;
 }
 
 interface Transaction {
@@ -128,6 +131,8 @@ export default function CreateBill() {
   const editBillNumber = searchParams.get("edit");
   const isEditMode = !!editBillNumber;
   const { t } = useLanguage();
+  const { dateSortingMethod } = useSettings();
+  const { sizes: plateSizes } = usePlateSizes();
 
   const [client, setClient] = useState<ClientFormData | null>(null);
   const [billResult, setBillResult] = useState<ReturnType<
@@ -533,15 +538,14 @@ export default function CreateBill() {
         // UPDATE EXISTING BILL
 
         const { error: billUpdateError } = await supabase.from("bills").update({
-          billdate: billData.billDate,
+          billing_date: billData.billDate,
           from_date: billData.fromDate,
           to_date: billData.toDate,
           daily_rent: billData.dailyRent,
-          total_rent: fullSummary.totalRent,
-          extra_costs_total: fullSummary.totalExtraCosts,
-          discounts_total: fullSummary.discounts,
-          grand_total: fullSummary.grandTotal,
-          total_paid: fullSummary.totalPaid,
+          total_rent_amount: fullSummary.totalRent,
+          total_extra_cost: fullSummary.totalExtraCosts,
+          total_discount: fullSummary.discounts,
+          total_payment: fullSummary.totalPaid,
           due_payment: Math.round(fullSummary.duePayment),
         }).eq('bill_number', billData.billNumber);
 
@@ -597,16 +601,15 @@ export default function CreateBill() {
         // CREATE NEW BILL (Existing Logic)
         const { error } = await supabase.from("bills").insert({
           bill_number: billData.billNumber,
-          billdate: billData.billDate,
+          billing_date: billData.billDate,
           from_date: billData.fromDate,
           to_date: billData.toDate,
           daily_rent: billData.dailyRent,
           client_id: clientId,
-          total_rent: fullSummary.totalRent,
-          extra_costs_total: fullSummary.totalExtraCosts,
-          discounts_total: fullSummary.discounts,
-          grand_total: fullSummary.grandTotal,
-          total_paid: fullSummary.totalPaid,
+          total_rent_amount: fullSummary.totalRent,
+          total_extra_cost: fullSummary.totalExtraCosts,
+          total_discount: fullSummary.discounts,
+          total_payment: fullSummary.totalPaid,
           due_payment: Math.round(fullSummary.duePayment),
         });
 
@@ -728,24 +731,8 @@ export default function CreateBill() {
           driver_name,
           alternative_site,
           items:udhar_items (
-            size_1_qty,
-            size_2_qty,
-            size_3_qty,
-            size_4_qty,
-            size_5_qty,
-            size_6_qty,
-            size_7_qty,
-            size_8_qty,
-            size_9_qty,
-            size_1_borrowed,
-            size_2_borrowed,
-            size_3_borrowed,
-            size_4_borrowed,
-            size_5_borrowed,
-            size_6_borrowed,
-            size_7_borrowed,
-            size_8_borrowed,
-            size_9_borrowed
+            items,
+            main_note
           )
         `
         )
@@ -770,24 +757,8 @@ export default function CreateBill() {
           alternative_site,
           is_all_return,
           items:jama_items (
-            size_1_qty,
-            size_2_qty,
-            size_3_qty,
-            size_4_qty,
-            size_5_qty,
-            size_6_qty,
-            size_7_qty,
-            size_8_qty,
-            size_9_qty,
-            size_1_borrowed,
-            size_2_borrowed,
-            size_3_borrowed,
-            size_4_borrowed,
-            size_5_borrowed,
-            size_6_borrowed,
-            size_7_borrowed,
-            size_8_borrowed,
-            size_9_borrowed
+            items,
+            main_note
           )
         `
         )
@@ -823,11 +794,18 @@ export default function CreateBill() {
           extraCharges,
           discounts,
           payments,
-          10, // serviceRate default
-          billData.fromDate // Pass the start date for filtering
+          10,
+          billData.fromDate,
+          plateSizes,
+          client?.jack_rents || {},
+          dateSortingMethod === 'jamaFirst'
         );
 
         setBillResult(result);
+
+        // Show which mode was used and the calculated rent total
+        const methodLabel = dateSortingMethod === 'jamaFirst' ? '🟢 Jama First' : '🔵 Standard';
+        toast.success(`${methodLabel} | Rent: ₹${result.billingPeriods.totalRent.toFixed(2)}`, { duration: 5000 });
 
         // Initialize balance tracking
         // Create balance from the final period's state
@@ -919,14 +897,14 @@ export default function CreateBill() {
     rentalCharges: billResult?.billingPeriods.periods.map((period) => {
 
       let end = parseISO(period.endDate);
-      const newDisplayEndDate = subDays(end, 1).toISOString();
+      const newDisplayEndDate = end.toISOString();
 
       return {
-        size: "All",
+        size: (period as any).sizeName || "All",
         pieces: period.plateCount,
         days: period.days,
-        rate: billData.dailyRent,
-        amount: period.plateCount * period.days * billData.dailyRent,
+        rate: (period as any).rate || billData.dailyRent,
+        amount: period.rent,
         startDate: period.startDate,
         endDate: newDisplayEndDate,
         causeType: period.causeType as 'udhar' | 'jama',
@@ -966,10 +944,11 @@ export default function CreateBill() {
   };
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-gray-50 flex">
       <Navbar />
-      <div className="container max-w-6xl px-4 py-4 mx-auto mt-16 sm:px-6 lg:px-8 sm:py-6 lg:py-8">
-        <div className="space-y-4">
+      <main className="flex-1 w-full ml-0 overflow-auto pt-14 pb-20 sm:pt-0 sm:pb-0 lg:ml-64">
+        <div className="w-full max-w-6xl px-4 py-4 mx-auto sm:px-6 lg:px-8 sm:py-6 lg:py-8 mt-16 sm:mt-0">
+          <div className="space-y-4">
           {/* Section A: Client Information */}
           <div className="px-4 py-3 bg-white border border-gray-200 rounded-xl">
             <div className="flex items-center justify-between gap-3">
@@ -1002,7 +981,7 @@ export default function CreateBill() {
                   <Receipt className="w-5 h-5 text-red-600" />
                 </div>
                 <div>
-                  <p className="text-sm font-medium text-red-800">Total Pending Amount</p>
+                  <p className="text-sm font-medium text-red-800">{t('totalPendingAmount')}</p>
                   <p className="text-lg font-bold text-red-700">₹{pendingAmount.toLocaleString("en-IN")}</p>
                 </div>
               </div>
@@ -1015,7 +994,7 @@ export default function CreateBill() {
               {t("billDetails")}
             </h4>
             <form className="space-y-4">
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                 <div>
                   <label className="block mb-1 text-sm font-medium text-gray-700">
                     {t("billNumber")}
@@ -1156,15 +1135,15 @@ export default function CreateBill() {
                   <tbody>
                     <tr className="bg-white">
                       <td className="px-4 py-3 font-medium">
-                        {format(new Date(billData.fromDate), "dd/MM/yyyy")}
+                        {formatLocalDate(billData.fromDate, "dd/MM/yyyy")}
                       </td>
                       <td className="px-4 py-3 font-medium">
-                        {format(new Date(billData.toDate), "dd/MM/yyyy")}
+                        {formatLocalDate(billData.toDate, "dd/MM/yyyy")}
                       </td>
                       <td className="px-4 py-3 font-medium">
                         {differenceInDays(
-                          new Date(billData.toDate),
-                          new Date(billData.fromDate)
+                          safeParseLocalDate(billData.toDate),
+                          safeParseLocalDate(billData.fromDate)
                         ) + 1}{" "}દિવસો
                       </td>
                     </tr>
@@ -1202,15 +1181,15 @@ export default function CreateBill() {
                           // For Jama periods, show the actual return date
                           // For other periods, show one day before the next period starts
                           let end = parseISO(period.endDate);
+                          if (period.days > 0) {
+                            end = addDays(end, -1);
+                          }
 
-                          // Always subtract 1 day for display to avoid overlap with next period start
-                          const newDisplayEndDate = format(subDays(end, 1), "dd/MM/yyyy");
+                          const newDisplayEndDate = format(end, "dd/MM/yyyy");
 
                           // Days calculation is now handled in billingPeriodCalculations.ts
-                          const amount =
-                            period.plateCount *
-                            period.days *
-                            billData.dailyRent;
+                          const rate = (period as any).rate || billData.dailyRent;
+                          const amount = period.rent;
 
                           return (
                             <tr
@@ -1237,13 +1216,18 @@ export default function CreateBill() {
                                       }
                                     </span>
                                   </div>
+                                  {(period as any).sizeName && (
+                                    <div className="text-xs text-gray-500 ml-4 font-bold">
+                                      સાઈઝ: {(period as any).sizeName}
+                                    </div>
+                                  )}
                                 </div>
                               </td>
                               <td className="px-4 py-3">{period.days}</td>
                               {showCalculation && (
                                 <td className="px-4 py-3">
-                                  {period.plateCount} પ્લેટ × {period.days} દિવસો
-                                  × ₹{billData.dailyRent}
+                                  {period.plateCount} નંગ × {period.days} દિવસો
+                                  × ₹{rate}
                                 </td>
                               )}
                               <td className="px-4 py-3 font-medium text-right">
@@ -1275,9 +1259,10 @@ export default function CreateBill() {
           {/* Section D, E, F: Extra Costs, Discounts, Payments */}
           {showLedger && billData.fromDate && (
             <>
-              {/* Action Buttons - Direct Access (Desktop Only) */}
-              <div className="justify-end hidden gap-2 mb-4 overflow-x-auto md:flex scrollbar-hide">
+              {/* Action Buttons */}
+              <div className="flex flex-wrap gap-2 mb-4">
                 <button
+                  type="button"
                   onClick={() => {
                     setBillData((prev) => ({
                       ...prev,
@@ -1294,12 +1279,13 @@ export default function CreateBill() {
                       ],
                     }));
                   }}
-                  className="flex items-center flex-shrink-0 gap-1 px-3 py-2 text-sm font-medium text-blue-700 bg-blue-50 border border-blue-200 rounded-lg hover:bg-blue-100"
+                  className="flex-grow flex items-center justify-center gap-1.5 px-3 py-2 text-sm font-semibold text-blue-700 bg-blue-50 border border-blue-200 rounded-lg hover:bg-blue-100 transition-colors shadow-sm active:scale-[0.98]"
                 >
                   <Plus className="w-4 h-4" />
-                  ખર્ચ
+                  {t('cost')}
                 </button>
                 <button
+                  type="button"
                   onClick={() => {
                     setBillData((prev) => ({
                       ...prev,
@@ -1316,12 +1302,13 @@ export default function CreateBill() {
                       ],
                     }));
                   }}
-                  className="flex items-center flex-shrink-0 gap-1 px-3 py-2 text-sm font-medium text-green-700 bg-green-50 border border-green-200 rounded-lg hover:bg-green-100"
+                  className="flex-grow flex-items-center justify-center gap-1.5 px-3 py-2 text-sm font-semibold text-green-700 bg-green-50 border border-green-200 rounded-lg hover:bg-green-100 transition-colors shadow-sm active:scale-[0.98]"
                 >
                   <Plus className="w-4 h-4" />
-                  છૂટ
+                  {t('discount')}
                 </button>
                 <button
+                  type="button"
                   onClick={() => {
                     setBillData((prev) => ({
                       ...prev,
@@ -1337,13 +1324,12 @@ export default function CreateBill() {
                       ],
                     }));
                   }}
-                  className="flex items-center flex-shrink-0 gap-1 px-3 py-2 text-sm font-medium text-purple-700 bg-purple-50 border border-purple-200 rounded-lg hover:bg-purple-100"
+                  className="flex-grow flex items-center justify-center gap-1.5 px-3 py-2 text-sm font-semibold text-purple-700 bg-purple-50 border border-purple-200 rounded-lg hover:bg-purple-100 transition-colors shadow-sm active:scale-[0.98]"
                 >
                   <Plus className="w-4 h-4" />
-                  ચુકવણી
+                  {t('payment')}
                 </button>
               </div>
-
 
               <div className="grid grid-cols-1 gap-4 mb-4 md:grid-cols-3">
                 {/* Section D: Extra Costs */}
@@ -1370,282 +1356,143 @@ export default function CreateBill() {
                     </div>
                   </div>
 
-
                   {billData.extraCosts.length > 0 && (
-                    <>
-                      {/* Desktop Table View */}
-                      <div className="hidden overflow-x-auto md:block">
-                        <table className="w-full text-sm text-left text-gray-500">
-                          <thead className="text-xs text-gray-700 uppercase bg-gray-50">
-                            <tr>
-                              <th className="px-4 py-3">તારીખ</th>
-                              <th className="px-4 py-3">નોંધ</th>
-                              <th className="px-4 py-3">સંખ્યા</th>
-                              <th className="px-4 py-3">નંગ</th>
-                              <th className="px-4 py-3">કુલ</th>
-                              <th className="px-4 py-3">ક્ષમતા</th>
-                            </tr>
-                          </thead>
-                          <tbody>
-                            {billData.extraCosts.map((cost, index) => (
-                              <tr key={cost.id} className="bg-white">
-                                <td className="px-4 py-2">
-                                  <input
-                                    type="date"
-                                    value={cost.date}
-                                    onChange={(e) => {
-                                      const newCosts = [...billData.extraCosts];
-                                      newCosts[index] = {
-                                        ...cost,
-                                        date: e.target.value,
-                                      };
-                                      setBillData((prev) => ({
-                                        ...prev,
-                                        extraCosts: newCosts,
-                                      }));
-                                    }}
-                                    className="px-2 py-1 border rounded w-36"
-                                  />
-                                </td>
-                                <td className="px-4 py-2">
-                                  <input
-                                    type="text"
-                                    value={cost.note}
-                                    onChange={(e) => {
-                                      const newCosts = [...billData.extraCosts];
-                                      newCosts[index] = {
-                                        ...cost,
-                                        note: e.target.value,
-                                      };
-                                      setBillData((prev) => ({
-                                        ...prev,
-                                        extraCosts: newCosts,
-                                      }));
-                                    }}
-                                    placeholder=" નોંધ "
-                                    list="cost-suggestions"
-                                    className="w-full px-2 py-1 border rounded"
-                                  />
-                                </td>
-                                <td className="px-4 py-2">
-                                  <input
-                                    type="number"
-                                    value={cost.pieces === 0 ? '' : cost.pieces}
-                                    onChange={(e) => {
-                                      const pieces = parseInt(e.target.value) || 0;
-                                      const newCosts = [...billData.extraCosts];
-                                      newCosts[index] = {
-                                        ...cost,
-                                        pieces,
-                                        total: pieces * (cost.pricePerPiece || 1),
-                                      };
-                                      setBillData((prev) => ({
-                                        ...prev,
-                                        extraCosts: newCosts,
-                                      }));
-                                    }}
-                                    onWheel={(e) => (e.target as HTMLInputElement).blur()}
-                                    min="0"
-                                    className="w-20 px-2 py-1 border rounded"
-                                  />
-                                </td>
-                                <td className="px-4 py-2">
-                                  <input
-                                    type="number"
-                                    value={cost.pricePerPiece === 0 ? '' : cost.pricePerPiece}
-                                    onChange={(e) => {
-                                      const price = parseFloat(e.target.value) || 0;
-                                      const newCosts = [...billData.extraCosts];
-                                      newCosts[index] = {
-                                        ...cost,
-                                        pricePerPiece: price,
-                                        total: (cost.pieces || 1) * price,
-                                      };
-                                      setBillData((prev) => ({
-                                        ...prev,
-                                        extraCosts: newCosts,
-                                      }));
-                                    }}
-                                    onWheel={(e) => (e.target as HTMLInputElement).blur()}
-                                    min="0"
-                                    step="0.01"
-                                    className="w-24 px-2 py-1 border rounded"
-                                  />
-                                </td>
-                                <td className="px-4 py-2">
-                                  ₹{cost.total.toLocaleString("en-IN")}
-                                </td>
-                                <td className="px-4 py-2">
-                                  <button
-                                    onClick={() => {
-                                      const newCosts = billData.extraCosts.filter(
-                                        (c) => c.id !== cost.id
-                                      );
-                                      setBillData((prev) => ({
-                                        ...prev,
-                                        extraCosts: newCosts,
-                                      }));
-                                    }}
-                                    className="text-red-600 hover:text-red-800"
-                                  >
-                                    <Trash2 className="w-4 h-4" />
-                                  </button>
-                                </td>
-                              </tr>
-                            ))}
-                            {billData.extraCosts.length > 0 && (
-                              <tr className="font-medium bg-gray-50">
-                                <td colSpan={4} className="px-4 py-3 text-right">
-                                  કુલ ચાર્જિસ:
-                                </td>
-                                <td colSpan={2} className="px-4 py-3">
-                                  ₹
-                                  {billData.extraCosts
-                                    .reduce((sum, cost) => sum + cost.total, 0)
-                                    .toLocaleString("en-IN")}
-                                </td>
-                              </tr>
-                            )}
-                          </tbody>
-                        </table>
-                      </div>
+                    <div className="space-y-3">
+                      {billData.extraCosts.map((cost, index) => (
+                        <div key={cost.id} className="relative p-3 pt-9 border border-gray-200 rounded-lg bg-gray-50">
+                          {/* Absolute Delete Button */}
+                          <button
+                            onClick={() => {
+                              const newCosts = billData.extraCosts.filter(
+                                (c) => c.id !== cost.id
+                              );
+                              setBillData((prev) => ({
+                                ...prev,
+                                extraCosts: newCosts,
+                              }));
+                            }}
+                            className="absolute top-2 right-2 p-1 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-full transition-colors"
+                            title="Delete"
+                          >
+                            <Trash2 className="w-4 h-4" />
+                          </button>
 
-                      {/* Mobile Card View */}
-                      <div className="space-y-3 md:hidden">
-                        {billData.extraCosts.map((cost, index) => (
-                          <div key={cost.id} className="relative p-3 border border-gray-200 rounded-lg bg-gray-50">
-                            <div className="grid grid-cols-[1fr_1fr_auto] gap-2 mb-2 items-end">
-                              <div>
-                                <label className="block mb-1 text-xs font-medium text-gray-600">તારીખ</label>
-                                <input
-                                  type="date"
-                                  value={cost.date}
-                                  onChange={(e) => {
-                                    const newCosts = [...billData.extraCosts];
-                                    newCosts[index] = {
-                                      ...cost,
-                                      date: e.target.value,
-                                    };
-                                    setBillData((prev) => ({
-                                      ...prev,
-                                      extraCosts: newCosts,
-                                    }));
-                                  }}
-                                  className="w-full px-2 py-1 text-sm border rounded"
-                                />
-                              </div>
-                              <div>
-                                <label className="block mb-1 text-xs font-medium text-gray-600">નોંધ</label>
-                                <input
-                                  type="text"
-                                  value={cost.note}
-                                  onChange={(e) => {
-                                    const newCosts = [...billData.extraCosts];
-                                    newCosts[index] = {
-                                      ...cost,
-                                      note: e.target.value,
-                                    };
-                                    setBillData((prev) => ({
-                                      ...prev,
-                                      extraCosts: newCosts,
-                                    }));
-                                  }}
-                                  placeholder="નોંધ"
-                                  list="cost-suggestions"
-                                  className="w-full px-2 py-1 text-sm border rounded"
-                                />
-                              </div>
-                              <button
-                                onClick={() => {
-                                  const newCosts = billData.extraCosts.filter(
-                                    (c) => c.id !== cost.id
-                                  );
+                          <div className="space-y-2 mb-2">
+                            <div>
+                              <label className="block mb-0.5 text-xs font-medium text-gray-600">તારીખ</label>
+                              <input
+                                type="date"
+                                value={cost.date}
+                                onChange={(e) => {
+                                  const newCosts = [...billData.extraCosts];
+                                  newCosts[index] = {
+                                    ...cost,
+                                    date: e.target.value,
+                                  };
                                   setBillData((prev) => ({
                                     ...prev,
                                     extraCosts: newCosts,
                                   }));
                                 }}
-                                className="p-2 mb-0.5 text-red-600 transition-colors rounded hover:bg-red-50"
-                                title="Delete"
-                              >
-                                <X className="w-4 h-4" />
-                              </button>
+                                className="w-full px-2 py-1.5 text-sm border border-gray-300 rounded bg-white outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500"
+                              />
                             </div>
+                            <div>
+                              <label className="block mb-0.5 text-xs font-medium text-gray-600">નોંધ</label>
+                              <input
+                                type="text"
+                                value={cost.note}
+                                onChange={(e) => {
+                                  const newCosts = [...billData.extraCosts];
+                                  newCosts[index] = {
+                                    ...cost,
+                                    note: e.target.value,
+                                  };
+                                  setBillData((prev) => ({
+                                    ...prev,
+                                    extraCosts: newCosts,
+                                  }));
+                                }}
+                                placeholder="નોંધ"
+                                list="cost-suggestions"
+                                className="w-full px-2 py-1.5 text-sm border border-gray-300 rounded bg-white outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500"
+                              />
+                            </div>
+                          </div>
 
-                            <div className="grid grid-cols-3 gap-2">
-                              <div>
-                                <label className="block mb-1 text-xs font-medium text-gray-600">સંખ્યા</label>
-                                <input
-                                  type="number"
-                                  value={cost.pieces === 0 ? '' : cost.pieces}
-                                  onChange={(e) => {
-                                    const pieces = parseInt(e.target.value) || 0;
-                                    const newCosts = [...billData.extraCosts];
-                                    newCosts[index] = {
-                                      ...cost,
-                                      pieces,
-                                      total: pieces * (cost.pricePerPiece || 1),
-                                    };
-                                    setBillData((prev) => ({
-                                      ...prev,
-                                      extraCosts: newCosts,
-                                    }));
-                                  }}
-                                  onWheel={(e) => (e.target as HTMLInputElement).blur()}
-                                  min="0"
-                                  className="w-full px-2 py-1 text-sm border rounded"
-                                />
-                              </div>
-                              <div>
-                                <label className="block mb-1 text-xs font-medium text-gray-600">નંગ</label>
-                                <input
-                                  type="number"
-                                  value={cost.pricePerPiece === 0 ? '' : cost.pricePerPiece}
-                                  onChange={(e) => {
-                                    const price = parseFloat(e.target.value) || 0;
-                                    const newCosts = [...billData.extraCosts];
-                                    newCosts[index] = {
-                                      ...cost,
-                                      pricePerPiece: price,
-                                      total: (cost.pieces || 1) * price,
-                                    };
-                                    setBillData((prev) => ({
-                                      ...prev,
-                                      extraCosts: newCosts,
-                                    }));
-                                  }}
-                                  onWheel={(e) => (e.target as HTMLInputElement).blur()}
-                                  min="0"
-                                  step="0.01"
-                                  className="w-full px-2 py-1 text-sm border rounded"
-                                />
-                              </div>
-                              <div>
-                                <label className="block mb-1 text-xs font-medium text-gray-600">કુલ</label>
-                                <div className="px-2 py-1 text-sm font-medium text-gray-900">
-                                  ₹{cost.total.toLocaleString("en-IN")}
-                                </div>
+                          <div className="grid grid-cols-3 gap-2">
+                            <div>
+                              <label className="block mb-1 text-xs font-medium text-gray-600">સંખ્યા</label>
+                              <input
+                                type="number"
+                                value={cost.pieces === 0 ? '' : cost.pieces}
+                                onChange={(e) => {
+                                  const pieces = parseInt(e.target.value) || 0;
+                                  const newCosts = [...billData.extraCosts];
+                                  newCosts[index] = {
+                                    ...cost,
+                                    pieces,
+                                    total: pieces * (cost.pricePerPiece || 1),
+                                  };
+                                  setBillData((prev) => ({
+                                    ...prev,
+                                    extraCosts: newCosts,
+                                  }));
+                                }}
+                                onWheel={(e) => (e.target as HTMLInputElement).blur()}
+                                min="0"
+                                className="w-full px-2 py-1 text-sm border rounded"
+                              />
+                            </div>
+                            <div>
+                              <label className="block mb-1 text-xs font-medium text-gray-600">નંગ</label>
+                              <input
+                                type="number"
+                                value={cost.pricePerPiece === 0 ? '' : cost.pricePerPiece}
+                                onChange={(e) => {
+                                  const price = parseFloat(e.target.value) || 0;
+                                  const newCosts = [...billData.extraCosts];
+                                  newCosts[index] = {
+                                    ...cost,
+                                    pricePerPiece: price,
+                                    total: (cost.pieces || 1) * price,
+                                  };
+                                  setBillData((prev) => ({
+                                    ...prev,
+                                    extraCosts: newCosts,
+                                  }));
+                                }}
+                                onWheel={(e) => (e.target as HTMLInputElement).blur()}
+                                min="0"
+                                step="0.01"
+                                className="w-full px-2 py-1 text-sm border rounded"
+                              />
+                            </div>
+                            <div>
+                              <label className="block mb-1 text-xs font-medium text-gray-600">કુલ</label>
+                              <div className="px-2 py-1 text-sm font-medium text-gray-900">
+                                ₹{cost.total.toLocaleString("en-IN")}
                               </div>
                             </div>
                           </div>
-                        ))}
-
-                        {/* Mobile Total */}
-                        <div className="flex justify-between p-3 font-medium border-t-2 border-gray-300 bg-gray-50">
-                          <span>કુલ ચાર્જિસ:</span>
-                          <span>
-                            ₹{billData.extraCosts
-                              .reduce((sum, cost) => sum + cost.total, 0)
-                              .toLocaleString("en-IN")}
-                          </span>
                         </div>
+                      ))}
+
+                      {/* Total */}
+                      <div className="flex justify-between p-3 font-medium border-t-2 border-gray-300 bg-gray-50">
+                        <span>કુલ ચાર્જિસ:</span>
+                        <span>
+                          ₹{billData.extraCosts
+                            .reduce((sum, cost) => sum + cost.total, 0)
+                            .toLocaleString("en-IN")}
+                        </span>
                       </div>
-                    </>
+                    </div>
                   )}
                 </div>
 
                 {/* Section E: Discounts */}
-                <div className={`p-4 bg-white border border-gray-200 rounded-xl ${billData.discounts.length === 0 ? 'hidden md:block' : ''}`}>
+                <div className={`p-4 bg-white border border-gray-200 rounded-xl ${billData.discounts.length === 0 ? 'hidden' : 'block'}`}>
                   <div className="flex items-center justify-between mb-4">
                     <h4 className="text-base font-medium text-gray-900">
                       છૂટ
@@ -1667,286 +1514,147 @@ export default function CreateBill() {
                       )}
                     </div>
 
-                    {/* Datalist for Extra Cost Suggestions */}
                     <datalist id="cost-suggestions">
                       <option value="સર્વિસ ચાર્જ" />
                       <option value="ભરાઈ / ઉતરાઈ" />
                     </datalist>
                   </div>
 
-
                   {billData.discounts.length > 0 && (
-                    <>
-                      {/* Desktop Table View */}
-                      <div className="hidden overflow-x-auto md:block">
-                        <table className="w-full text-sm text-left text-gray-500">
-                          <thead className="text-xs text-gray-700 uppercase bg-gray-50">
-                            <tr>
-                              <th className="px-4 py-3">તારીખ</th>
-                              <th className="px-4 py-3">નોંધ</th>
-                              <th className="px-4 py-3">સંખ્યા</th>
-                              <th className="px-4 py-3">નંગ</th>
-                              <th className="px-4 py-3">કુલ</th>
-                              <th className="px-4 py-3">ક્ષમતા</th>
-                            </tr>
-                          </thead>
-                          <tbody>
-                            {billData.discounts.map((discount, index) => (
-                              <tr key={discount.id} className="bg-white">
-                                <td className="px-4 py-2">
-                                  <input
-                                    type="date"
-                                    value={discount.date}
-                                    onChange={(e) => {
-                                      const newDiscounts = [...billData.discounts];
-                                      newDiscounts[index] = {
-                                        ...discount,
-                                        date: e.target.value,
-                                      };
-                                      setBillData((prev) => ({
-                                        ...prev,
-                                        discounts: newDiscounts,
-                                      }));
-                                    }}
-                                    className="px-2 py-1 border rounded w-36"
-                                  />
-                                </td>
-                                <td className="px-4 py-2">
-                                  <input
-                                    type="text"
-                                    value={discount.note}
-                                    onChange={(e) => {
-                                      const newDiscounts = [...billData.discounts];
-                                      newDiscounts[index] = {
-                                        ...discount,
-                                        note: e.target.value,
-                                      };
-                                      setBillData((prev) => ({
-                                        ...prev,
-                                        discounts: newDiscounts,
-                                      }));
-                                    }}
-                                    placeholder="Enter note"
-                                    className="w-full px-2 py-1 border rounded"
-                                  />
-                                </td>
-                                <td className="px-4 py-2">
-                                  <input
-                                    type="number"
-                                    value={discount.pieces === 0 ? '' : discount.pieces}
-                                    onChange={(e) => {
-                                      const pieces = parseInt(e.target.value) || 0;
-                                      const newDiscounts = [...billData.discounts];
-                                      newDiscounts[index] = {
-                                        ...discount,
-                                        pieces,
-                                        total: pieces * discount.discountPerPiece,
-                                      };
-                                      setBillData((prev) => ({
-                                        ...prev,
-                                        discounts: newDiscounts,
-                                      }));
-                                    }}
-                                    onWheel={(e) => (e.target as HTMLInputElement).blur()}
-                                    min="0"
-                                    className="w-20 px-2 py-1 border rounded"
-                                  />
-                                </td>
-                                <td className="px-4 py-2">
-                                  <input
-                                    type="number"
-                                    value={discount.discountPerPiece === 0 ? '' : discount.discountPerPiece}
-                                    onChange={(e) => {
-                                      const discountPerPiece = parseFloat(e.target.value) || 0;
-                                      const newDiscounts = [...billData.discounts];
-                                      newDiscounts[index] = {
-                                        ...discount,
-                                        discountPerPiece,
-                                        total: discount.pieces * discountPerPiece,
-                                      };
-                                      setBillData((prev) => ({
-                                        ...prev,
-                                        discounts: newDiscounts,
-                                      }));
-                                    }}
-                                    onWheel={(e) => (e.target as HTMLInputElement).blur()}
-                                    min="0"
-                                    step="0.01"
-                                    className="w-24 px-2 py-1 border rounded"
-                                  />
-                                </td>
-                                <td className="px-4 py-2">
-                                  ₹{discount.total.toLocaleString("en-IN")}
-                                </td>
-                                <td className="px-4 py-2">
-                                  <button
-                                    onClick={() => {
-                                      const newDiscounts = billData.discounts.filter(
-                                        (d) => d.id !== discount.id
-                                      );
-                                      setBillData((prev) => ({
-                                        ...prev,
-                                        discounts: newDiscounts,
-                                      }));
-                                    }}
-                                    className="text-red-600 hover:text-red-800"
-                                  >
-                                    <Trash2 className="w-4 h-4" />
-                                  </button>
-                                </td>
-                              </tr>
-                            ))}
-                            {billData.discounts.length > 0 && (
-                              <tr className="font-medium bg-gray-50">
-                                <td colSpan={4} className="px-4 py-3 text-right">
-                                  કુલ છૂટ:
-                                </td>
-                                <td colSpan={2} className="px-4 py-3">
-                                  ₹
-                                  {billData.discounts
-                                    .reduce((sum, discount) => sum + discount.total, 0)
-                                    .toLocaleString("en-IN")}
-                                </td>
-                              </tr>
-                            )}
-                          </tbody>
-                        </table>
-                      </div>
+                    <div className="space-y-3">
+                      {billData.discounts.map((discount, index) => (
+                        <div key={discount.id} className="relative p-3 pt-9 border border-gray-200 rounded-lg bg-gray-50">
+                          {/* Absolute Delete Button */}
+                          <button
+                            onClick={() => {
+                              const newDiscounts = billData.discounts.filter(
+                                (d) => d.id !== discount.id
+                              );
+                              setBillData((prev) => ({
+                                ...prev,
+                                discounts: newDiscounts,
+                              }));
+                            }}
+                            className="absolute top-2 right-2 p-1 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-full transition-colors"
+                            title="Delete"
+                          >
+                            <Trash2 className="w-4 h-4" />
+                          </button>
 
-                      {/* Mobile Card View */}
-                      <div className="space-y-3 md:hidden">
-                        {billData.discounts.map((discount, index) => (
-                          <div key={discount.id} className="relative p-3 border border-gray-200 rounded-lg bg-gray-50">
-                            <div className="grid grid-cols-[1fr_1fr_auto] gap-2 mb-2 items-end">
-                              <div>
-                                <label className="block mb-1 text-xs font-medium text-gray-600">તારીખ</label>
-                                <input
-                                  type="date"
-                                  value={discount.date}
-                                  onChange={(e) => {
-                                    const newDiscounts = [...billData.discounts];
-                                    newDiscounts[index] = {
-                                      ...discount,
-                                      date: e.target.value,
-                                    };
-                                    setBillData((prev) => ({
-                                      ...prev,
-                                      discounts: newDiscounts,
-                                    }));
-                                  }}
-                                  className="w-full px-2 py-1 text-sm border rounded"
-                                />
-                              </div>
-                              <div>
-                                <label className="block mb-1 text-xs font-medium text-gray-600">નોંધ</label>
-                                <input
-                                  type="text"
-                                  value={discount.note}
-                                  onChange={(e) => {
-                                    const newDiscounts = [...billData.discounts];
-                                    newDiscounts[index] = {
-                                      ...discount,
-                                      note: e.target.value,
-                                    };
-                                    setBillData((prev) => ({
-                                      ...prev,
-                                      discounts: newDiscounts,
-                                    }));
-                                  }}
-                                  placeholder="નોંધ"
-                                  className="w-full px-2 py-1 text-sm border rounded"
-                                />
-                              </div>
-                              <button
-                                onClick={() => {
-                                  const newDiscounts = billData.discounts.filter(
-                                    (d) => d.id !== discount.id
-                                  );
+                          <div className="space-y-2 mb-2">
+                            <div>
+                              <label className="block mb-0.5 text-xs font-medium text-gray-600">તારીખ</label>
+                              <input
+                                type="date"
+                                value={discount.date}
+                                onChange={(e) => {
+                                  const newDiscounts = [...billData.discounts];
+                                  newDiscounts[index] = {
+                                    ...discount,
+                                    date: e.target.value,
+                                  };
                                   setBillData((prev) => ({
                                     ...prev,
                                     discounts: newDiscounts,
                                   }));
                                 }}
-                                className="p-2 mb-0.5 text-red-600 transition-colors rounded hover:bg-red-50"
-                                title="Delete"
-                              >
-                                <X className="w-4 h-4" />
-                              </button>
+                                className="w-full px-2 py-1.5 text-sm border border-gray-300 rounded bg-white outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500"
+                              />
                             </div>
-                            <div className="grid grid-cols-3 gap-2">
-                              <div>
-                                <label className="block mb-1 text-xs font-medium text-gray-600">સંખ્યા</label>
-                                <input
-                                  type="number"
-                                  value={discount.pieces === 0 ? '' : discount.pieces}
-                                  onChange={(e) => {
-                                    const pieces = parseInt(e.target.value) || 0;
-                                    const newDiscounts = [...billData.discounts];
-                                    newDiscounts[index] = {
-                                      ...discount,
-                                      pieces,
-                                      total: pieces * discount.discountPerPiece,
-                                    };
-                                    setBillData((prev) => ({
-                                      ...prev,
-                                      discounts: newDiscounts,
-                                    }));
-                                  }}
-                                  onWheel={(e) => (e.target as HTMLInputElement).blur()}
-                                  min="0"
-                                  className="w-full px-2 py-1 text-sm border rounded"
-                                />
-                              </div>
-                              <div>
-                                <label className="block mb-1 text-xs font-medium text-gray-600">નંગ</label>
-                                <input
-                                  type="number"
-                                  value={discount.discountPerPiece === 0 ? '' : discount.discountPerPiece}
-                                  onChange={(e) => {
-                                    const discountPerPiece = parseFloat(e.target.value) || 0;
-                                    const newDiscounts = [...billData.discounts];
-                                    newDiscounts[index] = {
-                                      ...discount,
-                                      discountPerPiece,
-                                      total: discount.pieces * discountPerPiece,
-                                    };
-                                    setBillData((prev) => ({
-                                      ...prev,
-                                      discounts: newDiscounts,
-                                    }));
-                                  }}
-                                  onWheel={(e) => (e.target as HTMLInputElement).blur()}
-                                  min="0"
-                                  step="0.01"
-                                  className="w-full px-2 py-1 text-sm border rounded"
-                                />
-                              </div>
-                              <div>
-                                <label className="block mb-1 text-xs font-medium text-gray-600">કુલ</label>
-                                <div className="px-2 py-1 text-sm font-medium text-gray-900">
-                                  ₹{discount.total.toLocaleString("en-IN")}
-                                </div>
+                            <div>
+                              <label className="block mb-0.5 text-xs font-medium text-gray-600">નોંધ</label>
+                              <input
+                                type="text"
+                                value={discount.note}
+                                onChange={(e) => {
+                                  const newDiscounts = [...billData.discounts];
+                                  newDiscounts[index] = {
+                                    ...discount,
+                                    note: e.target.value,
+                                  };
+                                  setBillData((prev) => ({
+                                    ...prev,
+                                    discounts: newDiscounts,
+                                  }));
+                                }}
+                                placeholder="નોંધ"
+                                className="w-full px-2 py-1.5 text-sm border border-gray-300 rounded bg-white outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500"
+                              />
+                            </div>
+                          </div>
+                          <div className="grid grid-cols-3 gap-2">
+                            <div>
+                              <label className="block mb-1 text-xs font-medium text-gray-600">સંખ્યા</label>
+                              <input
+                                type="number"
+                                value={discount.pieces === 0 ? '' : discount.pieces}
+                                onChange={(e) => {
+                                  const pieces = parseInt(e.target.value) || 0;
+                                  const newDiscounts = [...billData.discounts];
+                                  newDiscounts[index] = {
+                                    ...discount,
+                                    pieces,
+                                    total: pieces * discount.discountPerPiece,
+                                  };
+                                  setBillData((prev) => ({
+                                    ...prev,
+                                    discounts: newDiscounts,
+                                  }));
+                                }}
+                                onWheel={(e) => (e.target as HTMLInputElement).blur()}
+                                min="0"
+                                className="w-full px-2 py-1 text-sm border rounded"
+                              />
+                            </div>
+                            <div>
+                              <label className="block mb-1 text-xs font-medium text-gray-600">નંગ</label>
+                              <input
+                                type="number"
+                                value={discount.discountPerPiece === 0 ? '' : discount.discountPerPiece}
+                                onChange={(e) => {
+                                  const discountPerPiece = parseFloat(e.target.value) || 0;
+                                  const newDiscounts = [...billData.discounts];
+                                  newDiscounts[index] = {
+                                    ...discount,
+                                    discountPerPiece,
+                                    total: discount.pieces * discountPerPiece,
+                                  };
+                                  setBillData((prev) => ({
+                                    ...prev,
+                                    discounts: newDiscounts,
+                                  }));
+                                }}
+                                onWheel={(e) => (e.target as HTMLInputElement).blur()}
+                                min="0"
+                                step="0.01"
+                                className="w-full px-2 py-1 text-sm border rounded"
+                              />
+                            </div>
+                            <div>
+                              <label className="block mb-1 text-xs font-medium text-gray-600">કુલ</label>
+                              <div className="px-2 py-1 text-sm font-medium text-gray-900">
+                                ₹{discount.total.toLocaleString("en-IN")}
                               </div>
                             </div>
                           </div>
-                        ))}
-
-                        {/* Mobile Total */}
-                        <div className="flex justify-between p-3 font-medium border-t-2 border-gray-300 bg-gray-50">
-                          <span>કુલ છૂટ:</span>
-                          <span>
-                            ₹{billData.discounts
-                              .reduce((sum, discount) => sum + discount.total, 0)
-                              .toLocaleString("en-IN")}
-                          </span>
                         </div>
+                      ))}
+
+                      {/* Total */}
+                      <div className="flex justify-between p-3 font-medium border-t-2 border-gray-300 bg-gray-50">
+                        <span>કુલ છૂટ:</span>
+                        <span>
+                          ₹{billData.discounts
+                            .reduce((sum, discount) => sum + discount.total, 0)
+                            .toLocaleString("en-IN")}
+                        </span>
                       </div>
-                    </>
+                    </div>
                   )}
                 </div>
 
                 {/* Section F: Payments */}
-                <div className={`p-4 bg-white border border-gray-200 rounded-xl ${billData.payments.length === 0 ? 'hidden md:block' : ''}`}>
+                <div className={`p-4 bg-white border border-gray-200 rounded-xl ${billData.payments.length === 0 ? 'hidden' : 'block'}`}>
                   <div className="flex items-center justify-between mb-4">
                     <h4 className="text-base font-medium text-gray-900">
                       ચુકવણી
@@ -1969,331 +1677,133 @@ export default function CreateBill() {
                     </div>
                   </div>
 
-
                   {billData.payments.length > 0 && (
-                    <>
-                      {/* Desktop Table View */}
-                      <div className="hidden overflow-x-auto md:block">
-                        <table className="w-full text-sm text-left text-gray-500">
-                          <thead className="text-xs text-gray-700 uppercase bg-gray-50">
-                            <tr>
-                              <th className="px-4 py-3">તારીખ</th>
-                              <th className="px-4 py-3">નોંધ</th>
-                              <th className="px-4 py-3">પેમેન્ટ મેથડ</th>
-                              <th className="px-4 py-3">પેમેન્ટ</th>
-                              <th className="px-4 py-3">ક્ષમતા</th>
-                            </tr>
-                          </thead>
-                          <tbody>
-                            {billData.payments.map((payment, index) => (
-                              <tr key={payment.id} className="bg-white">
-                                <td className="px-4 py-2">
-                                  <input
-                                    type="date"
-                                    value={payment.date}
-                                    onChange={(e) => {
-                                      const newPayments = [...billData.payments];
-                                      newPayments[index] = {
-                                        ...payment,
-                                        date: e.target.value,
-                                      };
-                                      setBillData((prev) => ({
-                                        ...prev,
-                                        payments: newPayments,
-                                      }));
-                                    }}
-                                    className="px-2 py-1 border rounded w-36"
-                                  />
-                                </td>
-                                <td className="px-4 py-2">
-                                  <input
-                                    type="text"
-                                    value={payment.note}
-                                    onChange={(e) => {
-                                      const newPayments = [...billData.payments];
-                                      newPayments[index] = {
-                                        ...payment,
-                                        note: e.target.value,
-                                      };
-                                      setBillData((prev) => ({
-                                        ...prev,
-                                        payments: newPayments,
-                                      }));
-                                    }}
-                                    placeholder="Enter note"
-                                    className="w-full px-2 py-1 border rounded"
-                                  />
-                                </td>
-                                <td className="px-4 py-2">
-                                  <select
-                                    value={payment.method}
-                                    onChange={(e) => {
-                                      const newPayments = [...billData.payments];
-                                      newPayments[index] = {
-                                        ...payment,
-                                        method: e.target.value as Payment["method"],
-                                      };
-                                      setBillData((prev) => ({
-                                        ...prev,
-                                        payments: newPayments,
-                                      }));
-                                    }}
-                                    className="w-32 px-2 py-1 border rounded"
-                                  >
-                                    <option value="cash">રોકડ</option>
-                                    <option value="bank">બેંક</option>
-                                    <option value="upi">UPI</option>
-                                    <option value="cheque">ચેક</option>
-                                    <option value="card">કાર્ડ</option>
-                                    <option value="other">અન્ય</option>
-                                  </select>
-                                </td>
-                                <td className="px-4 py-2">
-                                  <input
-                                    type="number"
-                                    value={payment.amount === 0 ? '' : payment.amount}
-                                    onChange={(e) => {
-                                      const amount = parseFloat(e.target.value) || 0;
-                                      const newPayments = [...billData.payments];
-                                      newPayments[index] = {
-                                        ...payment,
-                                        amount,
-                                      };
-                                      setBillData((prev) => ({
-                                        ...prev,
-                                        payments: newPayments,
-                                      }));
-                                    }}
-                                    onWheel={(e) => (e.target as HTMLInputElement).blur()}
-                                    min="0"
-                                    step="0.01"
-                                    className="w-32 px-2 py-1 border rounded"
-                                  />
-                                </td>
-                                <td className="px-4 py-2">
-                                  <button
-                                    onClick={() => {
-                                      const newPayments = billData.payments.filter(
-                                        (p) => p.id !== payment.id
-                                      );
-                                      setBillData((prev) => ({
-                                        ...prev,
-                                        payments: newPayments,
-                                      }));
-                                    }}
-                                    className="text-red-600 hover:text-red-800"
-                                  >
-                                    <Trash2 className="w-4 h-4" />
-                                  </button>
-                                </td>
-                              </tr>
-                            ))}
-                            {billData.payments.length > 0 && (
-                              <tr className="font-medium bg-gray-50">
-                                <td colSpan={3} className="px-4 py-3 text-right">
-                                  કુલ પેમેન્ટ:
-                                </td>
-                                <td colSpan={2} className="px-4 py-3">
-                                  ₹
-                                  {billData.payments
-                                    .reduce((sum, payment) => sum + payment.amount, 0)
-                                    .toLocaleString("en-IN")}
-                                </td>
-                              </tr>
-                            )}
-                          </tbody>
-                        </table>
-                      </div>
+                    <div className="space-y-3">
+                      {billData.payments.map((payment, index) => (
+                        <div key={payment.id} className="relative p-3 pt-9 border border-gray-200 rounded-lg bg-gray-50">
+                          {/* Absolute Delete Button */}
+                          <button
+                            onClick={() => {
+                              const newPayments = billData.payments.filter(
+                                (p) => p.id !== payment.id
+                              );
+                              setBillData((prev) => ({
+                                ...prev,
+                                payments: newPayments,
+                              }));
+                            }}
+                            className="absolute top-2 right-2 p-1 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-full transition-colors"
+                            title="Delete"
+                          >
+                            <Trash2 className="w-4 h-4" />
+                          </button>
 
-                      {/* Mobile Card View */}
-                      <div className="space-y-3 md:hidden">
-                        {billData.payments.map((payment, index) => (
-                          <div key={payment.id} className="relative p-3 border border-gray-200 rounded-lg bg-gray-50">
-                            <div className="grid grid-cols-[1fr_1fr_auto] gap-2 mb-2 items-end">
-                              <div>
-                                <label className="block mb-1 text-xs font-medium text-gray-600">તારીખ</label>
-                                <input
-                                  type="date"
-                                  value={payment.date}
-                                  onChange={(e) => {
-                                    const newPayments = [...billData.payments];
-                                    newPayments[index] = {
-                                      ...payment,
-                                      date: e.target.value,
-                                    };
-                                    setBillData((prev) => ({
-                                      ...prev,
-                                      payments: newPayments,
-                                    }));
-                                  }}
-                                  className="w-full px-2 py-1 text-sm border rounded"
-                                />
-                              </div>
-                              <div>
-                                <label className="block mb-1 text-xs font-medium text-gray-600">નોંધ</label>
-                                <input
-                                  type="text"
-                                  value={payment.note}
-                                  onChange={(e) => {
-                                    const newPayments = [...billData.payments];
-                                    newPayments[index] = {
-                                      ...payment,
-                                      note: e.target.value,
-                                    };
-                                    setBillData((prev) => ({
-                                      ...prev,
-                                      payments: newPayments,
-                                    }));
-                                  }}
-                                  placeholder="નોંધ"
-                                  className="w-full px-2 py-1 text-sm border rounded"
-                                />
-                              </div>
-                              <button
-                                onClick={() => {
-                                  const newPayments = billData.payments.filter(
-                                    (p) => p.id !== payment.id
-                                  );
+                          <div className="space-y-2 mb-2">
+                            <div>
+                              <label className="block mb-0.5 text-xs font-medium text-gray-600">તારીખ</label>
+                              <input
+                                type="date"
+                                value={payment.date}
+                                onChange={(e) => {
+                                  const newPayments = [...billData.payments];
+                                  newPayments[index] = {
+                                    ...payment,
+                                    date: e.target.value,
+                                  };
                                   setBillData((prev) => ({
                                     ...prev,
                                     payments: newPayments,
                                   }));
                                 }}
-                                className="p-2 mb-0.5 text-red-600 transition-colors rounded hover:bg-red-50"
-                                title="Delete"
-                              >
-                                <X className="w-4 h-4" />
-                              </button>
+                                className="w-full px-2 py-1.5 text-sm border border-gray-300 rounded bg-white outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500"
+                              />
                             </div>
-                            <div className="grid grid-cols-2 gap-2">
-                              <div>
-                                <label className="block mb-1 text-xs font-medium text-gray-600">મેથડ</label>
-                                <select
-                                  value={payment.method}
-                                  onChange={(e) => {
-                                    const newPayments = [...billData.payments];
-                                    newPayments[index] = {
-                                      ...payment,
-                                      method: e.target.value as Payment["method"],
-                                    };
-                                    setBillData((prev) => ({
-                                      ...prev,
-                                      payments: newPayments,
-                                    }));
-                                  }}
-                                  className="w-full px-2 py-1 text-sm border rounded"
-                                >
-                                  <option value="cash">રોકડ</option>
-                                  <option value="bank">બેંક</option>
-                                </select>
-                              </div>
-                              <div>
-                                <label className="block mb-1 text-xs font-medium text-gray-600">પેમેન્ટ</label>
-                                <input
-                                  type="number"
-                                  value={payment.amount === 0 ? '' : payment.amount}
-                                  onChange={(e) => {
-                                    const amount = parseFloat(e.target.value) || 0;
-                                    const newPayments = [...billData.payments];
-                                    newPayments[index] = {
-                                      ...payment,
-                                      amount,
-                                    };
-                                    setBillData((prev) => ({
-                                      ...prev,
-                                      payments: newPayments,
-                                    }));
-                                  }}
-                                  onWheel={(e) => (e.target as HTMLInputElement).blur()}
-                                  min="0"
-                                  step="0.01"
-                                  className="w-full px-2 py-1 text-sm border rounded"
-                                />
-                              </div>
+                            <div>
+                              <label className="block mb-0.5 text-xs font-medium text-gray-600">નોંધ</label>
+                              <input
+                                type="text"
+                                value={payment.note}
+                                onChange={(e) => {
+                                  const newPayments = [...billData.payments];
+                                  newPayments[index] = {
+                                    ...payment,
+                                    note: e.target.value,
+                                  };
+                                  setBillData((prev) => ({
+                                    ...prev,
+                                    payments: newPayments,
+                                  }));
+                                }}
+                                placeholder="નોંધ"
+                                className="w-full px-2 py-1.5 text-sm border border-gray-300 rounded bg-white outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500"
+                              />
                             </div>
                           </div>
-                        ))}
-
-                        {/* Mobile Total */}
-                        <div className="flex justify-between p-3 font-medium border-t-2 border-gray-300 bg-gray-50">
-                          <span>કુલ પેમેન્ટ:</span>
-                          <span>
-                            ₹{billData.payments
-                              .reduce((sum, payment) => sum + payment.amount, 0)
-                              .toLocaleString("en-IN")}
-                          </span>
+                          <div className="grid grid-cols-2 gap-2">
+                            <div>
+                              <label className="block mb-1 text-xs font-medium text-gray-600">મેથડ</label>
+                              <select
+                                value={payment.method}
+                                onChange={(e) => {
+                                  const newPayments = [...billData.payments];
+                                  newPayments[index] = {
+                                    ...payment,
+                                    method: e.target.value as Payment["method"],
+                                  };
+                                  setBillData((prev) => ({
+                                    ...prev,
+                                    payments: newPayments,
+                                  }));
+                                }}
+                                className="w-full px-2 py-1 text-sm border rounded"
+                              >
+                                <option value="cash">રોકડ</option>
+                                <option value="bank">બેંક</option>
+                                <option value="upi">UPI</option>
+                                <option value="cheque">ચેક</option>
+                                <option value="card">કાર્ડ</option>
+                                <option value="other">અન્ય</option>
+                              </select>
+                            </div>
+                            <div>
+                              <label className="block mb-1 text-xs font-medium text-gray-600">પેમેન્ટ</label>
+                              <input
+                                type="number"
+                                value={payment.amount === 0 ? '' : payment.amount}
+                                onChange={(e) => {
+                                  const amount = parseFloat(e.target.value) || 0;
+                                  const newPayments = [...billData.payments];
+                                  newPayments[index] = {
+                                    ...payment,
+                                    amount,
+                                  };
+                                  setBillData((prev) => ({
+                                    ...prev,
+                                    payments: newPayments,
+                                  }));
+                                }}
+                                onWheel={(e) => (e.target as HTMLInputElement).blur()}
+                                min="0"
+                                step="0.01"
+                                className="w-full px-2 py-1 text-sm border rounded"
+                              />
+                            </div>
+                          </div>
                         </div>
+                      ))}
+
+                      {/* Total */}
+                      <div className="flex justify-between p-3 font-medium border-t-2 border-gray-300 bg-gray-50">
+                        <span>કુલ પેમેન્ટ:</span>
+                        <span>
+                          ₹{billData.payments
+                            .reduce((sum, payment) => sum + payment.amount, 0)
+                            .toLocaleString("en-IN")}
+                        </span>
                       </div>
-                    </>
+                    </div>
                   )}
                 </div>
-              </div>
-
-
-              {/* Mobile Action Buttons (Mobile Only) */}
-              <div className="flex gap-2 mb-4 md:hidden">
-                <button
-                  onClick={() => {
-                    setBillData((prev) => ({
-                      ...prev,
-                      extraCosts: [
-                        ...prev.extraCosts,
-                        {
-                          id: crypto.randomUUID(),
-                          date: format(new Date(), "yyyy-MM-dd"),
-                          note: "",
-                          pieces: 1,
-                          pricePerPiece: 1,
-                          total: 1,
-                        },
-                      ],
-                    }));
-                  }}
-                  className="flex-1 px-3 py-2 text-xs font-medium text-gray-700 bg-white border border-gray-200 rounded-lg shadow-sm active:bg-gray-100"
-                >
-                  + ખર્ચ
-                </button>
-                <button
-                  onClick={() => {
-                    setBillData((prev) => ({
-                      ...prev,
-                      discounts: [
-                        ...prev.discounts,
-                        {
-                          id: crypto.randomUUID(),
-                          date: format(new Date(), "yyyy-MM-dd"),
-                          note: "",
-                          pieces: 0,
-                          discountPerPiece: 0,
-                          total: 0,
-                        },
-                      ],
-                    }));
-                  }}
-                  className="flex-1 px-3 py-2 text-xs font-medium text-gray-700 bg-white border border-gray-200 rounded-lg shadow-sm active:bg-gray-100"
-                >
-                  + છૂટ
-                </button>
-                <button
-                  onClick={() => {
-                    setBillData((prev) => ({
-                      ...prev,
-                      payments: [
-                        ...prev.payments,
-                        {
-                          id: crypto.randomUUID(),
-                          date: format(new Date(), "yyyy-MM-dd"),
-                          note: "",
-                          amount: 0,
-                          method: "cash",
-                        },
-                      ],
-                    }));
-                  }}
-                  className="flex-1 px-3 py-2 text-xs font-medium text-gray-700 bg-white border border-gray-200 rounded-lg shadow-sm active:bg-gray-100"
-                >
-                  + ચુકવણી
-                </button>
               </div>
             </>
           )}
@@ -2370,6 +1880,7 @@ export default function CreateBill() {
 
         </div>
       </div>
+      </main>
       <Toaster />
 
       {/* Preview Modal */}

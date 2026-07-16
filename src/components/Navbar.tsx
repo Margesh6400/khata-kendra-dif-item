@@ -10,7 +10,8 @@ import {
   LogOut,
   LayoutDashboard,
   Menu,
-  X
+  X,
+  Settings as SettingsIcon
 } from 'lucide-react';
 import logo from '../assets/logo.png';
 import { useLanguage } from '../contexts/LanguageContext';
@@ -98,6 +99,12 @@ const Navbar: React.FC = () => {
       label: t('billBook'),
       icon: BookOpen,
       colorClass: 'blue'
+    },
+    {
+      path: '/settings',
+      label: t('settings'),
+      icon: SettingsIcon,
+      colorClass: 'purple'
     },
   ];
 

@@ -1,6 +1,6 @@
 import React from "react";
 import { FileText, User, MapPin, Pencil, Eye, Download, Trash2 } from "lucide-react";
-import { format } from "date-fns";
+import { formatLocalDate } from "../utils/dateUtils";
 
 export interface BillRecord {
     id?: string;
@@ -73,7 +73,7 @@ const BillCard: React.FC<BillCardProps> = ({ bill, t, onView, onDownload, onDele
                             </div>
                         )}
                         <div className="text-[10px] text-gray-500">
-                            {date ? format(new Date(date), "dd MMM yy") : t('noDate')}
+                            {date ? formatLocalDate(date, "dd MMM yy") : t('noDate')}
                         </div>
                     </div>
                 </div>

@@ -12,29 +12,17 @@ import { supabase } from '../utils/supabase';
 import { generateJPEG } from '../utils/generateJPEG';
 import { format } from 'date-fns';
 import toast, { Toaster } from 'react-hot-toast';
+import { usePlateSizes } from '../hooks/usePlateSizes';
 
 type SortOption = 'dateNewOld' | 'dateOldNew' | 'numberHighLow' | 'numberLowHigh';
 type TabType = 'udhar' | 'jama';
 
 interface ItemsData {
-  size_1_qty: number; size_2_qty: number; size_3_qty: number; size_4_qty: number; size_5_qty: number;
-  size_6_qty: number; size_7_qty: number; size_8_qty: number; size_9_qty: number;
-  size_1_borrowed: number; size_2_borrowed: number; size_3_borrowed: number;
-  size_4_borrowed: number; size_5_borrowed: number; size_6_borrowed: number;
-  size_7_borrowed: number; size_8_borrowed: number; size_9_borrowed: number;
-  size_1_note: string | null; size_2_note: string | null; size_3_note: string | null;
-  size_4_note: string | null; size_5_note: string | null; size_6_note: string | null;
-  size_7_note: string | null; size_8_note: string | null; size_9_note: string | null;
+  [key: string]: any;
   main_note: string | null;
 }
 
 const emptyItems: ItemsData = {
-  size_1_qty: 0, size_2_qty: 0, size_3_qty: 0, size_4_qty: 0, size_5_qty: 0,
-  size_6_qty: 0, size_7_qty: 0, size_8_qty: 0, size_9_qty: 0,
-  size_1_borrowed: 0, size_2_borrowed: 0, size_3_borrowed: 0, size_4_borrowed: 0, size_5_borrowed: 0,
-  size_6_borrowed: 0, size_7_borrowed: 0, size_8_borrowed: 0, size_9_borrowed: 0,
-  size_1_note: null, size_2_note: null, size_3_note: null, size_4_note: null, size_5_note: null,
-  size_6_note: null, size_7_note: null, size_8_note: null, size_9_note: null,
   main_note: null,
 };
 
@@ -56,22 +44,33 @@ interface ChallanData {
 
 const ITEMS_PER_PAGE = 10;
 
-const ITEMS_SELECT = `
-  size_1_qty, size_2_qty, size_3_qty, size_4_qty, size_5_qty,
-  size_6_qty, size_7_qty, size_8_qty, size_9_qty,
-  size_1_borrowed, size_2_borrowed, size_3_borrowed,
-  size_4_borrowed, size_5_borrowed, size_6_borrowed,
-  size_7_borrowed, size_8_borrowed, size_9_borrowed,
-  size_1_note, size_2_note, size_3_note, size_4_note,
-  size_5_note, size_6_note, size_7_note, size_8_note,
-  size_9_note, main_note
-`;
+const ITEMS_SELECT = 'items, main_note';
+
+const convertJSONToFlatItems = (jsonItemsArray: any[], mainNote: string | null): ItemsData => {
+  const result: any = { main_note: mainNote };
+  
+  if (Array.isArray(jsonItemsArray)) {
+    jsonItemsArray.forEach((item: any) => {
+      const sizeId = item.size_id;
+      if (sizeId >= 1) {
+        result[`size_${sizeId}_qty`] = item.qty || 0;
+        result[`size_${sizeId}_borrowed`] = item.borrowed || 0;
+        result[`size_${sizeId}_note`] = item.note || null;
+      }
+    });
+  }
+  
+  return result;
+};
 
 function calcTotalItems(items: ItemsData): number {
   let total = 0;
-  for (let i = 1; i <= 9; i++) {
-    total += ((items as any)[`size_${i}_qty`] || 0) + ((items as any)[`size_${i}_borrowed`] || 0);
-  }
+  Object.keys(items).forEach(key => {
+    if (key.endsWith('_qty') && key.startsWith('size_')) {
+      const sizeId = key.split('_')[1];
+      total += ((items as any)[key] || 0) + ((items as any)[`size_${sizeId}_borrowed`] || 0);
+    }
+  });
   return total;
 }
 
@@ -135,7 +134,8 @@ async function fetchChallansPage(
 
   const transformed: ChallanData[] = (data || []).map((ch: any) => {
     const raw = ch.items;
-    const itemRow: ItemsData = Array.isArray(raw) ? (raw[0] ?? emptyItems) : (raw ?? emptyItems);
+    const row = Array.isArray(raw) ? (raw[0] || {}) : (raw || {});
+    const itemRow = convertJSONToFlatItems(row.items || [], row.main_note);
     return {
       challanNumber: ch[numField],
       date: ch[dateField],
@@ -157,6 +157,7 @@ async function fetchChallansPage(
 }
 
 const ChallanBook: React.FC = () => {
+  const { sizes: plateSizes } = usePlateSizes();
   const { t } = useLanguage();
 
   const [activeTab, setActiveTab] = useState<TabType>('udhar');
@@ -270,7 +271,7 @@ const ChallanBook: React.FC = () => {
     size_3_note: items.size_3_note || '', size_4_note: items.size_4_note || '',
     size_5_note: items.size_5_note || '', size_6_note: items.size_6_note || '',
     size_7_note: items.size_7_note || '', size_8_note: items.size_8_note || '',
-    size_9_note: items.size_9_note || '', main_note: items.main_note || '',
+    size_9_note: items.size_9_note || '', size_10_note: items.size_10_note || '', main_note: items.main_note || '',
   });
 
   const handleDownloadJPEG = async (challan: ChallanData) => {
@@ -322,18 +323,28 @@ const ChallanBook: React.FC = () => {
     const loadingToast = toast.loading('Deleting challan...');
     try {
       const rpc = activeTab === 'udhar' ? 'delete_udhar_challan_with_stock' : 'delete_jama_challan_with_stock';
+      
+      const itemsList: any[] = [];
+      Object.keys(challan.items).forEach(key => {
+        if (key.endsWith('_qty') && key.startsWith('size_')) {
+          const sizeId = parseInt(key.split('_')[1]);
+          const qty = (challan.items as any)[`size_${sizeId}_qty`] || 0;
+          const borrowed = (challan.items as any)[`size_${sizeId}_borrowed`] || 0;
+          const note = (challan.items as any)[`size_${sizeId}_note`] || '';
+          if (qty > 0 || borrowed > 0 || note) {
+            itemsList.push({
+              size_id: sizeId,
+              qty,
+              borrowed,
+              note
+            });
+          }
+        }
+      });
+
       const { data, error } = await supabase.rpc(rpc, {
         p_challan_number: challan.challanNumber,
-        p_size_1_qty: challan.items.size_1_qty, p_size_2_qty: challan.items.size_2_qty,
-        p_size_3_qty: challan.items.size_3_qty, p_size_4_qty: challan.items.size_4_qty,
-        p_size_5_qty: challan.items.size_5_qty, p_size_6_qty: challan.items.size_6_qty,
-        p_size_7_qty: challan.items.size_7_qty, p_size_8_qty: challan.items.size_8_qty,
-        p_size_9_qty: challan.items.size_9_qty,
-        p_size_1_borrowed: challan.items.size_1_borrowed, p_size_2_borrowed: challan.items.size_2_borrowed,
-        p_size_3_borrowed: challan.items.size_3_borrowed, p_size_4_borrowed: challan.items.size_4_borrowed,
-        p_size_5_borrowed: challan.items.size_5_borrowed, p_size_6_borrowed: challan.items.size_6_borrowed,
-        p_size_7_borrowed: challan.items.size_7_borrowed, p_size_8_borrowed: challan.items.size_8_borrowed,
-        p_size_9_borrowed: challan.items.size_9_borrowed,
+        p_items: itemsList,
       });
 
       toast.dismiss(loadingToast);
@@ -418,7 +429,7 @@ const ChallanBook: React.FC = () => {
           <div className="items-center justify-between hidden mb-6 sm:flex lg:mb-8">
             <div className="flex-1">
               <h2 className="text-2xl font-bold text-gray-900 lg:text-3xl">{t('challanBook')}</h2>
-              <p className="mt-1 text-xs text-gray-600">View and manage all challans</p>
+              <p className="mt-1 text-xs text-gray-600">{t('challanBookSubtitle')}</p>
             </div>
             <button
               onClick={handleRefresh}

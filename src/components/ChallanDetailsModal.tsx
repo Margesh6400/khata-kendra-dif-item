@@ -2,36 +2,10 @@ import React from 'react';
 import { X, Download } from 'lucide-react';
 import { useLanguage } from '../contexts/LanguageContext';
 import { format } from 'date-fns';
-import { PLATE_SIZES } from './ItemsTable';
+import { usePlateSizes } from '../hooks/usePlateSizes';
 
 interface ItemsData {
-  size_1_qty: number;
-  size_2_qty: number;
-  size_3_qty: number;
-  size_4_qty: number;
-  size_5_qty: number;
-  size_6_qty: number;
-  size_7_qty: number;
-  size_8_qty: number;
-  size_9_qty: number;
-  size_1_borrowed: number;
-  size_2_borrowed: number;
-  size_3_borrowed: number;
-  size_4_borrowed: number;
-  size_5_borrowed: number;
-  size_6_borrowed: number;
-  size_7_borrowed: number;
-  size_8_borrowed: number;
-  size_9_borrowed: number;
-  size_1_note: string | null;
-  size_2_note: string | null;
-  size_3_note: string | null;
-  size_4_note: string | null;
-  size_5_note: string | null;
-  size_6_note: string | null;
-  size_7_note: string | null;
-  size_8_note: string | null;
-  size_9_note: string | null;
+  [key: string]: any;
   main_note: string | null;
 }
 
@@ -66,6 +40,18 @@ const ChallanDetailsModal: React.FC<ChallanDetailsModalProps> = ({
   onDownload,
 }) => {
   const { t } = useLanguage();
+  const { sizes: plateSizes } = usePlateSizes();
+
+  React.useEffect(() => {
+    if (isOpen && challan) {
+      document.body.style.overflow = 'hidden';
+    } else {
+      document.body.style.overflow = '';
+    }
+    return () => {
+      document.body.style.overflow = '';
+    };
+  }, [isOpen, challan]);
 
   if (!isOpen || !challan) return null;
 
@@ -194,17 +180,17 @@ const ChallanDetailsModal: React.FC<ChallanDetailsModalProps> = ({
                   </tr>
                 </thead>
                 <tbody className="bg-white divide-y divide-gray-200">
-                  {[1, 2, 3, 4, 5, 6, 7, 8, 9].map((size) => {
-                    const qty = challan.items[`size_${size}_qty` as keyof ItemsData] || 0;
-                    const borrowed = challan.items[`size_${size}_borrowed` as keyof ItemsData] || 0;
-                    const note = challan.items[`size_${size}_note` as keyof ItemsData] || '';
+                  {plateSizes.map((ps) => {
+                    const qty = challan.items[`size_${ps.id}_qty` as keyof ItemsData] || 0;
+                    const borrowed = challan.items[`size_${ps.id}_borrowed` as keyof ItemsData] || 0;
+                    const note = challan.items[`size_${ps.id}_note` as keyof ItemsData] || '';
 
                     if (qty === 0 && borrowed === 0 && !note) return null;
 
                     return (
-                      <tr key={size} className="hover:bg-gray-50">
+                      <tr key={ps.id} className="hover:bg-gray-50">
                         <td className="sticky left-0 z-10 px-2 py-2 text-[11px] sm:text-sm font-medium text-gray-900 whitespace-nowrap bg-inherit sm:px-4">
-                          {PLATE_SIZES[size - 1]}
+                          {ps.name}
                         </td>
                         <td className="px-2 py-2 text-[11px] sm:text-sm text-gray-900 whitespace-nowrap text-center sm:px-4">
                           <span className="inline-block min-w-[40px] px-2 py-1 bg-blue-50 rounded">
@@ -246,17 +232,17 @@ const ChallanDetailsModal: React.FC<ChallanDetailsModalProps> = ({
                   </tr>
                 </thead>
                 <tbody className="bg-white divide-y divide-gray-200">
-                  {[1, 2, 3, 4, 5, 6, 7, 8, 9].map((size) => {
-                    const qty = challan.items[`size_${size}_qty` as keyof ItemsData] || 0;
-                    const borrowed = challan.items[`size_${size}_borrowed` as keyof ItemsData] || 0;
-                    const note = challan.items[`size_${size}_note` as keyof ItemsData] || '';
+                  {plateSizes.map((ps) => {
+                    const qty = challan.items[`size_${ps.id}_qty` as keyof ItemsData] || 0;
+                    const borrowed = challan.items[`size_${ps.id}_borrowed` as keyof ItemsData] || 0;
+                    const note = challan.items[`size_${ps.id}_note` as keyof ItemsData] || '';
 
                     if (qty === 0 && borrowed === 0 && !note) return null;
 
                     return (
-                      <tr key={size} className="border-b border-gray-200">
+                      <tr key={ps.id} className="border-b border-gray-200">
                         <td className="sticky left-0 z-10 px-2 py-1.5 text-[10px] font-medium text-gray-900 whitespace-nowrap bg-inherit border-r border-gray-200">
-                          {PLATE_SIZES[size - 1]}
+                          {ps.name}
                         </td>
                         <td className="px-2 py-1.5 text-[10px] text-center text-gray-900 whitespace-nowrap border-r border-gray-200">
                           <span className="inline-block min-w-[28px] px-1.5 py-0.5 bg-blue-100 text-blue-800 rounded text-[9px] font-semibold">

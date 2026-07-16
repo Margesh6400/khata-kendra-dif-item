@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useLanguage } from '../contexts/LanguageContext';
+import { usePlateSizes } from '../hooks/usePlateSizes';
 
 export interface ClientFormData {
   id?: string;
@@ -9,6 +10,7 @@ export interface ClientFormData {
   primary_phone_number: string;
   daily_rent_price?: number;
   is_hidden?: boolean;
+  jack_rents?: Record<string, number>;
 }
 
 interface ClientFormProps {
@@ -20,6 +22,7 @@ interface ClientFormProps {
 
 const ClientForm: React.FC<ClientFormProps> = ({ initialData, onSubmit, onCancel, isQuickAdd = false }) => {
   const { t } = useLanguage();
+  const { sizes: plateSizes } = usePlateSizes();
   const [formData, setFormData] = useState<ClientFormData>({
     client_nic_name: '',
     client_name: '',
@@ -27,6 +30,7 @@ const ClientForm: React.FC<ClientFormProps> = ({ initialData, onSubmit, onCancel
     primary_phone_number: '',
     daily_rent_price: 1,
     is_hidden: false,
+    jack_rents: {},
   });
   const [errors, setErrors] = useState<Partial<ClientFormData>>({});
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -71,6 +75,7 @@ const ClientForm: React.FC<ClientFormProps> = ({ initialData, onSubmit, onCancel
         primary_phone_number: '',
         daily_rent_price: 1,
         is_hidden: false,
+        jack_rents: {},
       });
       setErrors({});
     } finally {
@@ -109,7 +114,7 @@ const ClientForm: React.FC<ClientFormProps> = ({ initialData, onSubmit, onCancel
               onChange={(e) => setFormData({ ...formData, daily_rent_price: parseFloat(e.target.value) || 1 })}
               className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm"
               min={0}
-              step={0.1}
+              step="any"
             />
           </div>
         </div>
@@ -157,6 +162,44 @@ const ClientForm: React.FC<ClientFormProps> = ({ initialData, onSubmit, onCancel
           />
           {errors.primary_phone_number && <p className="mt-1 text-sm text-red-600">{errors.primary_phone_number}</p>}
         </div>
+
+        {plateSizes.filter(s => s.category === 'jack').length > 0 && (
+          <div className="pt-3 border-t border-gray-200">
+            <h4 className="block mb-2 text-sm font-bold text-gray-800">
+              જેક રોજનું ભાડું (Jack Daily Rents)
+            </h4>
+            <div className="grid grid-cols-2 gap-3">
+              {plateSizes.filter(s => s.category === 'jack').map((size) => {
+                const currentRent = formData.jack_rents?.[size.id] ?? '';
+                return (
+                  <div key={size.id}>
+                    <label className="block mb-1 text-xs font-semibold text-gray-600">
+                      {size.name} ભાડું
+                    </label>
+                    <input
+                      type="number"
+                      value={currentRent}
+                      placeholder={`${formData.daily_rent_price ?? 1} (Default)`}
+                      onChange={(e) => {
+                        const val = parseFloat(e.target.value);
+                        const nextRents = { ...(formData.jack_rents || {}) };
+                        if (isNaN(val)) {
+                          delete nextRents[size.id];
+                        } else {
+                          nextRents[size.id] = val;
+                        }
+                        setFormData({ ...formData, jack_rents: nextRents });
+                      }}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm"
+                      min={0}
+                      step="any"
+                    />
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        )}
       </div>
 
       <div className="flex gap-3">

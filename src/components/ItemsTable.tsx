@@ -1,48 +1,35 @@
 import React from "react";
 import { useLanguage } from "../contexts/LanguageContext";
+import { usePlateSizes } from "../hooks/usePlateSizes";
+import { ChevronDown, ChevronRight } from "lucide-react";
 
-export const PLATE_SIZES = [
-  "2 X 3",
-  "21 X 3",
-  "18 X 3",
-  "15 X 3",
-  "12 X 3",
-  "9 X 3",
-  "પતરા",
-  "2 X 2",
-  "2 ફુટ",
-] as const;
+export interface PlateSize {
+  id: number;
+  name: string;
+  sort_order: number;
+  category?: 'shuttering' | 'jack' | 'other';
+}
+
+export interface ItemDetail {
+  size_id: number;
+  qty: number;
+  borrowed: number;
+  note: string;
+}
 
 export interface ItemsData {
-  size_1_qty: number;
-  size_2_qty: number;
-  size_3_qty: number;
-  size_4_qty: number;
-  size_5_qty: number;
-  size_6_qty: number;
-  size_7_qty: number;
-  size_8_qty: number;
-  size_9_qty: number;
-  size_1_borrowed: number;
-  size_2_borrowed: number;
-  size_3_borrowed: number;
-  size_4_borrowed: number;
-  size_5_borrowed: number;
-  size_6_borrowed: number;
-  size_7_borrowed: number;
-  size_8_borrowed: number;
-  size_9_borrowed: number;
-  size_1_note: string;
-  size_2_note: string;
-  size_3_note: string;
-  size_4_note: string;
-  size_5_note: string;
-  size_6_note: string;
-  size_7_note: string;
-  size_8_note: string;
-  size_9_note: string;
+  items: {
+    [key: number]: {
+      qty: number;
+      borrowed: number;
+      note: string;
+    };
+  };
   main_note: string;
 }
+
+
+
 
 interface StockData {
   size: number;
@@ -55,6 +42,7 @@ interface StockData {
 }
 
 interface ItemsTableProps {
+  plateSizes?: PlateSize[];
   items: ItemsData;
   onChange: (items: ItemsData) => void;
   outstandingBalances?: { [key: number]: number };
@@ -65,6 +53,7 @@ interface ItemsTableProps {
 }
 
 const ItemsTable: React.FC<ItemsTableProps> = ({
+  plateSizes: propPlateSizes,
   items,
   onChange,
   outstandingBalances,
@@ -74,22 +63,224 @@ const ItemsTable: React.FC<ItemsTableProps> = ({
   showAvailable = false,
 }) => {
   const { t } = useLanguage();
+  const { sizes: hookPlateSizes } = usePlateSizes();
+  const plateSizes = propPlateSizes || hookPlateSizes || [];
 
-  const handleChange = (field: keyof ItemsData, value: number | string) => {
-    // If the field is a note field, allow empty string
-    if (field.includes("note")) {
-      onChange({ ...items, [field]: value });
-    } else {
-      // For quantity and borrowed fields, convert empty to 0
-      if (typeof value === "string" && value === "") {
-        onChange({ ...items, [field]: 0 });
-      } else {
-        onChange({ ...items, [field]: value });
-      }
-    }
+  const [collapsedSections, setCollapsedSections] = React.useState<Record<string, boolean>>({
+    shuttering: false,
+    jack: false,
+    other: false,
+  });
+
+  const toggleSection = (section: string) => {
+    setCollapsedSections(prev => ({
+      ...prev,
+      [section]: !prev[section]
+    }));
   };
 
-  const sizeIndices = Array.from({ length: 9 }, (_, i) => i + 1);
+
+  const handleChange = (sizeId: number, field: 'qty' | 'borrowed' | 'note', value: number | string) => {
+    const currentItem = items.items[sizeId] || { qty: 0, borrowed: 0, note: '' };
+
+    let newValue = value;
+    if (field !== 'note') {
+      newValue = (typeof value === 'string' && value === '') ? 0 : parseInt(value as string) || 0;
+    }
+
+    onChange({
+      ...items,
+      items: {
+        ...items.items,
+        [sizeId]: { ...currentItem, [field]: newValue }
+      }
+    });
+  };
+
+  const handleMainNoteChange = (value: string) => {
+    onChange({ ...items, main_note: value });
+  };
+
+
+  const renderDesktopRow = (ps: PlateSize) => (
+    <tr key={ps.id}>
+      <td className="px-4 py-4 text-sm font-bold text-center text-gray-900 whitespace-nowrap">
+        {ps.name}
+      </td>
+      {outstandingBalances && (
+        <td className="px-4 py-4 text-center whitespace-nowrap">
+          <div
+            className={`px-3 py-2 text-sm font-semibold rounded-lg inline-block ${outstandingBalances[ps.id] > 0
+              ? "bg-red-100 text-red-700"
+              : "bg-gray-100 text-gray-700"
+              }`}
+          >
+            {outstandingBalances[ps.id] || 0}
+          </div>
+        </td>
+      )}
+      {showAvailable && (
+        <td className="px-4 py-4 text-center whitespace-nowrap">
+          <div
+            className={`px-3 py-2 text-sm font-semibold rounded-lg inline-block ${stockData.find((s) => s.size === ps.id)
+              ?.available_stock === 0
+              ? "bg-red-100 text-red-700"
+              : "bg-emerald-100 text-emerald-700"
+              }`}
+          >
+            {stockData.find((s) => s.size === ps.id)
+              ?.available_stock || 0}
+          </div>
+        </td>
+      )}
+      <td className="px-4 py-4 text-center whitespace-nowrap">
+        <input
+          type="number"
+          min="0"
+          value={
+            items.items[ps.id]?.qty || ""
+          }
+          onChange={(e) => handleChange(ps.id, 'qty', e.target.value)}
+          className="w-24 px-3 py-2 text-center border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+        />
+      </td>
+      {outstandingBalances && !hideColumns && (
+        <td className="px-4 py-4 text-center whitespace-nowrap">
+          <div
+            className={`px-3 py-2 text-sm font-semibold rounded-lg inline-block ${borrowedOutstanding &&
+              borrowedOutstanding[ps.id] > 0
+              ? "bg-orange-100 text-orange-700"
+              : "bg-gray-100 text-gray-700"
+              }`}
+          >
+            {borrowedOutstanding
+              ? borrowedOutstanding[ps.id] || 0
+              : 0}
+          </div>
+        </td>
+      )}
+      {!hideColumns && (
+        <>
+          <td className="px-4 py-4 text-center whitespace-nowrap">
+            <input
+              type="number"
+              min="0"
+              value={
+                items.items[ps.id]?.borrowed || ""
+              }
+              onChange={(e) => handleChange(ps.id, 'borrowed', e.target.value)}
+              className="w-24 px-3 py-2 text-center border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+            />
+          </td>
+          <td className="px-4 py-4">
+            <input
+              type="text"
+              value={
+                items.items[ps.id]?.note || ""
+              }
+              onChange={(e) => handleChange(ps.id, 'note', e.target.value)}
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+            />
+          </td>
+        </>
+      )}
+    </tr>
+  );
+
+  const renderMobileRow = (ps: PlateSize, index: number) => (
+    <tr
+      key={ps.id}
+      className={index % 2 === 0 ? "bg-white" : "bg-gray-50"}
+    >
+      <td className={`sticky left-0 z-10 px-1 py-1.5 text-[10px] font-bold text-center text-gray-900 border-r-2 border-gray-300 w-12 min-w-[48px] sm:w-16 sm:min-w-[64px] sm:px-2 sm:text-sm ${index % 2 === 0 ? "bg-white" : "bg-gray-50"}`}>
+        {ps.name}
+      </td>
+      {outstandingBalances && (
+        <td className="px-1 py-1.5 text-center border-r border-gray-200">
+          <div
+            className={`px-1.5 py-1 text-xs sm:text-sm font-semibold rounded whitespace-nowrap ${outstandingBalances[ps.id] > 0
+              ? "bg-red-100 text-red-700"
+              : "bg-gray-200 text-gray-600"
+              }`}
+          >
+            {outstandingBalances[ps.id] || 0}
+          </div>
+        </td>
+      )}
+      {showAvailable && (
+        <td className="px-1 py-1.5 text-center border-r border-gray-200">
+          <div
+            className={`px-1.5 py-1 text-xs sm:text-sm font-semibold rounded whitespace-nowrap ${stockData.find((s) => s.size === ps.id)
+              ?.available_stock === 0
+              ? "bg-red-100 text-red-700"
+              : "bg-emerald-100 text-emerald-700"
+              }`}
+          >
+            {stockData.find((s) => s.size === ps.id)
+              ?.available_stock || 0}
+          </div>
+        </td>
+      )}
+      <td className="px-1 py-1.5 border-r border-gray-200">
+        <input
+          type="number"
+          min="0"
+          inputMode="numeric"
+          value={
+            items.items[ps.id]?.qty || ""
+          }
+          onChange={(e) =>
+            handleChange(ps.id, 'qty', e.target.value)
+          }
+          className="w-full px-2 py-2 text-[13px] sm:text-sm text-center border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent min-h-[40px] sm:min-h-[44px] touch-manipulation active:scale-[0.97]"
+        />
+      </td>
+      {outstandingBalances && !hideColumns && (
+        <td className="px-1 py-1.5 text-center border-r border-gray-200">
+          <div
+            className={`px-1.5 py-1 text-xs sm:text-sm font-semibold rounded whitespace-nowrap ${borrowedOutstanding &&
+              borrowedOutstanding[ps.id] > 0
+              ? "bg-orange-100 text-orange-700"
+              : "bg-gray-200 text-gray-600"
+              }`}
+          >
+            {borrowedOutstanding
+              ? borrowedOutstanding[ps.id] || 0
+              : 0}
+          </div>
+        </td>
+      )}
+      {!hideColumns && (
+        <>
+          <td className="px-1 py-1.5 border-r border-gray-200">
+            <input
+              type="number"
+              min="0"
+              inputMode="numeric"
+              value={
+                items.items[ps.id]?.borrowed || ""
+              }
+              onChange={(e) =>
+                handleChange(ps.id, 'borrowed', e.target.value)
+              }
+              className="w-full px-2 py-2 text-[13px] sm:text-sm text-center border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent min-h-[40px] sm:min-h-[44px] touch-manipulation active:scale-[0.97]"
+            />
+          </td>
+          <td className="px-1 py-1.5">
+            <input
+              type="text"
+              value={
+                items.items[ps.id]?.note || ""
+              }
+              onChange={(e) => handleChange(ps.id, 'note', e.target.value)}
+              className="w-full px-2 py-2 text-[13px] sm:text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent min-h-[40px] sm:min-h-[44px] touch-manipulation active:scale-[0.97]"
+              placeholder={t("optionalNote")}
+            />
+          </td>
+        </>
+      )}
+    </tr>
+  );
 
   return (
     <div className="space-y-4 sm:space-y-6">
@@ -132,109 +323,63 @@ const ItemsTable: React.FC<ItemsTableProps> = ({
             </tr>
           </thead>
           <tbody className="bg-white divide-y divide-gray-200">
-            {sizeIndices.map((sizeIndex) => (
-              <tr key={sizeIndex}>
-                <td className="px-4 py-4 text-sm font-bold text-center text-gray-900 whitespace-nowrap">
-                  {PLATE_SIZES[sizeIndex - 1]}
-                </td>
-                {outstandingBalances && (
-                  <td className="px-4 py-4 text-center whitespace-nowrap">
-                    <div
-                      className={`px-3 py-2 text-sm font-semibold rounded-lg inline-block ${outstandingBalances[sizeIndex] > 0
-                          ? "bg-red-100 text-red-700"
-                          : "bg-gray-100 text-gray-700"
-                        }`}
-                    >
-                      {outstandingBalances[sizeIndex] || 0}
+            {/* Shuttering Plates Section */}
+            <tr 
+              onClick={() => toggleSection('shuttering')}
+              className="bg-blue-50/70 font-semibold border-y border-blue-100 cursor-pointer select-none hover:bg-blue-100/70 transition-colors"
+            >
+              <td colSpan={10} className="px-4 py-2 text-xs sm:text-sm text-blue-800 font-bold text-left">
+                <div className="flex items-center gap-2">
+                  {collapsedSections.shuttering ? (
+                    <ChevronRight className="w-4 h-4 text-blue-600" />
+                  ) : (
+                    <ChevronDown className="w-4 h-4 text-blue-600" />
+                  )}
+                  <span>શટરિંગ પ્લેટો (Shuttering Plates)</span>
+                </div>
+              </td>
+            </tr>
+            {!collapsedSections.shuttering && plateSizes.filter(ps => (ps.category || 'shuttering') === 'shuttering').map(renderDesktopRow)}
+
+            {/* Jacks Section */}
+            <tr 
+              onClick={() => toggleSection('jack')}
+              className="bg-purple-50/70 font-semibold border-y border-purple-100 cursor-pointer select-none hover:bg-purple-100/70 transition-colors"
+            >
+              <td colSpan={10} className="px-4 py-2 text-xs sm:text-sm text-purple-800 font-bold text-left">
+                <div className="flex items-center gap-2">
+                  {collapsedSections.jack ? (
+                    <ChevronRight className="w-4 h-4 text-purple-600" />
+                  ) : (
+                    <ChevronDown className="w-4 h-4 text-purple-600" />
+                  )}
+                  <span>લોખંડના જેક (Iron Jacks)</span>
+                </div>
+              </td>
+            </tr>
+            {!collapsedSections.jack && plateSizes.filter(ps => ps.category === 'jack').map(renderDesktopRow)}
+
+            {/* Other Section */}
+            {plateSizes.some(ps => ps.category === 'other') && (
+              <>
+                <tr 
+                  onClick={() => toggleSection('other')}
+                  className="bg-green-50/70 font-semibold border-y border-green-100 cursor-pointer select-none hover:bg-green-100/70 transition-colors"
+                >
+                  <td colSpan={10} className="px-4 py-2 text-xs sm:text-sm text-green-800 font-bold text-left">
+                    <div className="flex items-center gap-2">
+                      {collapsedSections.other ? (
+                        <ChevronRight className="w-4 h-4 text-green-600" />
+                      ) : (
+                        <ChevronDown className="w-4 h-4 text-green-600" />
+                      )}
+                      <span>અન્ય આઈટમ્સ (Other Items)</span>
                     </div>
                   </td>
-                )}
-                {showAvailable && (
-                  <td className="px-4 py-4 text-center whitespace-nowrap">
-                    <div
-                      className={`px-3 py-2 text-sm font-semibold rounded-lg inline-block ${stockData.find((s) => s.size === sizeIndex)
-                          ?.available_stock === 0
-                          ? "bg-red-100 text-red-700"
-                          : "bg-emerald-100 text-emerald-700"
-                        }`}
-                    >
-                      {stockData.find((s) => s.size === sizeIndex)
-                        ?.available_stock || 0}
-                    </div>
-                  </td>
-                )}
-                <td className="px-4 py-4 text-center whitespace-nowrap">
-                  <input
-                    type="number"
-                    min="0"
-                    value={
-                      items[`size_${sizeIndex}_qty` as keyof ItemsData] || ""
-                    }
-                    onChange={(e) =>
-                      handleChange(
-                        `size_${sizeIndex}_qty` as keyof ItemsData,
-                        e.target.value === "" ? 0 : parseInt(e.target.value)
-                      )
-                    }
-                    className="w-24 px-3 py-2 text-center border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                  />
-                </td>
-                {outstandingBalances && !hideColumns && (
-                  <td className="px-4 py-4 text-center whitespace-nowrap">
-                    <div
-                      className={`px-3 py-2 text-sm font-semibold rounded-lg inline-block ${borrowedOutstanding &&
-                          borrowedOutstanding[sizeIndex] > 0
-                          ? "bg-orange-100 text-orange-700"
-                          : "bg-gray-100 text-gray-700"
-                        }`}
-                    >
-                      {borrowedOutstanding
-                        ? borrowedOutstanding[sizeIndex] || 0
-                        : 0}
-                    </div>
-                  </td>
-                )}
-                {!hideColumns && (
-                  <>
-                    <td className="px-4 py-4 text-center whitespace-nowrap">
-                      <input
-                        type="number"
-                        min="0"
-                        value={
-                          items[
-                          `size_${sizeIndex}_borrowed` as keyof ItemsData
-                          ] || ""
-                        }
-                        onChange={(e) =>
-                          handleChange(
-                            `size_${sizeIndex}_borrowed` as keyof ItemsData,
-                            e.target.value === "" ? 0 : parseInt(e.target.value)
-                          )
-                        }
-                        className="w-24 px-3 py-2 text-center border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                      />
-                    </td>
-                    <td className="px-4 py-4">
-                      <input
-                        type="text"
-                        value={
-                          items[
-                          `size_${sizeIndex}_note` as keyof ItemsData
-                          ] as string
-                        }
-                        onChange={(e) =>
-                          handleChange(
-                            `size_${sizeIndex}_note` as keyof ItemsData,
-                            e.target.value
-                          )
-                        }
-                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                      />
-                    </td>
-                  </>
-                )}
-              </tr>
-            ))}
+                </tr>
+                {!collapsedSections.other && plateSizes.filter(ps => ps.category === 'other').map(renderDesktopRow)}
+              </>
+            )}
           </tbody>
         </table>
       </div>
@@ -247,7 +392,7 @@ const ItemsTable: React.FC<ItemsTableProps> = ({
               <table className="min-w-full border-collapse">
                 <thead>
                   <tr className="bg-gray-100 border-b-2 border-gray-300">
-                    <th className="sticky left-0 z-10 px-1 py-1.5 text-[10px] font-bold text-center text-gray-700 bg-gray-100 border-r-2 border-gray-300 w-12 sm:px-2 sm:text-xs">
+                    <th className="sticky left-0 z-10 px-1 py-1.5 text-[10px] font-bold text-center text-gray-700 bg-gray-100 border-r-2 border-gray-300 w-12 min-w-[48px] sm:w-16 sm:min-w-[64px] sm:px-2 sm:text-xs">
                       {t("size")}
                     </th>
                     {outstandingBalances && (
@@ -256,7 +401,7 @@ const ItemsTable: React.FC<ItemsTableProps> = ({
                       </th>
                     )}
                     {showAvailable && (
-                      <th className="px-1 py-1.5 text-xs sm:text-sm font-semibold text-center text-gray-700 border-r border-gray-200 min-w-[70px] sm:min-w-[80px]">
+                      <th className="px-1 py-1.5 text-xs sm:text-sm font-semibold text-center text-gray-700 border-r border-gray-200 min-w-[70px] sm:min-w-[90px]">
                         {t("available")}
                       </th>
                     )}
@@ -281,123 +426,66 @@ const ItemsTable: React.FC<ItemsTableProps> = ({
                   </tr>
                 </thead>
                 <tbody className="bg-white divide-y divide-gray-200">
-                  {sizeIndices.map((sizeIndex, index) => (
-                    <tr
-                      key={sizeIndex}
-                      className={index % 2 === 0 ? "bg-white" : "bg-gray-50"}
-                    >
-                      <td className="sticky left-0 z-10 px-1 py-1.5 text-[10px] font-bold text-center text-gray-900 border-r-2 border-gray-300 sm:px-2 sm:text-sm bg-inherit">
-                        {PLATE_SIZES[sizeIndex - 1]}
-                      </td>
-                      {outstandingBalances && (
-                        <td className="px-1 py-1.5 text-center border-r border-gray-200">
-                          <div
-                            className={`px-1.5 py-1 text-xs sm:text-sm font-semibold rounded whitespace-nowrap ${outstandingBalances[sizeIndex] > 0
-                                ? "bg-red-100 text-red-700"
-                                : "bg-gray-200 text-gray-600"
-                              }`}
-                          >
-                            {outstandingBalances[sizeIndex] || 0}
+                  {/* Shuttering Plates Section */}
+                  <tr 
+                    onClick={() => toggleSection('shuttering')}
+                    className="bg-blue-50/70 font-semibold border-y border-blue-100 cursor-pointer select-none"
+                  >
+                    <td colSpan={10} className="px-2 py-1 text-[11px] sm:text-xs text-blue-800 font-bold sticky left-0 bg-blue-50/70 z-10 text-left">
+                      <div className="flex items-center gap-1.5">
+                        {collapsedSections.shuttering ? (
+                          <ChevronRight className="w-3.5 h-3.5 text-blue-600" />
+                        ) : (
+                          <ChevronDown className="w-3.5 h-3.5 text-blue-600" />
+                        )}
+                        <span>શટરિંગ પ્લેટો (Shuttering Plates)</span>
+                      </div>
+                    </td>
+                  </tr>
+                  {!collapsedSections.shuttering && plateSizes.filter(ps => (ps.category || 'shuttering') === 'shuttering').map((ps, idx) => renderMobileRow(ps, idx))}
+
+                  {/* Jacks Section */}
+                  <tr 
+                    onClick={() => toggleSection('jack')}
+                    className="bg-purple-50/70 font-semibold border-y border-purple-100 cursor-pointer select-none"
+                  >
+                    <td colSpan={10} className="px-2 py-1 text-[11px] sm:text-xs text-purple-800 font-bold sticky left-0 bg-purple-50/70 z-10 text-left">
+                      <div className="flex items-center gap-1.5">
+                        {collapsedSections.jack ? (
+                          <ChevronRight className="w-3.5 h-3.5 text-purple-600" />
+                        ) : (
+                          <ChevronDown className="w-3.5 h-3.5 text-purple-600" />
+                        )}
+                        <span>લોખંડના જેક (Iron Jacks)</span>
+                      </div>
+                    </td>
+                  </tr>
+                  {!collapsedSections.jack && plateSizes.filter(ps => ps.category === 'jack').map((ps, idx) => renderMobileRow(ps, idx))}
+
+                  {/* Other Section */}
+                  {plateSizes.some(ps => ps.category === 'other') && (
+                    <>
+                      <tr 
+                        onClick={() => toggleSection('other')}
+                        className="bg-green-50/70 font-semibold border-y border-green-100 cursor-pointer select-none"
+                      >
+                        <td colSpan={10} className="px-2 py-1 text-[11px] sm:text-xs text-green-800 font-bold sticky left-0 bg-green-50/70 z-10 text-left">
+                          <div className="flex items-center gap-1.5">
+                            {collapsedSections.other ? (
+                              <ChevronRight className="w-3.5 h-3.5 text-green-600" />
+                            ) : (
+                              <ChevronDown className="w-3.5 h-3.5 text-green-600" />
+                            )}
+                            <span>અન્ય આઈટમ્સ (Other Items)</span>
                           </div>
                         </td>
-                      )}
-                      {showAvailable && (
-                        <td className="px-1 py-1.5 text-center border-r border-gray-200">
-                          <div
-                            className={`px-1.5 py-1 text-xs sm:text-sm font-semibold rounded whitespace-nowrap ${stockData.find((s) => s.size === sizeIndex)
-                                ?.available_stock === 0
-                                ? "bg-red-100 text-red-700"
-                                : "bg-emerald-100 text-emerald-700"
-                              }`}
-                          >
-                            {stockData.find((s) => s.size === sizeIndex)
-                              ?.available_stock || 0}
-                          </div>
-                        </td>
-                      )}
-                      <td className="px-1 py-1.5 border-r border-gray-200">
-                        <input
-                          type="number"
-                          min="0"
-                          inputMode="numeric"
-                          value={
-                            items[`size_${sizeIndex}_qty` as keyof ItemsData] ||
-                            ""
-                          }
-                          onChange={(e) =>
-                            handleChange(
-                              `size_${sizeIndex}_qty` as keyof ItemsData,
-                              e.target.value === ""
-                                ? 0
-                                : parseInt(e.target.value)
-                            )
-                          }
-                          className="w-full px-2 py-2 text-[13px] sm:text-sm text-center border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent min-h-[40px] sm:min-h-[44px] touch-manipulation active:scale-[0.97]"
-                        />
-                      </td>
-                      {outstandingBalances && !hideColumns && (
-                        <td className="px-1 py-1.5 text-center border-r border-gray-200">
-                          <div
-                            className={`px-1.5 py-1 text-xs sm:text-sm font-semibold rounded whitespace-nowrap ${borrowedOutstanding &&
-                                borrowedOutstanding[sizeIndex] > 0
-                                ? "bg-orange-100 text-orange-700"
-                                : "bg-gray-200 text-gray-600"
-                              }`}
-                          >
-                            {borrowedOutstanding
-                              ? borrowedOutstanding[sizeIndex] || 0
-                              : 0}
-                          </div>
-                        </td>
-                      )}
-                      {!hideColumns && (
-                        <>
-                          <td className="px-1 py-1.5 border-r border-gray-200">
-                            <input
-                              type="number"
-                              min="0"
-                              inputMode="numeric"
-                              value={
-                                items[
-                                `size_${sizeIndex}_borrowed` as keyof ItemsData
-                                ] || ""
-                              }
-                              onChange={(e) =>
-                                handleChange(
-                                  `size_${sizeIndex}_borrowed` as keyof ItemsData,
-                                  e.target.value === ""
-                                    ? 0
-                                    : parseInt(e.target.value)
-                                )
-                              }
-                              className="w-full px-2 py-2 text-[13px] sm:text-sm text-center border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent min-h-[40px] sm:min-h-[44px] touch-manipulation active:scale-[0.97]"
-                            />
-                          </td>
-                          <td className="px-1 py-1.5">
-                            <input
-                              type="text"
-                              value={
-                                items[
-                                `size_${sizeIndex}_note` as keyof ItemsData
-                                ] as string
-                              }
-                              onChange={(e) =>
-                                handleChange(
-                                  `size_${sizeIndex}_note` as keyof ItemsData,
-                                  e.target.value
-                                )
-                              }
-                              className="w-full px-2 py-2 text-[13px] sm:text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent min-h-[40px] sm:min-h-[44px] touch-manipulation active:scale-[0.97]"
-                              placeholder={t("optionalNote")}
-                            />
-                          </td>
-                        </>
-                      )}
-                    </tr>
-                  ))}
+                      </tr>
+                      {!collapsedSections.other && plateSizes.filter(ps => ps.category === 'other').map((ps, idx) => renderMobileRow(ps, idx))}
+                    </>
+                  )}
                   {/* Totals Summary Row */}
                   <tr className="bg-gray-100 border-t-2 border-gray-300">
-                    <td className="sticky left-0 z-10 px-1 py-3 text-xs font-bold text-center text-gray-900 border-r-2 border-gray-300 sm:text-sm bg-inherit">
+                    <td className="sticky left-0 z-10 px-1 py-3 text-xs font-bold text-center text-gray-900 border-r-2 border-gray-300 w-12 min-w-[48px] sm:w-16 sm:min-w-[64px] sm:text-sm bg-gray-100">
                       કુલ
                     </td>
                     {outstandingBalances && (
@@ -412,18 +500,7 @@ const ItemsTable: React.FC<ItemsTableProps> = ({
                     )}
                     <td className="px-1 py-3 text-xs font-bold text-center border-r border-gray-200 sm:text-sm">
                       <div className="px-3 py-1.5 bg-blue-100 rounded-lg text-blue-800">
-                        {sizeIndices.reduce(
-                          (total, sizeIndex) =>
-                            total +
-                            ((items[
-                              `size_${sizeIndex}_qty` as keyof ItemsData
-                            ] as number) || 0) +
-                            ((items[
-                              `size_${sizeIndex}_borrowed` as keyof ItemsData
-                            ] as number) || 0),
-                          0
-                        )}{" "}
-                        કુલ
+                        {Object.values(items.items || {}).reduce((sum, item) => sum + (item.qty || 0) + (item.borrowed || 0), 0)} કુલ
                       </div>
                     </td>
                     {outstandingBalances && !hideColumns && (
@@ -435,15 +512,7 @@ const ItemsTable: React.FC<ItemsTableProps> = ({
                       <>
                         <td className="px-1 py-3 text-xs font-bold text-center border-r border-gray-200 sm:text-sm">
                           <div className="px-2 py-1 rounded-lg bg-orange-50">
-                            {sizeIndices.reduce(
-                              (total, sizeIndex) =>
-                                total +
-                                ((items[
-                                  `size_${sizeIndex}_borrowed` as keyof ItemsData
-                                ] as number) || 0),
-                              0
-                            )}{" "}
-                            માર્કો
+                            {Object.values(items.items || {}).reduce((sum, item) => sum + (item.borrowed || 0), 0)} માર્કો
                           </div>
                         </td>
                       </>
@@ -463,7 +532,7 @@ const ItemsTable: React.FC<ItemsTableProps> = ({
         </label>
         <textarea
           value={items.main_note}
-          onChange={(e) => handleChange("main_note", e.target.value)}
+          onChange={(e) => handleMainNoteChange(e.target.value)}
           rows={3}
           placeholder={t("optionalGeneralNotes")}
           className="w-full px-2.5 py-2 sm:px-3 sm:py-2.5 text-xs sm:text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"

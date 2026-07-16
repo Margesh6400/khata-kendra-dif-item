@@ -2,69 +2,16 @@ import React, { useState, useEffect } from 'react';
 import { X, Download } from 'lucide-react';
 import { useLanguage } from '../contexts/LanguageContext';
 import { format } from 'date-fns';
-import { PLATE_SIZES } from './ItemsTable';
+import { usePlateSizes } from '../hooks/usePlateSizes';
 import { supabase } from '../utils/supabase';
 
 interface ItemsData {
-  size_1_qty: number;
-  size_2_qty: number;
-  size_3_qty: number;
-  size_4_qty: number;
-  size_5_qty: number;
-  size_6_qty: number;
-  size_7_qty: number;
-  size_8_qty: number;
-  size_9_qty: number;
-  size_1_borrowed: number;
-  size_2_borrowed: number;
-  size_3_borrowed: number;
-  size_4_borrowed: number;
-  size_5_borrowed: number;
-  size_6_borrowed: number;
-  size_7_borrowed: number;
-  size_8_borrowed: number;
-  size_9_borrowed: number;
-  size_1_note: string | null;
-  size_2_note: string | null;
-  size_3_note: string | null;
-  size_4_note: string | null;
-  size_5_note: string | null;
-  size_6_note: string | null;
-  size_7_note: string | null;
-  size_8_note: string | null;
-  size_9_note: string | null;
+  [key: string]: any;
   main_note: string | null;
 }
 
-// Form state allows nulls so inputs can show empty instead of 0 by default
 interface FormItems {
-  size_1_qty: number | null;
-  size_2_qty: number | null;
-  size_3_qty: number | null;
-  size_4_qty: number | null;
-  size_5_qty: number | null;
-  size_6_qty: number | null;
-  size_7_qty: number | null;
-  size_8_qty: number | null;
-  size_9_qty: number | null;
-  size_1_borrowed: number | null;
-  size_2_borrowed: number | null;
-  size_3_borrowed: number | null;
-  size_4_borrowed: number | null;
-  size_5_borrowed: number | null;
-  size_6_borrowed: number | null;
-  size_7_borrowed: number | null;
-  size_8_borrowed: number | null;
-  size_9_borrowed: number | null;
-  size_1_note: string | null;
-  size_2_note: string | null;
-  size_3_note: string | null;
-  size_4_note: string | null;
-  size_5_note: string | null;
-  size_6_note: string | null;
-  size_7_note: string | null;
-  size_8_note: string | null;
-  size_9_note: string | null;
+  [key: string]: any;
   main_note: string | null;
 }
 
@@ -99,27 +46,16 @@ const ChallanEditModal: React.FC<ChallanEditModalProps> = ({
   onSave,
 }) => {
   const { t } = useLanguage();
+  const { sizes: plateSizes } = usePlateSizes();
   const [loading, setLoading] = useState(false);
   const [date, setDate] = useState('');
   const [driverName, setDriverName] = useState('');
   const [alternativeSite, setAlternativeSite] = useState('');
   const [secondaryPhone, setSecondaryPhone] = useState('');
   const [items, setItems] = useState<FormItems>({
-    size_1_qty: null, size_2_qty: null, size_3_qty: null, size_4_qty: null, size_5_qty: null,
-    size_6_qty: null, size_7_qty: null, size_8_qty: null, size_9_qty: null,
-    size_1_borrowed: null, size_2_borrowed: null, size_3_borrowed: null, size_4_borrowed: null, size_5_borrowed: null,
-    size_6_borrowed: null, size_7_borrowed: null, size_8_borrowed: null, size_9_borrowed: null,
-    size_1_note: null, size_2_note: null, size_3_note: null, size_4_note: null, size_5_note: null,
-    size_6_note: null, size_7_note: null, size_8_note: null, size_9_note: null,
     main_note: null,
   });
   const [originalItems, setOriginalItems] = useState<ItemsData>({
-    size_1_qty: 0, size_2_qty: 0, size_3_qty: 0, size_4_qty: 0, size_5_qty: 0,
-    size_6_qty: 0, size_7_qty: 0, size_8_qty: 0, size_9_qty: 0,
-    size_1_borrowed: 0, size_2_borrowed: 0, size_3_borrowed: 0, size_4_borrowed: 0, size_5_borrowed: 0,
-    size_6_borrowed: 0, size_7_borrowed: 0, size_8_borrowed: 0, size_9_borrowed: 0,
-    size_1_note: null, size_2_note: null, size_3_note: null, size_4_note: null, size_5_note: null,
-    size_6_note: null, size_7_note: null, size_8_note: null, size_9_note: null,
     main_note: null,
   });
 
@@ -129,40 +65,23 @@ const ChallanEditModal: React.FC<ChallanEditModalProps> = ({
       setDriverName(challan.driverName || '');
       setAlternativeSite(challan.isAlternativeSite ? challan.site : '');
       setSecondaryPhone(challan.isSecondaryPhone ? challan.phone : '');
-      // originalItems should keep numeric values for stock calculations
       setOriginalItems(challan.items);
 
-      // For the form, show empty inputs instead of 0: map 0 -> null
       const mapped: FormItems = {
-        size_1_qty: challan.items.size_1_qty === 0 ? null : challan.items.size_1_qty,
-        size_2_qty: challan.items.size_2_qty === 0 ? null : challan.items.size_2_qty,
-        size_3_qty: challan.items.size_3_qty === 0 ? null : challan.items.size_3_qty,
-        size_4_qty: challan.items.size_4_qty === 0 ? null : challan.items.size_4_qty,
-        size_5_qty: challan.items.size_5_qty === 0 ? null : challan.items.size_5_qty,
-        size_6_qty: challan.items.size_6_qty === 0 ? null : challan.items.size_6_qty,
-        size_7_qty: challan.items.size_7_qty === 0 ? null : challan.items.size_7_qty,
-        size_8_qty: challan.items.size_8_qty === 0 ? null : challan.items.size_8_qty,
-        size_9_qty: challan.items.size_9_qty === 0 ? null : challan.items.size_9_qty,
-        size_1_borrowed: challan.items.size_1_borrowed === 0 ? null : challan.items.size_1_borrowed,
-        size_2_borrowed: challan.items.size_2_borrowed === 0 ? null : challan.items.size_2_borrowed,
-        size_3_borrowed: challan.items.size_3_borrowed === 0 ? null : challan.items.size_3_borrowed,
-        size_4_borrowed: challan.items.size_4_borrowed === 0 ? null : challan.items.size_4_borrowed,
-        size_5_borrowed: challan.items.size_5_borrowed === 0 ? null : challan.items.size_5_borrowed,
-        size_6_borrowed: challan.items.size_6_borrowed === 0 ? null : challan.items.size_6_borrowed,
-        size_7_borrowed: challan.items.size_7_borrowed === 0 ? null : challan.items.size_7_borrowed,
-        size_8_borrowed: challan.items.size_8_borrowed === 0 ? null : challan.items.size_8_borrowed,
-        size_9_borrowed: challan.items.size_9_borrowed === 0 ? null : challan.items.size_9_borrowed,
-        size_1_note: challan.items.size_1_note || null,
-        size_2_note: challan.items.size_2_note || null,
-        size_3_note: challan.items.size_3_note || null,
-        size_4_note: challan.items.size_4_note || null,
-        size_5_note: challan.items.size_5_note || null,
-        size_6_note: challan.items.size_6_note || null,
-        size_7_note: challan.items.size_7_note || null,
-        size_8_note: challan.items.size_8_note || null,
-        size_9_note: challan.items.size_9_note || null,
         main_note: challan.items.main_note || null,
       };
+
+      // Dynamically map all items: size_X_qty, size_X_borrowed, size_X_note
+      Object.keys(challan.items).forEach((key) => {
+        if (key.startsWith('size_')) {
+          const val = challan.items[key];
+          if (key.endsWith('_qty') || key.endsWith('_borrowed')) {
+            mapped[key] = val === 0 ? null : val;
+          } else {
+            mapped[key] = val || null;
+          }
+        }
+      });
 
       setItems(mapped);
     }
@@ -189,6 +108,28 @@ const ChallanEditModal: React.FC<ChallanEditModalProps> = ({
       const rpcFunction = type === 'udhar' ? 'update_udhar_challan_with_stock' : 'update_jama_challan_with_stock';
       const dateField = type === 'udhar' ? 'p_udhar_date' : 'p_jama_date';
 
+      // Build old_items JSONB array from the flat originalItems (size_1_qty etc.)
+      const oldItems: any[] = [];
+      plateSizes.forEach((ps) => {
+        const qty = (originalItems as any)[`size_${ps.id}_qty`] || 0;
+        const borrowed = (originalItems as any)[`size_${ps.id}_borrowed`] || 0;
+        const note = (originalItems as any)[`size_${ps.id}_note`] || '';
+        if (qty > 0 || borrowed > 0 || note) {
+          oldItems.push({ size_id: ps.id, qty, borrowed, note });
+        }
+      });
+
+      // Build new_items JSONB array from the form state
+      const newItems: any[] = [];
+      plateSizes.forEach((ps) => {
+        const qty = (items as FormItems)[`size_${ps.id}_qty` as keyof FormItems] ?? 0;
+        const borrowed = (items as FormItems)[`size_${ps.id}_borrowed` as keyof FormItems] ?? 0;
+        const note = (items as FormItems)[`size_${ps.id}_note` as keyof FormItems] || '';
+        if ((qty as number) > 0 || (borrowed as number) > 0 || note) {
+          newItems.push({ size_id: ps.id, qty: qty as number, borrowed: borrowed as number, note: note as string });
+        }
+      });
+
       const { data, error } = await supabase.rpc(rpcFunction, {
         p_challan_number: challan.challanNumber,
         p_client_id: challan.clientId,
@@ -196,51 +137,8 @@ const ChallanEditModal: React.FC<ChallanEditModalProps> = ({
         p_secondary_phone_number: secondaryPhone || null,
         [dateField]: date,
         p_driver_name: driverName || null,
-        p_old_size_1_qty: originalItems.size_1_qty,
-        p_old_size_2_qty: originalItems.size_2_qty,
-        p_old_size_3_qty: originalItems.size_3_qty,
-        p_old_size_4_qty: originalItems.size_4_qty,
-        p_old_size_5_qty: originalItems.size_5_qty,
-        p_old_size_6_qty: originalItems.size_6_qty,
-        p_old_size_7_qty: originalItems.size_7_qty,
-        p_old_size_8_qty: originalItems.size_8_qty,
-        p_old_size_9_qty: originalItems.size_9_qty,
-        p_old_size_1_borrowed: originalItems.size_1_borrowed,
-        p_old_size_2_borrowed: originalItems.size_2_borrowed,
-        p_old_size_3_borrowed: originalItems.size_3_borrowed,
-        p_old_size_4_borrowed: originalItems.size_4_borrowed,
-        p_old_size_5_borrowed: originalItems.size_5_borrowed,
-        p_old_size_6_borrowed: originalItems.size_6_borrowed,
-        p_old_size_7_borrowed: originalItems.size_7_borrowed,
-        p_old_size_8_borrowed: originalItems.size_8_borrowed,
-        p_old_size_9_borrowed: originalItems.size_9_borrowed,
-        p_new_size_1_qty: (items as FormItems).size_1_qty ?? 0,
-        p_new_size_2_qty: (items as FormItems).size_2_qty ?? 0,
-        p_new_size_3_qty: (items as FormItems).size_3_qty ?? 0,
-        p_new_size_4_qty: (items as FormItems).size_4_qty ?? 0,
-        p_new_size_5_qty: (items as FormItems).size_5_qty ?? 0,
-        p_new_size_6_qty: (items as FormItems).size_6_qty ?? 0,
-        p_new_size_7_qty: (items as FormItems).size_7_qty ?? 0,
-        p_new_size_8_qty: (items as FormItems).size_8_qty ?? 0,
-        p_new_size_9_qty: (items as FormItems).size_9_qty ?? 0,
-        p_new_size_1_borrowed: (items as FormItems).size_1_borrowed ?? 0,
-        p_new_size_2_borrowed: (items as FormItems).size_2_borrowed ?? 0,
-        p_new_size_3_borrowed: (items as FormItems).size_3_borrowed ?? 0,
-        p_new_size_4_borrowed: (items as FormItems).size_4_borrowed ?? 0,
-        p_new_size_5_borrowed: (items as FormItems).size_5_borrowed ?? 0,
-        p_new_size_6_borrowed: (items as FormItems).size_6_borrowed ?? 0,
-        p_new_size_7_borrowed: (items as FormItems).size_7_borrowed ?? 0,
-        p_new_size_8_borrowed: (items as FormItems).size_8_borrowed ?? 0,
-        p_new_size_9_borrowed: (items as FormItems).size_9_borrowed ?? 0,
-        p_new_size_1_note: items.size_1_note,
-        p_new_size_2_note: items.size_2_note,
-        p_new_size_3_note: items.size_3_note,
-        p_new_size_4_note: items.size_4_note,
-        p_new_size_5_note: items.size_5_note,
-        p_new_size_6_note: items.size_6_note,
-        p_new_size_7_note: items.size_7_note,
-        p_new_size_8_note: items.size_8_note,
-        p_new_size_9_note: items.size_9_note,
+        p_old_items: oldItems,
+        p_new_items: newItems,
         p_new_main_note: items.main_note,
       });
 
@@ -363,18 +261,18 @@ const ChallanEditModal: React.FC<ChallanEditModalProps> = ({
                   </tr>
                 </thead>
                 <tbody className="bg-white divide-y divide-gray-200">
-                  {[1, 2, 3, 4, 5, 6, 7, 8, 9].map((size) => (
-                    <tr key={size} className="hover:bg-gray-50">
+                  {plateSizes.map((ps) => (
+                    <tr key={ps.id} className="hover:bg-gray-50">
                       <td className="px-4 py-2 text-sm font-medium text-gray-900 whitespace-nowrap">
-                        {PLATE_SIZES[size - 1]}
+                        {ps.name}
                       </td>
                       <td className="px-4 py-2 whitespace-nowrap">
                         <input
                           type="number"
                           min="0"
                           inputMode="numeric"
-                          value={(items as FormItems)[`size_${size}_qty` as keyof FormItems] ?? ''}
-                          onChange={(e) => handleItemChange(size, 'qty', e.target.value)}
+                          value={(items as FormItems)[`size_${ps.id}_qty` as keyof FormItems] ?? ''}
+                          onChange={(e) => handleItemChange(ps.id, 'qty', e.target.value)}
                           className="w-24 px-3 py-2.5 text-sm text-center border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent min-h-[44px]"
                         />
                       </td>
@@ -383,16 +281,16 @@ const ChallanEditModal: React.FC<ChallanEditModalProps> = ({
                           type="number"
                           min="0"
                           inputMode="numeric"
-                          value={(items as FormItems)[`size_${size}_borrowed` as keyof FormItems] ?? ''}
-                          onChange={(e) => handleItemChange(size, 'borrowed', e.target.value)}
+                          value={(items as FormItems)[`size_${ps.id}_borrowed` as keyof FormItems] ?? ''}
+                          onChange={(e) => handleItemChange(ps.id, 'borrowed', e.target.value)}
                           className="w-24 px-3 py-2.5 text-sm text-center border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent min-h-[44px]"
                         />
                       </td>
                       <td className="px-4 py-2">
                         <input
                           type="text"
-                          value={(items as FormItems)[`size_${size}_note` as keyof FormItems] || ''}
-                          onChange={(e) => handleItemChange(size, 'note', e.target.value)}
+                          value={(items as FormItems)[`size_${ps.id}_note` as keyof FormItems] || ''}
+                          onChange={(e) => handleItemChange(ps.id, 'note', e.target.value)}
                           className="w-full px-3 py-2.5 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent min-h-[44px]"
                         />
                       </td>
@@ -425,21 +323,21 @@ const ChallanEditModal: React.FC<ChallanEditModalProps> = ({
                         </tr>
                       </thead>
                       <tbody className="bg-white divide-y divide-gray-200">
-                        {[1, 2, 3, 4, 5, 6, 7, 8, 9].map((size, index) => (
+                        {plateSizes.map((ps, index) => (
                           <tr 
-                            key={size}
+                            key={ps.id}
                             className={index % 2 === 0 ? 'bg-white' : 'bg-gray-50'}
                           >
                             <td className="sticky left-0 z-5 px-1 py-1.5 text-[10px] font-bold text-center text-gray-900 border-r-2 border-gray-300 sm:px-2 sm:text-sm bg-inherit">
-                              {PLATE_SIZES[size - 1]}
+                              {ps.name}
                             </td>
                             <td className="px-1 py-1.5 border-r border-gray-200">
                               <input
                                 type="number"
                                 min="0"
                                 inputMode="numeric"
-                                value={(items as FormItems)[`size_${size}_qty` as keyof FormItems] ?? ''}
-                                onChange={(e) => handleItemChange(size, 'qty', e.target.value)}
+                                value={(items as FormItems)[`size_${ps.id}_qty` as keyof FormItems] ?? ''}
+                                onChange={(e) => handleItemChange(ps.id, 'qty', e.target.value)}
                                 className="w-full px-2 py-2 text-[13px] sm:text-sm text-center border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent min-h-[40px] sm:min-h-[44px] touch-manipulation active:scale-[0.97]"
                               />
                             </td>
@@ -448,16 +346,16 @@ const ChallanEditModal: React.FC<ChallanEditModalProps> = ({
                                 type="number"
                                 min="0"
                                 inputMode="numeric"
-                                value={(items as FormItems)[`size_${size}_borrowed` as keyof FormItems] ?? ''}
-                                onChange={(e) => handleItemChange(size, 'borrowed', e.target.value)}
+                                value={(items as FormItems)[`size_${ps.id}_borrowed` as keyof FormItems] ?? ''}
+                                onChange={(e) => handleItemChange(ps.id, 'borrowed', e.target.value)}
                                 className="w-full px-2 py-2 text-[13px] sm:text-sm text-center border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent min-h-[40px] sm:min-h-[44px] touch-manipulation active:scale-[0.97]"
                               />
                             </td>
                             <td className="px-1 py-1.5">
                               <input
                                 type="text"
-                                value={(items as FormItems)[`size_${size}_note` as keyof FormItems] || ''}
-                                onChange={(e) => handleItemChange(size, 'note', e.target.value)}
+                                value={(items as FormItems)[`size_${ps.id}_note` as keyof FormItems] || ''}
+                                onChange={(e) => handleItemChange(ps.id, 'note', e.target.value)}
                                 className="w-full px-2 py-2 text-[13px] sm:text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent min-h-[40px] sm:min-h-[44px] touch-manipulation active:scale-[0.97]"
                                 placeholder={t('optionalNote')}
                               />

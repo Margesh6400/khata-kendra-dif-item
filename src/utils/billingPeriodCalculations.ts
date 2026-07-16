@@ -1,5 +1,13 @@
 import { addDays, parseISO, differenceInDays, format } from 'date-fns';
 
+// Returns sort priority based on the selected method.
+// Standard: Udhar first (1), Jama second (2)
+// Jama First: Jama first (1), Udhar second (2) — lower rent on same-day events
+const getSortPriority = (type: 'udhar' | 'jama', jamaFirst: boolean): number => {
+  if (jamaFirst) return type === 'jama' ? 1 : 2;
+  return type === 'udhar' ? 1 : 2;
+};
+
 /**
  * BILLING PERIOD CALCULATION SYSTEM
  * -------------------------------
@@ -76,7 +84,7 @@ interface ChallanEntry {
   type: 'udhar' | 'jama';
   plateCount: number;
   challanNumber: string;
-  sortPriority: 1 | 2;
+  sortPriority: number;
 }
 
 interface LedgerEntry {
@@ -88,7 +96,7 @@ interface LedgerEntry {
   balanceAfter: number;
   entryType: 'udhar' | 'jama';
   challanNumber: string;
-  sortPriority: 1 | 2;
+  sortPriority: number;
 }
 
 interface ChallanDetail {
@@ -118,85 +126,73 @@ export interface BillingPeriodResult {
   totalRent: number;
 }
 
+export function getChallanTotalPlates(challan: any): number {
+  if (!challan) return 0;
+  const raw = challan.items;
+  const row = Array.isArray(raw) ? (raw[0] || {}) : (raw || {});
+
+  if (row.items && Array.isArray(row.items)) {
+    return row.items.reduce((sum: number, item: any) => sum + (item.qty || 0) + (item.borrowed || 0), 0);
+  } else {
+    let total = 0;
+    for (let i = 1; i <= 50; i++) {
+      total += (row[`size_${i}_qty`] || 0) + (row[`size_${i}_borrowed`] || 0);
+    }
+    return total;
+  }
+}
+
 export function createCombinedEntryList(
   udharChallans: Array<{
     udhar_date: string;
     udhar_challan_number: string;
-    items: any; // Can be array or single item
+    items: any;
   }>,
   jamaReturns: Array<{
     jama_date: string;
     jama_challan_number: string;
-    items: any; // Can be array or single item
-  }>
+    items: any;
+  }>,
+  jamaFirst: boolean = false
 ): ChallanEntry[] {
   const entries: ChallanEntry[] = [];
 
-  // Process Udhar challans
   udharChallans.forEach(challan => {
-    // Ensure items is an array, if not, wrap the single item in an array
-    const itemsArray = Array.isArray(challan.items) ? challan.items : [challan.items];
-
-    const totalPlates = itemsArray.reduce((sum, item) => {
-      if (!item) return sum;
-      // Sum up all size quantities and borrowed quantities
-      let total = 0;
-      for (let i = 1; i <= 9; i++) {
-        total += (item[`size_${i}_qty`] || 0) + (item[`size_${i}_borrowed`] || 0);
-      }
-      return sum + total;
-    }, 0);
-
-    console.log('Udhar Entry plateCount:', totalPlates, 'from items:', itemsArray);
-
+    const totalPlates = getChallanTotalPlates(challan);
     entries.push({
-      date: challan.udhar_date,           // When plates were issued
-      effectiveDate: challan.udhar_date,  // Start billing from issue date
+      date: challan.udhar_date,
+      effectiveDate: challan.udhar_date,
       type: 'udhar',
       plateCount: totalPlates,
       challanNumber: challan.udhar_challan_number,
-      sortPriority: 1
+      sortPriority: getSortPriority('udhar', jamaFirst)
     });
   });
 
-  // Process Jama returns
   jamaReturns.forEach(jama => {
-    // Ensure items is an array, if not, wrap the single item in an array
-    const itemsArray = Array.isArray(jama.items) ? jama.items : [jama.items];
+    const totalPlates = getChallanTotalPlates(jama);
 
-    const totalPlates = itemsArray.reduce((sum, item) => {
-      if (!item) return sum;
-      // Sum up all size quantities and borrowed quantities
-      let total = 0;
-      for (let i = 1; i <= 9; i++) {
-        total += (item[`size_${i}_qty`] || 0) + (item[`size_${i}_borrowed`] || 0);
-      }
-      return sum + total;
-    }, 0);
+    // JAMA FIRST: Plates leave the balance on the SAME DAY they are returned.
+    //   → Client is NOT charged for the return day itself. Lower rent.
+    //
+    // STANDARD:   Plates leave the balance the DAY AFTER return.
+    //   → Client IS charged for the return day. Standard practice.
+    const effectiveDate = jamaFirst
+      ? jama.jama_date
+      : format(addDays(parseISO(jama.jama_date), 1), 'yyyy-MM-dd');
 
-    // Special Case: If Udhar and Jama are on the SAME DAY, use the same effective date
-    // This allows the return to net out the udhar immediately, resulting in 0 rent for that day
-    // "check challan date if its same... count it combainly... adding extra cost"
-    const hasUdharSameDay = udharChallans.some(u => u.udhar_date === jama.jama_date);
-
-    let effectiveDate: string;
-    if (hasUdharSameDay) {
-      effectiveDate = jama.jama_date; // No +1 shift
-    } else {
-      effectiveDate = format(addDays(parseISO(jama.jama_date), 1), 'yyyy-MM-dd');
-    }
+    console.log(`[createCombinedEntryList] Jama ${jama.jama_challan_number}: jamaFirst=${jamaFirst}, date=${jama.jama_date}, effectiveDate=${effectiveDate}`);
 
     entries.push({
-      date: jama.jama_date,          // Actual return date (when plates were returned)
-      effectiveDate: effectiveDate,   // First day with no plates (no rent charged)
+      date: jama.jama_date,
+      effectiveDate,
       type: 'jama',
       plateCount: totalPlates,
       challanNumber: jama.jama_challan_number,
-      sortPriority: 2
+      sortPriority: getSortPriority('jama', jamaFirst)
     });
   });
 
-  // Sort by date and priority
   return entries.sort((a, b) => {
     const dateCompare = a.effectiveDate.localeCompare(b.effectiveDate);
     if (dateCompare !== 0) return dateCompare;
@@ -292,18 +288,6 @@ export function calculateBillingPeriods(
     const nextDate = i < dates.length - 1 ? dates[i + 1] : billDate;
 
     // Apply all changes for this date
-    /**
-     * EDGE CASE 1: Same-Day Events
-     * --------------------------
-     * When Udhar and Jama happen on the same day:
-     * 1. Sort by priority (Udhar=1, Jama=2)
-     * 2. Process Udhar first (add plates)
-     * 3. Then process Jama (remove plates)
-     * 
-     * Example:
-     * Jan 10: Udhar 100 plates → Balance = 100
-     * Jan 10: Jama 50 plates  → Balance = 50
-     */
     const sortedChanges = [...balanceChanges[currentDate]].sort((a, b) => a.sortPriority - b.sortPriority);
 
     sortedChanges.forEach(change => {
@@ -410,11 +394,8 @@ export function calculateBillingPeriods(
           continue;  // Skip invalid periods
         }
 
-        // Create period if we have valid data
-        // Special case: Include zero-day periods if they represent a transaction 
-        // (especially a jama return on the bill date that reduces outstanding stock)
-        if (periodData && periodData.days >= 0) {
-
+        // Create period if we have valid data with positive days
+        if (periodData && periodData.days > 0) {
           // Final days calculation
           let finalDays = periodData.days;
 
@@ -448,13 +429,32 @@ export function calculateBillingPeriods(
     }
   }
 
-
   return {
     entries,
     ledger,
     periods,
-    totalRent
+    totalRent: Math.round(totalRent * 100) / 100
   };
+}
+
+export function getQtyForSize(challan: any, sizeId: number): { qty: number, borrowed: number, note: string | null } {
+  const raw = challan.items;
+  const row = Array.isArray(raw) ? (raw[0] || {}) : (raw || {});
+
+  if (row.items && Array.isArray(row.items)) {
+    const matchedItem = row.items.find((i: any) => i.size_id === sizeId);
+    return {
+      qty: matchedItem?.qty || 0,
+      borrowed: matchedItem?.borrowed || 0,
+      note: matchedItem?.note || null
+    };
+  } else {
+    return {
+      qty: row[`size_${sizeId}_qty`] || 0,
+      borrowed: row[`size_${sizeId}_borrowed`] || 0,
+      note: row[`size_${sizeId}_note`] || null
+    };
+  }
 }
 
 export function calculateBill(
@@ -466,7 +466,10 @@ export function calculateBill(
   discounts: Array<{ amount: number }> = [],
   payments: Array<{ amount: number }> = [],
   serviceRate: number = 10,
-  fromDate?: string // New optional parameter
+  fromDate?: string,
+  plateSizes: any[] = [],
+  jackRents: Record<number, number> = {},
+  jamaFirst: boolean = false
 ): {
   billingPeriods: BillingPeriodResult;
   extraChargesTotal: number;
@@ -476,42 +479,167 @@ export function calculateBill(
   grandTotal: number;
   dueAmount: number;
 } {
-  // Calculate billing periods and rent
-  const entries = createCombinedEntryList(udharChallans, jamaReturns);
-  let billingPeriods = calculateBillingPeriods(entries, billDate, dailyRate);
+  console.log('[calculateBill] jamaFirst =', jamaFirst, '| dateSortingMethod from localStorage =', localStorage.getItem('dateSortingMethod'));
+  const entries = createCombinedEntryList(udharChallans, jamaReturns, jamaFirst);
+
+  // Helper: build ChallanEntry list for a specific set of sizeIds
+  function buildSizeEntries(sizeId: number): ChallanEntry[] {
+    const sizeEntries: ChallanEntry[] = [];
+    udharChallans.forEach(ch => {
+      const details = getQtyForSize(ch, sizeId);
+      const qty = details.qty + details.borrowed;
+      if (qty > 0) {
+        sizeEntries.push({
+          date: ch.udhar_date,
+          effectiveDate: ch.udhar_date,
+          type: 'udhar',
+          plateCount: qty,
+          challanNumber: ch.udhar_challan_number,
+          sortPriority: getSortPriority('udhar', jamaFirst)
+        });
+      }
+    });
+    jamaReturns.forEach(ch => {
+      const details = getQtyForSize(ch, sizeId);
+      const qty = details.qty + details.borrowed;
+      if (qty > 0) {
+        const effectiveDate = jamaFirst
+          ? ch.jama_date
+          : format(addDays(parseISO(ch.jama_date), 1), 'yyyy-MM-dd');
+        sizeEntries.push({
+          date: ch.jama_date,
+          effectiveDate,
+          type: 'jama',
+          plateCount: qty,
+          challanNumber: ch.jama_challan_number,
+          sortPriority: getSortPriority('jama', jamaFirst)
+        });
+      }
+    });
+    sizeEntries.sort((a, b) => {
+      const d = new Date(a.date).getTime() - new Date(b.date).getTime();
+      return d === 0 ? a.sortPriority - b.sortPriority : d;
+    });
+    return sizeEntries;
+  }
+
+  let periods: any[] = [];
+
+  if (plateSizes && plateSizes.length > 0) {
+    // Separate jack sizes (custom rent) from shuttering sizes (same rent)
+    const jackCustomSizes = plateSizes.filter(ps =>
+      ps.category === 'jack' &&
+      jackRents &&
+      typeof jackRents[ps.id] === 'number'
+    );
+    const shutteringSizes = plateSizes.filter(ps =>
+      !(ps.category === 'jack' && jackRents && typeof jackRents[ps.id] === 'number')
+    );
+
+    // ── SHUTTERING: combined global calculation across all shuttering+same-rate sizes ──
+    // Build combined entries only from shuttering sizes (exclude jack-custom sizes)
+    const shuttEntries: ChallanEntry[] = [];
+    if (shutteringSizes.length > 0) {
+      udharChallans.forEach(ch => {
+        let qty = 0;
+        shutteringSizes.forEach(ps => {
+          const d = getQtyForSize(ch, ps.id);
+          qty += d.qty + d.borrowed;
+        });
+        if (qty > 0) {
+          shuttEntries.push({
+            date: ch.udhar_date,
+            effectiveDate: ch.udhar_date,
+            type: 'udhar',
+            plateCount: qty,
+            challanNumber: ch.udhar_challan_number,
+            sortPriority: getSortPriority('udhar', jamaFirst)
+          });
+        }
+      });
+      jamaReturns.forEach(ch => {
+        let qty = 0;
+        shutteringSizes.forEach(ps => {
+          const d = getQtyForSize(ch, ps.id);
+          qty += d.qty + d.borrowed;
+        });
+        if (qty > 0) {
+          const effectiveDate = jamaFirst
+            ? ch.jama_date
+            : format(addDays(parseISO(ch.jama_date), 1), 'yyyy-MM-dd');
+          shuttEntries.push({
+            date: ch.jama_date,
+            effectiveDate,
+            type: 'jama',
+            plateCount: qty,
+            challanNumber: ch.jama_challan_number,
+            sortPriority: getSortPriority('jama', jamaFirst)
+          });
+        }
+      });
+      shuttEntries.sort((a, b) => {
+        const d = new Date(a.date).getTime() - new Date(b.date).getTime();
+        return d === 0 ? a.sortPriority - b.sortPriority : d;
+      });
+
+      if (shuttEntries.length > 0) {
+        const shuttResult = calculateBillingPeriods(shuttEntries, billDate, dailyRate);
+        shuttResult.periods.forEach(p => {
+          periods.push({ ...p, rate: dailyRate });
+          // No sizeId/sizeName — these are combined shuttering
+        });
+      }
+    }
+
+    // ── JACK (custom rent): separate per-size calculation ──
+    jackCustomSizes.forEach(ps => {
+      const rate = jackRents[ps.id] as number;
+      const sizeEntries = buildSizeEntries(ps.id);
+      if (sizeEntries.length > 0) {
+        const sizeResult = calculateBillingPeriods(sizeEntries, billDate, rate);
+        sizeResult.periods.forEach(p => {
+          periods.push({
+            ...p,
+            sizeId: ps.id,
+            sizeName: ps.name,
+            rate
+          });
+        });
+      }
+    });
+  } else {
+    // No plateSizes info — fall back to fully combined global calc
+    const globalBillingPeriods = calculateBillingPeriods(entries, billDate, dailyRate);
+    periods = globalBillingPeriods.periods.map(p => ({ ...p, rate: dailyRate }));
+  }
+
+  // Sort all periods: shuttering (no sizeId) first, then jack by sizeId, then by startDate
+  periods.sort((a, b) => {
+    const aIsJack = a.sizeId !== undefined ? 1 : 0;
+    const bIsJack = b.sizeId !== undefined ? 1 : 0;
+    if (aIsJack !== bIsJack) return aIsJack - bIsJack;
+    if (a.sizeId !== b.sizeId) return (a.sizeId || 0) - (b.sizeId || 0);
+    return a.startDate.localeCompare(b.startDate);
+  });
 
   // If fromDate is provided, filter and clamp periods
   if (fromDate) {
-    const clampedPeriods: BillingPeriod[] = [];
+    const clampedPeriods: any[] = [];
     let clampedTotalRent = 0;
 
-    billingPeriods.periods.forEach(period => {
-      // 1. Period ends before fromDate: Skip completely
+    periods.forEach(period => {
       if (period.endDate < fromDate) {
         return;
       }
 
-      // 2. Period starts after or on fromDate: Keep as is
       if (period.startDate >= fromDate) {
         clampedPeriods.push(period);
         clampedTotalRent += period.rent;
         return;
       }
 
-      // 3. Period overlaps (Start < fromDate < End): Clamp Start
-      // Recalculate days and rent
-
       const newStartDate = fromDate;
-      const rateInPaise = Math.round(dailyRate * 100);
-
-      // Determine if we need +1 day logic (if it was the last period ending on billDate)
-      // Original logic:
-      // If last period (ends on billDate): days = diff + 1
-      // If normal period: days = diff
-
-      // Check if original period treated endDate as inclusive (Last Period)
-      // Standard logic: differenceInDays(end, start)
-      // If days > diff(end, start), then it was inclusive.
+      const rateInPaise = Math.round((period.rate || dailyRate) * 100);
 
       const rawDiff = differenceInDays(parseISO(period.endDate), parseISO(period.startDate));
       const isInclusiveEnd = period.days > rawDiff;
@@ -533,40 +661,37 @@ export function calculateBill(
       }
     });
 
-    // Update billingPeriods with clamped data
-    billingPeriods = {
-      ...billingPeriods,
-      periods: clampedPeriods,
-      totalRent: clampedTotalRent
-    };
+    periods = clampedPeriods;
   }
 
-  // Calculate other components
   const extraChargesTotal = extraCharges.reduce((sum, charge) => sum + charge.amount, 0);
   const discountsTotal = discounts.reduce((sum, discount) => sum + discount.amount, 0);
   const paymentsTotal = payments.reduce((sum, payment) => sum + payment.amount, 0);
 
-  // Calculate service charge (₹10 per plate by default)
-  // Logic update: Ensure service charge only applies to visible periods?
-  // Usually service charge is per period or per bill. Assuming per period plate count is correct.
-  const serviceChargeTotal = billingPeriods.periods.reduce((sum, period) => {
+  const serviceChargeTotal = periods.reduce((sum, period) => {
     return sum + (period.plateCount * serviceRate);
   }, 0);
 
-  // Calculate total rent from periods in paise to avoid decimal issues
-  const totalRentInPaise = billingPeriods.periods.reduce((sum, period) => {
+  const totalRentInPaise = periods.reduce((sum, period) => {
     const rentInPaise = Math.round(period.rent * 100);
     return sum + rentInPaise;
   }, 0);
   const totalRent = Math.round(totalRentInPaise) / 100;
 
-  // Calculate final totals in paise
   const grandTotalInPaise = Math.round((totalRent * 100) + (extraChargesTotal * 100) + (serviceChargeTotal * 100) - (discountsTotal * 100));
   const grandTotal = Math.round(grandTotalInPaise) / 100;
   const dueAmount = grandTotal - paymentsTotal;
 
+  // Rebuild ledger from the full combined entries for display purposes
+  const ledger = buildTransactionLedger(entries);
+
   return {
-    billingPeriods,
+    billingPeriods: {
+      entries,
+      ledger,
+      periods,
+      totalRent
+    },
     extraChargesTotal,
     discountsTotal,
     paymentsTotal,

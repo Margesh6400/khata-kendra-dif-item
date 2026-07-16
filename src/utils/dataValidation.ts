@@ -216,7 +216,7 @@ interface ChallanItem {
   size_6_qty?: number;
   size_7_qty?: number;
   size_8_qty?: number;
-  size_9_qty?: number;
+  size_9_qty?: number; size_10_qty?: number;
   size_1_borrowed?: number;
   size_2_borrowed?: number;
   size_3_borrowed?: number;
@@ -225,7 +225,7 @@ interface ChallanItem {
   size_6_borrowed?: number;
   size_7_borrowed?: number;
   size_8_borrowed?: number;
-  size_9_borrowed?: number;
+  size_9_borrowed?: number; size_10_borrowed?: number;
 }
 
 interface Challan {
@@ -276,22 +276,27 @@ const validateUdharChallans = (challans: Challan[]): ValidationResult => {
     // Validate each item
     challan.items.forEach((item: ChallanItem) => {
       let hasQuantity = false;
-
-      // Verify all size fields exist and are numbers
-      for (let size = 1; size <= 9; size++) {
-        const qtyField = `size_${size}_qty`;
-        const borrowedField = `size_${size}_borrowed`;
-
-        // Convert to numbers, default to 0
-        const qty = Math.max(0, Number(item[qtyField]) || 0);
-        const borrowed = Math.max(0, Number(item[borrowedField]) || 0);
-
-        // Update with validated numbers
-        item[qtyField] = qty;
-        item[borrowedField] = borrowed;
-
-        if (qty > 0 || borrowed > 0) {
-          hasQuantity = true;
+      if (item.items && Array.isArray(item.items)) {
+        item.items.forEach((subItem: any) => {
+          const qty = Math.max(0, Number(subItem.qty) || 0);
+          const borrowed = Math.max(0, Number(subItem.borrowed) || 0);
+          subItem.qty = qty;
+          subItem.borrowed = borrowed;
+          if (qty > 0 || borrowed > 0) {
+            hasQuantity = true;
+          }
+        });
+      } else {
+        for (let size = 1; size <= 10; size++) {
+          const qtyField = `size_${size}_qty`;
+          const borrowedField = `size_${size}_borrowed`;
+          const qty = Math.max(0, Number(item[qtyField]) || 0);
+          const borrowed = Math.max(0, Number(item[borrowedField]) || 0);
+          item[qtyField] = qty;
+          item[borrowedField] = borrowed;
+          if (qty > 0 || borrowed > 0) {
+            hasQuantity = true;
+          }
         }
       }
 
@@ -318,7 +323,7 @@ interface JamaChallanItem {
   size_6_qty?: number;
   size_7_qty?: number;
   size_8_qty?: number;
-  size_9_qty?: number;
+  size_9_qty?: number; size_10_qty?: number;
   size_1_borrowed?: number;
   size_2_borrowed?: number;
   size_3_borrowed?: number;
@@ -327,7 +332,7 @@ interface JamaChallanItem {
   size_6_borrowed?: number;
   size_7_borrowed?: number;
   size_8_borrowed?: number;
-  size_9_borrowed?: number;
+  size_9_borrowed?: number; size_10_borrowed?: number;
 }
 
 interface JamaChallan {
@@ -378,22 +383,27 @@ const validateJamaChallans = (challans: JamaChallan[]): ValidationResult => {
     // Validate each item
     challan.items.forEach((item: JamaChallanItem) => {
       let hasQuantity = false;
-
-      // Verify all size fields exist and are numbers
-      for (let size = 1; size <= 9; size++) {
-        const qtyField = `size_${size}_qty`;
-        const borrowedField = `size_${size}_borrowed`;
-
-        // Convert to numbers, default to 0
-        const qty = Math.max(0, Number(item[qtyField]) || 0);
-        const borrowed = Math.max(0, Number(item[borrowedField]) || 0);
-
-        // Update with validated numbers
-        item[qtyField] = qty;
-        item[borrowedField] = borrowed;
-
-        if (qty > 0 || borrowed > 0) {
-          hasQuantity = true;
+      if (item.items && Array.isArray(item.items)) {
+        item.items.forEach((subItem: any) => {
+          const qty = Math.max(0, Number(subItem.qty) || 0);
+          const borrowed = Math.max(0, Number(subItem.borrowed) || 0);
+          subItem.qty = qty;
+          subItem.borrowed = borrowed;
+          if (qty > 0 || borrowed > 0) {
+            hasQuantity = true;
+          }
+        });
+      } else {
+        for (let size = 1; size <= 10; size++) {
+          const qtyField = `size_${size}_qty`;
+          const borrowedField = `size_${size}_borrowed`;
+          const qty = Math.max(0, Number(item[qtyField]) || 0);
+          const borrowed = Math.max(0, Number(item[borrowedField]) || 0);
+          item[qtyField] = qty;
+          item[borrowedField] = borrowed;
+          if (qty > 0 || borrowed > 0) {
+            hasQuantity = true;
+          }
         }
       }
 

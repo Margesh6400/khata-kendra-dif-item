@@ -173,16 +173,16 @@ const JournalSection: React.FC = () => {
                     udhar_challan_number, udhar_date, client_id,
                     client:clients!udhar_challans_client_id_fkey(client_nic_name, client_name),
                     items:udhar_items!udhar_items_udhar_challan_number_fkey(
-                        size_1_qty,size_2_qty,size_3_qty,size_4_qty,size_5_qty,size_6_qty,size_7_qty,size_8_qty,size_9_qty,
-                        size_1_borrowed,size_2_borrowed,size_3_borrowed,size_4_borrowed,size_5_borrowed,size_6_borrowed,size_7_borrowed,size_8_borrowed,size_9_borrowed
+                        size_1_qty,size_2_qty,size_3_qty,size_4_qty,size_5_qty,size_6_qty,size_7_qty,size_8_qty,size_9_qty, size_10_qty,
+                        size_1_borrowed,size_2_borrowed,size_3_borrowed,size_4_borrowed,size_5_borrowed,size_6_borrowed,size_7_borrowed,size_8_borrowed,size_9_borrowed,size_10_borrowed
                     )
                 `).gte('udhar_date', startStr).lte('udhar_date', endStr).order('udhar_date', { ascending: true }),
                 supabase.from('jama_challans').select(`
                     jama_challan_number, jama_date, client_id,
                     client:clients!jama_challans_client_id_fkey(client_nic_name, client_name),
                     items:jama_items!jama_items_jama_challan_number_fkey(
-                        size_1_qty,size_2_qty,size_3_qty,size_4_qty,size_5_qty,size_6_qty,size_7_qty,size_8_qty,size_9_qty,
-                        size_1_borrowed,size_2_borrowed,size_3_borrowed,size_4_borrowed,size_5_borrowed,size_6_borrowed,size_7_borrowed,size_8_borrowed,size_9_borrowed
+                        size_1_qty,size_2_qty,size_3_qty,size_4_qty,size_5_qty,size_6_qty,size_7_qty,size_8_qty,size_9_qty, size_10_qty,
+                        size_1_borrowed,size_2_borrowed,size_3_borrowed,size_4_borrowed,size_5_borrowed,size_6_borrowed,size_7_borrowed,size_8_borrowed,size_9_borrowed,size_10_borrowed
                     )
                 `).gte('jama_date', startStr).lte('jama_date', endStr).order('jama_date', { ascending: true }),
             ]);

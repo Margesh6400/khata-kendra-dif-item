@@ -2,7 +2,7 @@ import React, { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { format } from "date-fns";
 import { ArrowLeft, Search, Trash2 } from "lucide-react";
-import { PLATE_SIZES } from "../components/ItemsTable";
+import { usePlateSizes } from "../hooks/usePlateSizes";
 import Navbar from "../components/Navbar";
 import { supabase } from "../utils/supabase";
 import toast, { Toaster } from "react-hot-toast";
@@ -20,6 +20,7 @@ interface StockHistoryItem {
 }
 
 const StockHistory: React.FC = () => {
+    const { sizes: plateSizes } = usePlateSizes();
     const { t } = useLanguage();
     const [history, setHistory] = useState<StockHistoryItem[]>([]);
     const [loading, setLoading] = useState(true);
@@ -182,9 +183,9 @@ const StockHistory: React.FC = () => {
                                         <tr>
                                             <th className="px-4 py-3 font-medium text-gray-500 whitespace-nowrap">{t("date")}</th>
                                             <th className="px-4 py-3 font-medium text-gray-500 whitespace-nowrap">{t("total")}</th>
-                                            {PLATE_SIZES.map((size) => (
-                                                <th key={size} className="px-2 py-3 font-medium text-gray-500 text-center whitespace-nowrap min-w-[60px]">
-                                                    {size}
+                                            {plateSizes.map((ps) => (
+                                                <th key={ps.id} className="px-2 py-3 font-medium text-gray-500 text-center whitespace-nowrap min-w-[60px]">
+                                                    {ps.name}
                                                 </th>
                                             ))}
                                             <th className="px-4 py-3 font-medium text-gray-500 whitespace-nowrap">{t("partyOrReason")}</th>
@@ -206,10 +207,10 @@ const StockHistory: React.FC = () => {
                                                     <td className={`px-4 py-4 font-bold whitespace-nowrap ${isAdd ? 'text-green-600' : 'text-red-600'}`}>
                                                         {isAdd ? '+' : '-'}{totalQty}
                                                     </td>
-                                                    {PLATE_SIZES.map((_, index) => {
-                                                        const qty = item.items[index + 1];
+                                                    {plateSizes.map((ps) => {
+                                                        const qty = item.items[ps.id];
                                                         return (
-                                                            <td key={index} className="px-2 py-4 text-center text-gray-600 font-medium">
+                                                            <td key={ps.id} className="px-2 py-4 text-center text-gray-600 font-medium">
                                                                 {qty ? qty : ""}
                                                             </td>
                                                         );

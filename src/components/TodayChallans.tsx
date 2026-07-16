@@ -61,7 +61,7 @@ const TodayChallans: React.FC = () => {
             size_6_note: items.size_6_note || '',
             size_7_note: items.size_7_note || '',
             size_8_note: items.size_8_note || '',
-            size_9_note: items.size_9_note || '',
+            size_9_note: items.size_9_note || '', size_10_note: items.size_10_note || '',
             main_note: items.main_note || ''
         };
     };

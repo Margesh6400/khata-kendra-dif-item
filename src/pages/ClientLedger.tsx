@@ -9,6 +9,7 @@ import {
 } from 'lucide-react';
 import { naturalSort } from '../utils/sortingUtils';
 import { useLanguage } from '../contexts/LanguageContext';
+import { usePlateSizes } from '../hooks/usePlateSizes';
 import { translations } from '../utils/translations';
 import { supabase } from '../utils/supabase';
 import {
@@ -22,14 +23,14 @@ import toast, { Toaster } from 'react-hot-toast';
 
 type SortOption = 'nameAZ' | 'nameZA' | 'balanceHighLow' | 'balanceLowHigh';
 
-interface SizeBalance {
-  size_1: number; size_2: number; size_3: number; size_4: number; size_5: number;
-  size_6: number; size_7: number; size_8: number; size_9: number; grandTotal: number;
+export interface SizeBalance {
+  sizes: { [key: number]: number };
+  grandTotal: number;
 }
 
 export interface ClientBalance {
   grandTotal: number;
-  sizes: { [key: string]: { main: number; borrowed: number; total: number } };
+  sizes: { [key: number]: { main: number; borrowed: number; total: number } };
 }
 
 export interface Transaction {
@@ -38,7 +39,7 @@ export interface Transaction {
   challanId: string;
   date: string;
   grandTotal: number;
-  sizes: { [key: string]: { qty: number; borrowed: number } };
+  sizes: { [key: number]: { qty: number; borrowed: number } };
   site: string;
   driverName: string;
   items: any;
@@ -138,16 +139,13 @@ SkeletonCard.displayName = 'SkeletonCard';
 
 // ─── Pure helpers (no hooks, no closures over state) ──────────────────────────
 
-const EMPTY_SIZE: SizeBalance = Object.freeze({
-  size_1: 0, size_2: 0, size_3: 0, size_4: 0, size_5: 0,
-  size_6: 0, size_7: 0, size_8: 0, size_9: 0, grandTotal: 0,
-});
+const getEmptySize = (): SizeBalance => ({ sizes: {}, grandTotal: 0 });
 
 function buildLedgerFromTransactions(client: any, rawTransactions: any[]): ClientLedgerData {
-  const udharTotals = { ...EMPTY_SIZE };
-  const jamaTotals = { ...EMPTY_SIZE };
+  const udharTotals = getEmptySize();
+  const jamaTotals = getEmptySize();
   const sizes: ClientBalance['sizes'] = {};
-  for (let i = 1; i <= 9; i++) sizes[i] = { main: 0, borrowed: 0, total: 0 };
+  
 
   const transactions: Transaction[] = rawTransactions.map(t => {
     const sizeData: Transaction['sizes'] = {};
@@ -155,20 +153,21 @@ function buildLedgerFromTransactions(client: any, rawTransactions: any[]): Clien
     const multiplier = t.type === 'udhar' ? 1 : -1;
     const totals = t.type === 'udhar' ? udharTotals : jamaTotals;
 
-    for (let i = 1; i <= 9; i++) {
-      const qty = t.items[`size_${i}_qty`] || 0;
-      const borrowed = t.items[`size_${i}_borrowed`] || 0;
+        Object.entries(t.items.items || {}).forEach(([sizeIdStr, itemData]: [string, any]) => {
+      const i = parseInt(sizeIdStr);
+      const qty = itemData.qty || 0;
+      const borrowed = itemData.borrowed || 0;
       sizeData[i] = { qty, borrowed };
       grandTotal += qty + borrowed;
 
-      const key = `size_${i}` as keyof SizeBalance;
-      (totals as any)[key] += qty + borrowed;
+      totals.sizes[i] = (totals.sizes[i] || 0) + qty + borrowed;
       totals.grandTotal += qty + borrowed;
 
+      if (!sizes[i]) sizes[i] = { main: 0, borrowed: 0, total: 0 };
       sizes[i].main += qty * multiplier;
       sizes[i].borrowed += borrowed * multiplier;
       sizes[i].total = sizes[i].main + sizes[i].borrowed;
-    }
+    });
 
     return {
       type: t.type,
@@ -208,6 +207,7 @@ const ITEMS_PER_PAGE = 10;
 
 export default function ClientLedger() {
   const { language } = useLanguage();
+  const { sizes: plateSizes } = usePlateSizes();
   const t = translations[language];
 
   const [allClients, setAllClients] = useState<any[]>([]);
@@ -292,9 +292,9 @@ export default function ClientLedger() {
     const end = currentPage * ITEMS_PER_PAGE;
     const empty: ClientBalance = {
       grandTotal: 0,
-      sizes: Object.fromEntries(Array.from({ length: 9 }, (_, i) => [i + 1, { main: 0, borrowed: 0, total: 0 }])),
+      sizes: {},
     };
-    const emptySize = { ...EMPTY_SIZE };
+    const emptySize = getEmptySize();
 
     return sortedClients.slice(0, end).map(client => {
       const existing = ledgersMap.get(client.id);
@@ -399,8 +399,7 @@ export default function ClientLedger() {
         fetchJamaChallansForClient(),
       ]);
 
-      const csvRows = [['Client Sort Name', 'Client Name', 'Site', 'Phone', 'Grand Total',
-        'Size 1', 'Size 2', 'Size 3', 'Size 4', 'Size 5', 'Size 6', 'Size 7', 'Size 8', 'Size 9']];
+      const csvRows = [['Client Sort Name', 'Client Name', 'Site', 'Phone', 'Grand Total', ...plateSizes.map(ps => ps.name)]];
 
       const udharMap = new Map<string, any[]>();
       const jamaMap = new Map<string, any[]>();
@@ -408,13 +407,14 @@ export default function ClientLedger() {
       allJama.forEach((j: any) => { if (!jamaMap.has(j.clientId)) jamaMap.set(j.clientId, []); jamaMap.get(j.clientId)!.push(j); });
 
       const calcTotals = (challans: any[]) => {
-        const t = { ...EMPTY_SIZE };
+        const t = getEmptySize();
         challans.forEach(ch => {
-          for (let i = 1; i <= 9; i++) {
-            const v = (ch.items[`size_${i}_qty`] || 0) + (ch.items[`size_${i}_borrowed`] || 0);
-            (t as any)[`size_${i}`] += v;
+          Object.entries(ch.items.items || {}).forEach(([sizeIdStr, itemData]: [string, any]) => {
+            const i = parseInt(sizeIdStr);
+            const v = (itemData.qty || 0) + (itemData.borrowed || 0);
+            t.sizes[i] = (t.sizes[i] || 0) + v;
             t.grandTotal += v;
-          }
+          });
         });
         return t;
       };
@@ -429,7 +429,9 @@ export default function ClientLedger() {
           `"${client.primary_phone_number || ''}"`,
           (u.grandTotal - j.grandTotal).toString(),
         ];
-        for (let i = 1; i <= 9; i++) row.push(((u as any)[`size_${i}`] - (j as any)[`size_${i}`]).toString());
+        plateSizes.forEach(ps => {
+          row.push(((u.sizes[ps.id] || 0) - (j.sizes[ps.id] || 0)).toString());
+        });
         csvRows.push(row);
       });
 
@@ -540,10 +542,10 @@ export default function ClientLedger() {
                     onClick={handleDownloadBackup}
                     disabled={downloading}
                     className="flex items-center gap-1.5 px-2 py-1.5 text-xs text-gray-600 border border-gray-200 rounded-md hover:bg-gray-50 disabled:opacity-50"
-                    title="Download Backup (CSV)"
+                    title={t.backup || "Download Backup (CSV)"}
                   >
                     {downloading ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Download className="w-3.5 h-3.5" />}
-                    <span className="hidden sm:inline">Backup</span>
+                    <span className="hidden sm:inline">{t.backup || "Backup"}</span>
                   </button>
                   <div className="relative">
                     <button

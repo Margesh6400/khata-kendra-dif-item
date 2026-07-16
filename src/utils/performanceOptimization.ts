@@ -7,7 +7,7 @@
 const SIZES = Array.from({ length: 9 }, (_, i) => i + 1);
 const EMPTY_SIZE_BALANCE = Object.freeze({
   size_1: 0, size_2: 0, size_3: 0, size_4: 0, size_5: 0,
-  size_6: 0, size_7: 0, size_8: 0, size_9: 0, grandTotal: 0
+  size_6: 0, size_7: 0, size_8: 0, size_9: 0, size_10: 0, grandTotal: 0
 } as const);
 
 /**

@@ -21,6 +21,8 @@ import { fetchUdharChallansForClient, fetchJamaChallansForClient } from '../util
 import { naturalSort } from '../utils/sortingUtils';
 import ClientForm, { ClientFormData } from '../components/ClientForm';
 import ItemsTable, { ItemsData } from '../components/ItemsTable';
+import { usePlateSizes } from '../hooks/usePlateSizes';
+import { mapRecordToArray } from '../utils/challanOperations';
 import ReceiptTemplate from '../components/ReceiptTemplate';
 
 interface StockData {
@@ -559,6 +561,7 @@ const UdharChallan: React.FC = () => {
   const navigate = useNavigate();
   const location = useLocation();
   const { t } = useLanguage();
+  const { sizes: plateSizes } = usePlateSizes();
 
   // Step management
   const [currentStep, setCurrentStep] = useState<Step>('client-selection');
@@ -580,15 +583,7 @@ const UdharChallan: React.FC = () => {
   const [previousDriversVisible, setPreviousDriversVisible] = useState(false);
   const [alternativeSite, setAlternativeSite] = useState('');
   const [secondaryPhone, setSecondaryPhone] = useState('');
-  const [items, setItems] = useState<ItemsData>({
-    size_1_qty: 0, size_2_qty: 0, size_3_qty: 0, size_4_qty: 0, size_5_qty: 0,
-    size_6_qty: 0, size_7_qty: 0, size_8_qty: 0, size_9_qty: 0,
-    size_1_borrowed: 0, size_2_borrowed: 0, size_3_borrowed: 0, size_4_borrowed: 0, size_5_borrowed: 0,
-    size_6_borrowed: 0, size_7_borrowed: 0, size_8_borrowed: 0, size_9_borrowed: 0,
-    size_1_note: '', size_2_note: '', size_3_note: '', size_4_note: '', size_5_note: '',
-    size_6_note: '', size_7_note: '', size_8_note: '', size_9_note: '',
-    main_note: '',
-  });
+  const [items, setItems] = useState<ItemsData>({ items: {}, main_note: '' });
   const [errors, setErrors] = useState<{ [key: string]: string }>({});
   const [showSuccess, setShowSuccess] = useState(false);
   const [hideExtraColumns, setHideExtraColumns] = useState(true);
@@ -784,12 +779,8 @@ const UdharChallan: React.FC = () => {
       newErrors.client = t('requiredField');
     }
 
-    const hasItems = Object.keys(items).some(key => {
-      if (key.includes('qty') || key.includes('borrowed')) {
-        const val = items[key as keyof ItemsData];
-        return typeof val === 'number' && val > 0;
-      }
-      return false;
+    const hasItems = Object.values(items.items || {}).some(item => {
+      return (item.qty && item.qty > 0) || (item.borrowed && item.borrowed > 0);
     });
 
     if (!hasItems) {
@@ -807,15 +798,14 @@ const UdharChallan: React.FC = () => {
     }
 
     // Validate against available stock
-    for (let i = 1; i <= 9; i++) {
-      const qtyVal = items[`size_${i}_qty` as keyof ItemsData];
-      const qty = typeof qtyVal === 'string' ? (parseInt(qtyVal) || 0) : (qtyVal || 0);
-
-      const stockItem = stockData.find(s => s.size === i);
-      const available = stockItem?.available_stock || 0;
+    for (const stockItem of stockData) {
+      const sizeId = stockItem.size;
+      const qty = items.items?.[sizeId]?.qty || 0;
+      const available = stockItem.available_stock || 0;
 
       if (qty > 0 && qty > available) {
-        toast.error(`Cannot issue more than available stock for Size ${i}. Available: ${available}, Entered: ${qty}`);
+        const sizeName = plateSizes.find(p => p.id === sizeId)?.name || `Size ${sizeId}`;
+        toast.error(`Cannot issue more than available stock for Size ${sizeName}. Available: ${available}, Entered: ${qty}`);
         return;
       }
     }
@@ -856,7 +846,8 @@ const UdharChallan: React.FC = () => {
       .from('udhar_items')
       .insert({
         udhar_challan_number: challanNumber,
-        ...items,
+        items: mapRecordToArray(items),
+        main_note: items.main_note,
       });
 
     if (itemsError) {
@@ -867,19 +858,20 @@ const UdharChallan: React.FC = () => {
     }
 
     try {
-      for (let size = 1; size <= 9; size++) {
-        const onRentQty = items[`size_${size}_qty` as keyof ItemsData] as number;
-        const borrowedQty = items[`size_${size}_borrowed` as keyof ItemsData] as number;
+      for (const [sizeIdStr, detail] of Object.entries(items.items || {})) {
+        const sizeId = parseInt(sizeIdStr);
+        const onRentQty = detail.qty || 0;
+        const borrowedQty = detail.borrowed || 0;
 
         if (onRentQty > 0 || borrowedQty > 0) {
           const { error: stockError } = await supabase.rpc('increment_stock', {
-            p_size: size,
+            p_size: sizeId,
             p_on_rent_increment: onRentQty,
             p_borrowed_increment: borrowedQty,
           });
 
           if (stockError) {
-            console.error(`Error updating stock for size ${size}:`, stockError);
+            console.error(`Error updating stock for size ${sizeId}:`, stockError);
             throw stockError;
           }
         }
@@ -958,7 +950,7 @@ const UdharChallan: React.FC = () => {
             <>
               <div className="hidden mb-4 sm:block sm:mb-6 lg:mb-8">
                 <h2 className="text-xl font-bold text-gray-900 sm:text-2xl lg:text-3xl">{t('udharChallanTitle')}</h2>
-                <p className="mt-1 text-[10px] sm:text-xs lg:text-sm lg:mt-2 text-gray-600">Create new udhar challan</p>
+                <p className="mt-1 text-[10px] sm:text-xs lg:text-sm lg:mt-2 text-gray-600">{t('udharChallanSubtitle')}</p>
               </div>
               {showQuickAdd && (
                 <>

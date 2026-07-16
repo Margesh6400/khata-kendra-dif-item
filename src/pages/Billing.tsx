@@ -13,46 +13,49 @@ interface ClientCardProps {
   onClick: () => void;
 }
 
-const ClientCard: React.FC<ClientCardProps> = ({ client, balance, onClick }) => (
-  <button
-    onClick={onClick}
-    className="p-3 text-left transition-all bg-white border border-gray-200 shadow-sm sm:p-4 lg:p-5 group rounded-lg sm:rounded-xl hover:shadow-md hover:border-blue-500 touch-manipulation active:scale-[0.98]"
-  >
-    <div className="flex items-center gap-2 mb-2 sm:gap-3 sm:mb-3">
-      <div className="p-1.5 sm:p-2 transition-colors bg-blue-100 rounded-md sm:rounded-lg group-hover:bg-blue-200">
-        <User className="w-4 h-4 text-blue-600 sm:w-5 sm:h-5" />
-      </div>
-      <div className="flex-1 min-w-0">
-        <h4 className="text-sm font-semibold text-gray-900 truncate transition-colors sm:text-base lg:text-lg group-hover:text-blue-600">
-          {client.client_nic_name}
-          {client.is_hidden && (
-            <span className="ml-2 px-1.5 py-0.5 text-[10px] font-medium text-gray-500 bg-gray-100 rounded">
-              Hidden
-            </span>
-          )}
-        </h4>
-        <p className="text-[10px] sm:text-xs lg:text-sm text-gray-600 truncate">{client.client_name}</p>
-      </div>
-      {balance !== undefined && balance > 0 && (
-        <div className="text-right mr-2">
-          <span className="block text-[10px] text-gray-400 font-medium uppercase tracking-wider">Payable</span>
-          <span className="text-xs font-bold text-red-600 sm:text-sm">₹{balance.toLocaleString('en-IN')}</span>
+const ClientCard: React.FC<ClientCardProps> = ({ client, balance, onClick }) => {
+  const { t } = useLanguage();
+  return (
+    <button
+      onClick={onClick}
+      className="p-3 text-left transition-all bg-white border border-gray-200 shadow-sm sm:p-4 lg:p-5 group rounded-lg sm:rounded-xl hover:shadow-md hover:border-blue-500 touch-manipulation active:scale-[0.98]"
+    >
+      <div className="flex items-center gap-2 mb-2 sm:gap-3 sm:mb-3">
+        <div className="p-1.5 sm:p-2 transition-colors bg-blue-100 rounded-md sm:rounded-lg group-hover:bg-blue-200">
+          <User className="w-4 h-4 text-blue-600 sm:w-5 sm:h-5" />
         </div>
-      )}
-      <ChevronRight className="flex-shrink-0 w-4 h-4 text-gray-400 transition-transform sm:w-5 sm:h-5 group-hover:translate-x-1" />
-    </div>
-    <div className="pt-2 mt-2 space-y-1 border-t border-gray-100 sm:pt-3 sm:mt-3 sm:space-y-1.5 lg:space-y-2">
-      <div className="flex items-center gap-1.5 sm:gap-2 text-[10px] sm:text-xs lg:text-sm text-gray-600">
-        <MapPin className="flex-shrink-0 w-3 h-3 text-gray-400 sm:w-3.5 sm:h-3.5" />
-        <span className="truncate">{client.site}</span>
+        <div className="flex-1 min-w-0">
+          <h4 className="text-sm font-semibold text-gray-900 truncate transition-colors sm:text-base lg:text-lg group-hover:text-blue-600">
+            {client.client_nic_name}
+            {client.is_hidden && (
+              <span className="ml-2 px-1.5 py-0.5 text-[10px] font-medium text-gray-500 bg-gray-100 rounded">
+                Hidden
+              </span>
+            )}
+          </h4>
+          <p className="text-[10px] sm:text-xs lg:text-sm text-gray-600 truncate">{client.client_name}</p>
+        </div>
+        {balance !== undefined && balance > 0 && (
+          <div className="text-right mr-2">
+            <span className="block text-[10px] text-gray-400 font-medium uppercase tracking-wider">{t('payable')}</span>
+            <span className="text-xs font-bold text-red-600 sm:text-sm">₹{balance.toLocaleString('en-IN')}</span>
+          </div>
+        )}
+        <ChevronRight className="flex-shrink-0 w-4 h-4 text-gray-400 transition-transform sm:w-5 sm:h-5 group-hover:translate-x-1" />
       </div>
-      <div className="flex items-center gap-1.5 sm:gap-2 text-[10px] sm:text-xs lg:text-sm text-gray-600">
-        <Phone className="flex-shrink-0 w-3 h-3 text-gray-400 sm:w-3.5 sm:h-3.5" />
-        <span>{client.primary_phone_number}</span>
+      <div className="pt-2 mt-2 space-y-1 border-t border-gray-100 sm:pt-3 sm:mt-3 sm:space-y-1.5 lg:space-y-2">
+        <div className="flex items-center gap-1.5 sm:gap-2 text-[10px] sm:text-xs lg:text-sm text-gray-600">
+          <MapPin className="flex-shrink-0 w-3 h-3 text-gray-400 sm:w-3.5 sm:h-3.5" />
+          <span className="truncate">{client.site}</span>
+        </div>
+        <div className="flex items-center gap-1.5 sm:gap-2 text-[10px] sm:text-xs lg:text-sm text-gray-600">
+          <Phone className="flex-shrink-0 w-3 h-3 text-gray-400 sm:w-3.5 sm:h-3.5" />
+          <span className="truncate">{client.primary_phone_number}</span>
+        </div>
       </div>
-    </div>
-  </button>
-);
+    </button>
+  );
+};
 
 export default function Billing() {
   const navigate = useNavigate();
@@ -151,7 +154,7 @@ export default function Billing() {
           <div className="items-center justify-between hidden p-4 mb-4 bg-white border border-gray-200 sm:flex rounded-xl">
             <div>
               <h3 className="text-lg font-semibold text-gray-900 lg:text-xl">{t("selectClient")}</h3>
-              <p className="mt-0.5 text-xs text-gray-500 lg:text-sm">Choose client for billing</p>
+              <p className="mt-0.5 text-xs text-gray-500 lg:text-sm">{t('billingSubtitle')}</p>
             </div>
           </div>
 

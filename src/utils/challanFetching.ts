@@ -1,43 +1,37 @@
+
+export const mapItemsToRecord = (rawItems: any, mainNote: string = '') => {
+  const record: Record<number, { qty: number, borrowed: number, note: string }> = {};
+  
+  if (!rawItems) return { items: record, main_note: mainNote };
+  
+  // If it's a joined row array, take the first
+  const itemRow = Array.isArray(rawItems) && rawItems.length > 0 && !rawItems[0].size_id ? rawItems[0] : rawItems;
+  
+  // items array from jsonb
+  const jsonArray = itemRow.items || itemRow || [];
+  const arrayToProcess = Array.isArray(jsonArray) ? jsonArray : [];
+  
+  arrayToProcess.forEach((item: any) => {
+    if (item.size_id) {
+      record[item.size_id] = {
+        qty: item.qty || 0,
+        borrowed: item.borrowed || 0,
+        note: item.note || ''
+      };
+    }
+  });
+  
+  return { items: record, main_note: itemRow.main_note || mainNote };
+};
+
 import { supabase } from './supabase';
 
 interface ItemsData {
-  size_1_qty: number;
-  size_2_qty: number;
-  size_3_qty: number;
-  size_4_qty: number;
-  size_5_qty: number;
-  size_6_qty: number;
-  size_7_qty: number;
-  size_8_qty: number;
-  size_9_qty: number;
-  size_1_borrowed: number;
-  size_2_borrowed: number;
-  size_3_borrowed: number;
-  size_4_borrowed: number;
-  size_5_borrowed: number;
-  size_6_borrowed: number;
-  size_7_borrowed: number;
-  size_8_borrowed: number;
-  size_9_borrowed: number;
-  size_1_note: string | null;
-  size_2_note: string | null;
-  size_3_note: string | null;
-  size_4_note: string | null;
-  size_5_note: string | null;
-  size_6_note: string | null;
-  size_7_note: string | null;
-  size_8_note: string | null;
-  size_9_note: string | null;
+  [key: string]: any;
   main_note: string | null;
 }
 
 const emptyItems: ItemsData = {
-  size_1_qty: 0, size_2_qty: 0, size_3_qty: 0, size_4_qty: 0, size_5_qty: 0,
-  size_6_qty: 0, size_7_qty: 0, size_8_qty: 0, size_9_qty: 0,
-  size_1_borrowed: 0, size_2_borrowed: 0, size_3_borrowed: 0, size_4_borrowed: 0, size_5_borrowed: 0,
-  size_6_borrowed: 0, size_7_borrowed: 0, size_8_borrowed: 0, size_9_borrowed: 0,
-  size_1_note: null, size_2_note: null, size_3_note: null, size_4_note: null, size_5_note: null,
-  size_6_note: null, size_7_note: null, size_8_note: null, size_9_note: null,
   main_note: null,
 };
 
@@ -58,36 +52,7 @@ export const fetchUdharChallansForClient = async (clientId?: string) => {
         site,
         primary_phone_number
       ),
-      items:udhar_items!udhar_items_udhar_challan_number_fkey (
-        size_1_qty,
-        size_2_qty,
-        size_3_qty,
-        size_4_qty,
-        size_5_qty,
-        size_6_qty,
-        size_7_qty,
-        size_8_qty,
-        size_9_qty,
-        size_1_borrowed,
-        size_2_borrowed,
-        size_3_borrowed,
-        size_4_borrowed,
-        size_5_borrowed,
-        size_6_borrowed,
-        size_7_borrowed,
-        size_8_borrowed,
-        size_9_borrowed,
-        size_1_note,
-        size_2_note,
-        size_3_note,
-        size_4_note,
-        size_5_note,
-        size_6_note,
-        size_7_note,
-        size_8_note,
-        size_9_note,
-        main_note
-      )
+      items:udhar_items!udhar_items_udhar_challan_number_fkey(items, main_note)
     `)
     .order('udhar_date', { ascending: true });
 
@@ -103,8 +68,7 @@ export const fetchUdharChallansForClient = async (clientId?: string) => {
   }
 
   const transformedData = (data || []).map((challan: any) => {
-    const rawItems = challan.items;
-    const itemRow = Array.isArray(rawItems) ? (rawItems[0] || emptyItems) : (rawItems || emptyItems);
+    const parsedItems = mapItemsToRecord(challan.items);
 
     return {
       challanNumber: challan.udhar_challan_number,
@@ -118,7 +82,7 @@ export const fetchUdharChallansForClient = async (clientId?: string) => {
       isAlternativeSite: !!challan.alternative_site,
       phone: challan.secondary_phone_number || challan.client?.primary_phone_number || '',
       isSecondaryPhone: !!challan.secondary_phone_number,
-      items: itemRow,
+      items: parsedItems,
     };
   });
 
@@ -142,36 +106,7 @@ export const fetchJamaChallansForClient = async (clientId?: string) => {
         site,
         primary_phone_number
       ),
-      items:jama_items!jama_items_jama_challan_number_fkey (
-        size_1_qty,
-        size_2_qty,
-        size_3_qty,
-        size_4_qty,
-        size_5_qty,
-        size_6_qty,
-        size_7_qty,
-        size_8_qty,
-        size_9_qty,
-        size_1_borrowed,
-        size_2_borrowed,
-        size_3_borrowed,
-        size_4_borrowed,
-        size_5_borrowed,
-        size_6_borrowed,
-        size_7_borrowed,
-        size_8_borrowed,
-        size_9_borrowed,
-        size_1_note,
-        size_2_note,
-        size_3_note,
-        size_4_note,
-        size_5_note,
-        size_6_note,
-        size_7_note,
-        size_8_note,
-        size_9_note,
-        main_note
-      )
+      items:jama_items!jama_items_jama_challan_number_fkey(items, main_note)
     `)
     .order('jama_date', { ascending: true });
 
@@ -187,8 +122,7 @@ export const fetchJamaChallansForClient = async (clientId?: string) => {
   }
 
   const transformedData = (data || []).map((challan: any) => {
-    const rawItems = challan.items;
-    const itemRow = Array.isArray(rawItems) ? (rawItems[0] || emptyItems) : (rawItems || emptyItems);
+    const parsedItems = mapItemsToRecord(challan.items);
 
     return {
       challanNumber: challan.jama_challan_number,
@@ -202,7 +136,7 @@ export const fetchJamaChallansForClient = async (clientId?: string) => {
       isAlternativeSite: !!challan.alternative_site,
       phone: challan.secondary_phone_number || challan.client?.primary_phone_number || '',
       isSecondaryPhone: !!challan.secondary_phone_number,
-      items: itemRow,
+      items: parsedItems,
     };
   });
 
@@ -229,17 +163,7 @@ export const fetchDailyChallans = async (date: Date) => {
           site,
           primary_phone_number
         ),
-        items:udhar_items!udhar_items_udhar_challan_number_fkey (
-          size_1_qty, size_2_qty, size_3_qty, size_4_qty, size_5_qty,
-          size_6_qty, size_7_qty, size_8_qty, size_9_qty,
-          size_1_borrowed, size_2_borrowed, size_3_borrowed,
-          size_4_borrowed, size_5_borrowed, size_6_borrowed,
-          size_7_borrowed, size_8_borrowed, size_9_borrowed,
-          size_1_note, size_2_note, size_3_note,
-          size_4_note, size_5_note, size_6_note,
-          size_7_note, size_8_note, size_9_note,
-          main_note
-        )
+        items:udhar_items!udhar_items_udhar_challan_number_fkey(items, main_note)
       `)
       .eq('udhar_date', dateStr)
       .order('udhar_challan_number', { ascending: false }),
@@ -259,17 +183,7 @@ export const fetchDailyChallans = async (date: Date) => {
           site,
           primary_phone_number
         ),
-        items:jama_items!jama_items_jama_challan_number_fkey (
-          size_1_qty, size_2_qty, size_3_qty, size_4_qty, size_5_qty,
-          size_6_qty, size_7_qty, size_8_qty, size_9_qty,
-          size_1_borrowed, size_2_borrowed, size_3_borrowed,
-          size_4_borrowed, size_5_borrowed, size_6_borrowed,
-          size_7_borrowed, size_8_borrowed, size_9_borrowed,
-          size_1_note, size_2_note, size_3_note,
-          size_4_note, size_5_note, size_6_note,
-          size_7_note, size_8_note, size_9_note,
-          main_note
-        )
+        items:jama_items!jama_items_jama_challan_number_fkey(items, main_note)
       `)
       .eq('jama_date', dateStr)
       .order('jama_challan_number', { ascending: false }),
@@ -293,8 +207,7 @@ export const fetchDailyChallans = async (date: Date) => {
   ]);
 
   const mapChallan = (challan: any, type: 'udhar' | 'jama') => {
-    const rawItems = challan.items;
-    const itemRow = Array.isArray(rawItems) ? (rawItems[0] || emptyItems) : (rawItems || emptyItems);
+    const parsedItems = mapItemsToRecord(challan.items);
 
     return {
       challanNumber: type === 'udhar' ? challan.udhar_challan_number : challan.jama_challan_number,
@@ -308,8 +221,8 @@ export const fetchDailyChallans = async (date: Date) => {
       isAlternativeSite: !!challan.alternative_site,
       phone: challan.secondary_phone_number || challan.client?.primary_phone_number || '',
       isSecondaryPhone: !!challan.secondary_phone_number,
-      items: itemRow,
-      totalItems: calculateTotalFromItems(itemRow)
+      items: parsedItems,
+      totalItems: calculateTotalFromItems(parsedItems)
     };
   };
 
@@ -383,15 +296,7 @@ export const fetchBulkClientTransactions = async (clientIds: string[]): Promise<
         alternative_site,
         secondary_phone_number,
         client_id,
-        items:udhar_items!udhar_items_udhar_challan_number_fkey (
-          size_1_qty, size_2_qty, size_3_qty, size_4_qty, size_5_qty,
-          size_6_qty, size_7_qty, size_8_qty, size_9_qty,
-          size_1_borrowed, size_2_borrowed, size_3_borrowed,
-          size_4_borrowed, size_5_borrowed, size_6_borrowed,
-          size_7_borrowed, size_8_borrowed, size_9_borrowed,
-          size_1_note, size_2_note, size_3_note, size_4_note, size_5_note,
-          size_6_note, size_7_note, size_8_note, size_9_note, main_note
-        )
+        items:udhar_items!udhar_items_udhar_challan_number_fkey(items, main_note)
       `)
       .in('client_id', clientIds)
       .order('udhar_date', { ascending: true }),
@@ -404,15 +309,7 @@ export const fetchBulkClientTransactions = async (clientIds: string[]): Promise<
         alternative_site,
         secondary_phone_number,
         client_id,
-        items:jama_items!jama_items_jama_challan_number_fkey (
-          size_1_qty, size_2_qty, size_3_qty, size_4_qty, size_5_qty,
-          size_6_qty, size_7_qty, size_8_qty, size_9_qty,
-          size_1_borrowed, size_2_borrowed, size_3_borrowed,
-          size_4_borrowed, size_5_borrowed, size_6_borrowed,
-          size_7_borrowed, size_8_borrowed, size_9_borrowed,
-          size_1_note, size_2_note, size_3_note, size_4_note, size_5_note,
-          size_6_note, size_7_note, size_8_note, size_9_note, main_note
-        )
+        items:jama_items!jama_items_jama_challan_number_fkey(items, main_note)
       `)
       .in('client_id', clientIds)
       .order('jama_date', { ascending: true }),
@@ -423,8 +320,7 @@ export const fetchBulkClientTransactions = async (clientIds: string[]): Promise<
   (udharResult.data || []).forEach((challan: any) => {
     const cid = challan.client_id;
     if (!byClient.has(cid)) byClient.set(cid, []);
-    const raw = challan.items;
-    const itemRow = Array.isArray(raw) ? (raw[0] ?? emptyItems) : (raw ?? emptyItems);
+    const parsedItems = mapItemsToRecord(challan.items);
     byClient.get(cid)!.push({
       challanNumber: challan.udhar_challan_number,
       date: challan.udhar_date,
@@ -435,15 +331,14 @@ export const fetchBulkClientTransactions = async (clientIds: string[]): Promise<
       isAlternativeSite: !!challan.alternative_site,
       phone: challan.secondary_phone_number || '',
       isSecondaryPhone: !!challan.secondary_phone_number,
-      items: itemRow,
+      items: parsedItems,
     });
   });
 
   (jamaResult.data || []).forEach((challan: any) => {
     const cid = challan.client_id;
     if (!byClient.has(cid)) byClient.set(cid, []);
-    const raw = challan.items;
-    const itemRow = Array.isArray(raw) ? (raw[0] ?? emptyItems) : (raw ?? emptyItems);
+    const parsedItems = mapItemsToRecord(challan.items);
     byClient.get(cid)!.push({
       challanNumber: challan.jama_challan_number,
       date: challan.jama_date,
@@ -454,7 +349,7 @@ export const fetchBulkClientTransactions = async (clientIds: string[]): Promise<
       isAlternativeSite: !!challan.alternative_site,
       phone: challan.secondary_phone_number || '',
       isSecondaryPhone: !!challan.secondary_phone_number,
-      items: itemRow,
+      items: parsedItems,
     });
   });
 
@@ -466,10 +361,7 @@ export const fetchBulkClientTransactions = async (clientIds: string[]): Promise<
   return byClient;
 };
 
-export const calculateTotalFromItems = (items: ItemsData): number => {
-  let total = 0;
-  for (let i = 1; i <= 9; i++) {
-    total += ((items as any)[`size_${i}_qty`] || 0) + ((items as any)[`size_${i}_borrowed`] || 0);
-  }
-  return total;
+export const calculateTotalFromItems = (itemsData: any): number => {
+  if (!itemsData || !itemsData.items) return 0;
+  return Object.values(itemsData.items).reduce((sum: number, item: any) => sum + (item.qty || 0) + (item.borrowed || 0), 0);
 };

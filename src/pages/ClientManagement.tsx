@@ -221,6 +221,7 @@ const ClientManagement: React.FC = () => {
           site: data.site,
           primary_phone_number: data.primary_phone_number,
           daily_rent_price: data.daily_rent_price ?? 1,
+          jack_rents: data.jack_rents ?? {},
           updated_at: new Date().toISOString(),
         })
         .eq('id', editingClient.id);
@@ -258,6 +259,7 @@ const ClientManagement: React.FC = () => {
           site: data.site,
           primary_phone_number: data.primary_phone_number,
           daily_rent_price: data.daily_rent_price ?? 1,
+          jack_rents: data.jack_rents ?? {},
         });
 
       toast.dismiss(loadingToast);
@@ -466,62 +468,69 @@ const ClientManagement: React.FC = () => {
           </div>
 
           {/* Enhanced Search Bar with Integrated Filter */}
-          <div className="relative mb-4">
-            <div className="relative flex items-center w-full">
-              <Search className="absolute w-4 h-4 text-gray-400 left-3" />
+          <div className="flex items-center gap-2 mb-4 w-full">
+            {/* Search Input */}
+            <div className="relative flex-1">
+              <Search className="absolute w-4 h-4 text-gray-400 transform -translate-y-1/2 left-3 top-1/2" />
               <input
                 type="text"
                 placeholder={t('searchClients')}
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                className="w-full pl-10 pr-48 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm"
+                className="w-full pl-10 pr-10 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm bg-white"
               />
-              <div className="absolute flex items-center gap-2 right-2">
+              {searchQuery && (
                 <button
-                  onClick={() => setShowHidden(!showHidden)}
-                  className={`flex items-center gap-1 px-2 py-1.5 rounded-md text-xs font-medium transition-colors ${showHidden ? 'bg-orange-100 text-orange-700' : 'bg-gray-100 text-gray-600'
-                    }`}
+                  onClick={() => setSearchQuery('')}
+                  className="absolute p-1 text-gray-400 transform -translate-y-1/2 right-3 top-1/2 hover:text-gray-600"
                 >
-                  {showHidden ? <Eye className="w-3.5 h-3.5" /> : <EyeOff className="w-3.5 h-3.5" />}
-                  <span className="hidden sm:inline">{showHidden ? 'Hide Hidden' : 'Show Hidden'}</span>
+                  <div className="flex items-center justify-center w-4 h-4 text-lg">×</div>
                 </button>
-                {searchQuery && (
-                  <button
-                    onClick={() => setSearchQuery('')}
-                    className="p-1 text-gray-400 hover:text-gray-600"
-                  >
-                    <div className="flex items-center justify-center w-4 h-4">×</div>
-                  </button>
-                )}
-                <div className="relative sort-menu-container">
-                  <button
-                    onClick={() => setShowSortMenu(prev => !prev)}
-                    className="flex items-center gap-1.5 px-2 py-1.5 text-xs text-gray-600 rounded-md"
-                  >
-                    <Filter className="w-3.5 h-3.5" />
-                    <span className="hidden sm:inline">{getSortLabel(sortOption)}</span>
-                  </button>
+              )}
+            </div>
 
-                  {/* Sort Options Dropdown */}
-                  {showSortMenu && (
-                    <div className="absolute right-0 z-10 w-40 mt-1 bg-white border border-gray-200 rounded-lg shadow-lg">
-                      {(['nameAZ', 'nameZA'] as SortOption[]).map((option) => (
-                        <button
-                          key={option}
-                          onClick={() => {
-                            setSortOption(option);
-                            setShowSortMenu(false);
-                          }}
-                          className={`w-full px-4 py-2 text-xs text-left transition-colors hover:bg-gray-50 ${sortOption === option ? 'text-blue-600 bg-blue-50' : 'text-gray-700'
-                            }`}
-                        >
-                          {getSortLabel(option)}
-                        </button>
-                      ))}
-                    </div>
-                  )}
+            {/* Filter Buttons (Separate) */}
+            <button
+              onClick={() => setShowHidden(!showHidden)}
+              className={`flex items-center gap-1.5 px-3 py-2.5 border rounded-lg text-sm font-medium transition-colors ${
+                showHidden 
+                  ? 'bg-orange-50 border-orange-200 text-orange-700' 
+                  : 'bg-white border-gray-300 text-gray-700 hover:bg-gray-50'
+              }`}
+              title={showHidden ? t('hideHidden') : t('showHidden')}
+            >
+              {showHidden ? <Eye className="w-4 h-4" /> : <EyeOff className="w-4 h-4" />}
+              <span className="hidden sm:inline">{showHidden ? t('hideHidden') : t('showHidden')}</span>
+            </button>
+
+            <div className="relative sort-menu-container">
+              <button
+                onClick={() => setShowSortMenu(prev => !prev)}
+                className="flex items-center gap-1.5 px-3 py-2.5 bg-white border border-gray-300 rounded-lg text-sm font-medium text-gray-700 hover:bg-gray-50 transition-colors"
+                title={getSortLabel(sortOption)}
+              >
+                <Filter className="w-4 h-4 text-gray-500" />
+                <span className="hidden sm:inline">{getSortLabel(sortOption)}</span>
+              </button>
+
+              {/* Sort Options Dropdown */}
+              {showSortMenu && (
+                <div className="absolute right-0 z-10 w-40 mt-1 bg-white border border-gray-200 rounded-lg shadow-lg">
+                  {(['nameAZ', 'nameZA'] as SortOption[]).map((option) => (
+                    <button
+                      key={option}
+                      onClick={() => {
+                        setSortOption(option);
+                        setShowSortMenu(false);
+                      }}
+                      className={`w-full px-4 py-2 text-xs text-left transition-colors hover:bg-gray-50 ${sortOption === option ? 'text-blue-600 bg-blue-50' : 'text-gray-700'
+                        }`}
+                    >
+                      {getSortLabel(option)}
+                    </button>
+                  ))}
                 </div>
-              </div>
+              )}
             </div>
           </div>
 

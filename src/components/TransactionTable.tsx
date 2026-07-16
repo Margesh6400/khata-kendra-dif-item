@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { ArrowUpDown, Download } from 'lucide-react';
 import { Transaction, ClientBalance } from '../utils/ledgerCalculations';
 import { useLanguage } from '../contexts/LanguageContext';
@@ -6,7 +6,7 @@ import { translations } from '../utils/translations';
 import { generateJPEG } from '../utils/generateJPEG';
 import ReceiptTemplate from './ReceiptTemplate';
 import toast from 'react-hot-toast';
-import { PLATE_SIZES } from '../components/ItemsTable';
+import { usePlateSizes } from '../hooks/usePlateSizes';
 
 interface TransactionTableProps {
   transactions?: Transaction[];
@@ -30,6 +30,24 @@ export default function TransactionTable({
   const { language } = useLanguage();
   const t = translations[language];
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('asc');
+  const [selectedCategory, setSelectedCategory] = useState<'all' | 'shuttering' | 'jack' | 'other'>('all');
+  const { sizes: rawPlateSizes } = usePlateSizes();
+
+  const plateSizes = useMemo(() => {
+    return rawPlateSizes.filter(size => {
+      // Category filter
+      if (selectedCategory !== 'all' && size.category !== selectedCategory) {
+        return false;
+      }
+      const hasTx = transactions?.some(t => {
+        const sz = t.sizes[size.id];
+        return sz && ((sz.qty || 0) !== 0 || (sz.borrowed || 0) !== 0);
+      });
+      const bal = currentBalance?.sizes?.[size.id];
+      const hasBal = bal && ((bal.main || 0) !== 0 || (bal.borrowed || 0) !== 0 || (bal.total || 0) !== 0);
+      return !!(hasTx || hasBal);
+    });
+  }, [rawPlateSizes, transactions, currentBalance, selectedCategory]);
 
   const handleDownloadChallan = async (transaction: Transaction) => {
     try {
@@ -113,21 +131,22 @@ export default function TransactionTable({
     setSortOrder(prev => prev === 'asc' ? 'desc' : 'asc');
   };
 
-  const formatSizeValue = (size: { qty: number; borrowed: number }, note?: string | null) => {
-    const total = size.qty + size.borrowed;
+  const formatSizeValue = (size?: { qty: number; borrowed: number }, note?: string | null) => {
+    if (!size) return '-';
+    const total = (size.qty || 0) + (size.borrowed || 0);
 
     if (total === 0 && !note) return '-';
 
     let valueDisplay = null;
     if (total > 0) {
-      if (size.borrowed === 0) {
+      if ((size.borrowed || 0) === 0) {
         valueDisplay = (
           <span>
             <span className="font-medium">{size.qty}</span>
             {note && <sup className="ml-1 text-xs font-bold text-red-700">({note})</sup>}
           </span>
         );
-      } else if (size.qty === 0) {
+      } else if ((size.qty || 0) === 0) {
         valueDisplay = (
           <span>
             <span className="font-bold text-red-700">{size.borrowed}</span>
@@ -137,7 +156,7 @@ export default function TransactionTable({
       } else {
         valueDisplay = (
           <span>
-            <span className="font-medium">{size.qty + size.borrowed}</span>
+            <span className="font-medium">{(size.qty || 0) + (size.borrowed || 0)}</span>
             <sup className="ml-1 text-xs font-bold text-red-700">
               {size.borrowed}
               {note && <span>({note})</span>}
@@ -154,8 +173,8 @@ export default function TransactionTable({
     return <div>{valueDisplay || '-'}</div>;
   };
 
-  const formatBalanceValue = (sizeBalance: { main: number; borrowed: number; total: number }) => {
-    if (sizeBalance.total === 0) return '-';
+  const formatBalanceValue = (sizeBalance?: { main: number; borrowed: number; total: number }) => {
+    if (!sizeBalance || sizeBalance.total === 0) return '-';
 
     if (sizeBalance.borrowed === 0) {
       return <span className="font-bold">{sizeBalance.main}</span>;
@@ -188,7 +207,25 @@ export default function TransactionTable({
   }
 
   return (
-    <div className="-mx-5 overflow-x-auto md:mx-0">
+    <div className="space-y-4">
+      {/* Category Tabs */}
+      <div className="flex gap-2 bg-gray-100 p-1 rounded-lg w-fit">
+        {(['all', 'shuttering', 'jack', 'other'] as const).map(cat => (
+          <button
+            key={cat}
+            onClick={() => setSelectedCategory(cat)}
+            className={`px-3 py-1.5 text-xs font-semibold rounded-md transition-all ${
+              selectedCategory === cat
+                ? 'bg-white text-blue-600 shadow-sm'
+                : 'text-gray-600 hover:text-gray-900'
+            }`}
+          >
+            {cat === 'all' ? t.all || 'All' : t[cat] || cat}
+          </button>
+        ))}
+      </div>
+
+      <div className="-mx-5 overflow-x-auto md:mx-0">
       <div className="inline-block min-w-full align-middle">
         <div className="overflow-hidden border border-gray-200 rounded-lg md:border-0">
           <table className="min-w-full divide-y divide-gray-200">
@@ -209,9 +246,9 @@ export default function TransactionTable({
                 <th className="px-2 py-2 text-xs font-medium tracking-wider text-left text-gray-500 uppercase sm:text-sm">
                   {t.grandTotal}
                 </th>
-                {PLATE_SIZES.map((size, index) => (
-                  <th key={index + 1} className="px-2 py-2 text-xs font-medium tracking-wider text-center text-gray-500 sm:text-sm whitespace-nowrap">
-                    {size}
+                {plateSizes.map(size => (
+                  <th key={size.id} className="px-3 py-3 text-xs font-semibold text-center text-gray-700 uppercase">
+                    {size.name}
                   </th>
                 ))}
                 <th className="px-2 py-2 text-xs font-medium tracking-wider text-left text-gray-500 uppercase sm:text-sm">
@@ -237,9 +274,9 @@ export default function TransactionTable({
                 <td className="px-2 py-2 text-xs font-medium whitespace-nowrap sm:text-sm">
                   {currentBalance.grandTotal}
                 </td>
-                {[1, 2, 3, 4, 5, 6, 7, 8, 9].map(size => (
-                  <td key={size} className="px-2 py-2 text-xs text-center whitespace-nowrap sm:text-sm">
-                    {formatBalanceValue(currentBalance.sizes[size])}
+                {plateSizes.map(ps => (
+                  <td key={ps.id} className="px-2 py-2 text-xs text-center whitespace-nowrap sm:text-sm">
+                    {formatBalanceValue(currentBalance.sizes[ps.id])}
                   </td>
                 ))}
                 <td className="px-2 py-2 text-xs text-gray-500 whitespace-nowrap sm:text-sm">-</td>
@@ -267,11 +304,11 @@ export default function TransactionTable({
                   <td className="px-2 py-2 text-xs font-medium whitespace-nowrap sm:text-sm">
                     {transaction.grandTotal}
                   </td>
-                  {[1, 2, 3, 4, 5, 6, 7, 8, 9].map(size => {
-                    const sizeNote = transaction.items?.[`size_${size}_note`];
+                  {plateSizes.map(ps => {
+                    const sizeNote = (transaction.items as any)?.[`size_${ps.id}_note`] || (transaction.items as any)?.items?.[ps.id]?.note;
                     return (
-                      <td key={size} className="px-2 py-2 text-xs text-center sm:text-sm">
-                        {formatSizeValue(transaction.sizes[size], sizeNote)}
+                      <td key={ps.id} className="px-2 py-2 text-xs text-center sm:text-sm">
+                        {formatSizeValue(transaction.sizes[ps.id], sizeNote)}
                       </td>
                     );
                   })}
@@ -301,5 +338,6 @@ export default function TransactionTable({
       </div>
       {/* Preview Modal removed */}
     </div>
+  </div>
   );
 }

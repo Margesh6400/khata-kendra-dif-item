@@ -1,4 +1,5 @@
 import { supabase } from './supabase';
+import { mapItemsToRecord } from './challanFetching';
 
 export interface SizeBalance {
   main: number;
@@ -11,7 +12,7 @@ export interface Transaction {
   challanNumber: string;
   date: string;
   grandTotal: number;
-  sizes: { [key: string]: { qty: number; borrowed: number } };
+  sizes: { [key: number]: { qty: number; borrowed: number } };
   site: string;
   driverName: string;
   items: any;
@@ -20,7 +21,7 @@ export interface Transaction {
 
 export interface ClientBalance {
   grandTotal: number;
-  sizes: { [key: string]: SizeBalance };
+  sizes: { [key: number]: SizeBalance };
 }
 
 export interface ClientLedgerData {
@@ -53,26 +54,7 @@ export async function fetchClientLedger(clientId: string): Promise<ClientLedgerD
       driver_name,
       alternative_site,
       id,
-      items:udhar_items!udhar_items_udhar_challan_number_fkey (
-        size_1_qty,
-        size_2_qty,
-        size_3_qty,
-        size_4_qty,
-        size_5_qty,
-        size_6_qty,
-        size_7_qty,
-        size_8_qty,
-        size_9_qty,
-        size_1_borrowed,
-        size_2_borrowed,
-        size_3_borrowed,
-        size_4_borrowed,
-        size_5_borrowed,
-        size_6_borrowed,
-        size_7_borrowed,
-        size_8_borrowed,
-        size_9_borrowed
-      )
+      items:udhar_items!udhar_items_udhar_challan_number_fkey(items, main_note)
     `)
     .eq('client_id', clientId)
     .order('udhar_date', { ascending: true });
@@ -85,26 +67,7 @@ export async function fetchClientLedger(clientId: string): Promise<ClientLedgerD
       driver_name,
       alternative_site,
       id,
-      items:jama_items!jama_items_jama_challan_number_fkey (
-        size_1_qty,
-        size_2_qty,
-        size_3_qty,
-        size_4_qty,
-        size_5_qty,
-        size_6_qty,
-        size_7_qty,
-        size_8_qty,
-        size_9_qty,
-        size_1_borrowed,
-        size_2_borrowed,
-        size_3_borrowed,
-        size_4_borrowed,
-        size_5_borrowed,
-        size_6_borrowed,
-        size_7_borrowed,
-        size_8_borrowed,
-        size_9_borrowed
-      )
+      items:jama_items!jama_items_jama_challan_number_fkey(items, main_note)
     `)
     .eq('client_id', clientId)
     .order('jama_date', { ascending: true });
@@ -117,18 +80,15 @@ export async function fetchClientLedger(clientId: string): Promise<ClientLedgerD
   const transactions: Transaction[] = [];
 
   (udharChallans || []).forEach((challan: any) => {
-    const rawItems = challan.items;
-    const itemRow = Array.isArray(rawItems) ? (rawItems[0] || {}) : (rawItems || {});
-
-    const sizes: { [key: string]: { qty: number; borrowed: number } } = {};
+    const parsedItems = mapItemsToRecord(challan.items);
+    const sizes: { [key: number]: { qty: number; borrowed: number } } = {};
     let grandTotal = 0;
 
-    for (let i = 1; i <= 9; i++) {
-      const qty = itemRow[`size_${i}_qty`] || 0;
-      const borrowed = itemRow[`size_${i}_borrowed`] || 0;
-      sizes[i] = { qty, borrowed };
-      grandTotal += qty + borrowed;
-    }
+    Object.entries(parsedItems.items).forEach(([sizeId, data]: [string, any]) => {
+      const id = parseInt(sizeId);
+      sizes[id] = { qty: data.qty, borrowed: data.borrowed };
+      grandTotal += data.qty + data.borrowed;
+    });
 
     transactions.push({
       type: 'udhar',
@@ -138,24 +98,21 @@ export async function fetchClientLedger(clientId: string): Promise<ClientLedgerD
       sizes,
       site: challan.alternative_site || client.site,
       driverName: challan.driver_name || '',
-      items: itemRow,
+      items: parsedItems,
       challanId: challan.id
     });
   });
 
   (jamaChallans || []).forEach((challan: any) => {
-    const rawItems = challan.items;
-    const itemRow = Array.isArray(rawItems) ? (rawItems[0] || {}) : (rawItems || {});
-
-    const sizes: { [key: string]: { qty: number; borrowed: number } } = {};
+    const parsedItems = mapItemsToRecord(challan.items);
+    const sizes: { [key: number]: { qty: number; borrowed: number } } = {};
     let grandTotal = 0;
 
-    for (let i = 1; i <= 9; i++) {
-      const qty = itemRow[`size_${i}_qty`] || 0;
-      const borrowed = itemRow[`size_${i}_borrowed`] || 0;
-      sizes[i] = { qty, borrowed };
-      grandTotal += qty + borrowed;
-    }
+    Object.entries(parsedItems.items).forEach(([sizeId, data]: [string, any]) => {
+      const id = parseInt(sizeId);
+      sizes[id] = { qty: data.qty, borrowed: data.borrowed };
+      grandTotal += data.qty + data.borrowed;
+    });
 
     transactions.push({
       type: 'jama',
@@ -165,7 +122,7 @@ export async function fetchClientLedger(clientId: string): Promise<ClientLedgerD
       sizes,
       site: challan.alternative_site || client.site,
       driverName: challan.driver_name || '',
-      items: itemRow,
+      items: parsedItems,
       challanId: challan.id
     });
   });
@@ -191,22 +148,22 @@ export function calculateBalance(transactions: Transaction[]): ClientBalance {
     sizes: {}
   };
 
-  for (let i = 1; i <= 9; i++) {
-    balance.sizes[i] = { main: 0, borrowed: 0, total: 0 };
-  }
-
   transactions.forEach(transaction => {
-    for (let i = 1; i <= 9; i++) {
-      const size = transaction.sizes[i];
-      if (transaction.type === 'udhar') {
-        balance.sizes[i].main += size.qty;
-        balance.sizes[i].borrowed += size.borrowed;
-      } else {
-        balance.sizes[i].main -= size.qty;
-        balance.sizes[i].borrowed -= size.borrowed;
+    Object.entries(transaction.sizes).forEach(([sizeIdStr, sizeData]) => {
+      const sizeId = parseInt(sizeIdStr);
+      if (!balance.sizes[sizeId]) {
+        balance.sizes[sizeId] = { main: 0, borrowed: 0, total: 0 };
       }
-      balance.sizes[i].total = balance.sizes[i].main + balance.sizes[i].borrowed;
-    }
+      
+      if (transaction.type === 'udhar') {
+        balance.sizes[sizeId].main += sizeData.qty;
+        balance.sizes[sizeId].borrowed += sizeData.borrowed;
+      } else {
+        balance.sizes[sizeId].main -= sizeData.qty;
+        balance.sizes[sizeId].borrowed -= sizeData.borrowed;
+      }
+      balance.sizes[sizeId].total = balance.sizes[sizeId].main + balance.sizes[sizeId].borrowed;
+    });
   });
 
   balance.grandTotal = Object.values(balance.sizes).reduce((sum, size) => sum + size.total, 0);

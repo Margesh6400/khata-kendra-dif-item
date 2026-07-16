@@ -1,5 +1,5 @@
 import React, { memo } from 'react';
-import { format } from 'date-fns';
+import { formatLocalDate, safeParseLocalDate } from '../utils/dateUtils';
 import './BillInvoice.css';
 import { formatIndianCurrency } from '../utils/currencyFormat';
 
@@ -227,7 +227,7 @@ const BillInvoiceTemplate: React.FC<BillInvoiceProps> = ({
                 lineHeight: 1,
                 display: 'block',
               }}>
-                 &nbsp;ખાતા કેન્દ્ર&nbsp; 
+                &nbsp;ખાતા કેન્દ્ર&nbsp;
               </span>
             </div>
           </div>
@@ -287,7 +287,7 @@ const BillInvoiceTemplate: React.FC<BillInvoiceProps> = ({
               <div style={{ display: 'flex', alignItems: 'baseline', gap: '6px' }}>
                 <span style={{ fontWeight: 'bold', fontSize: '14px', whiteSpace: 'nowrap' }}>તારીખ:</span>
                 <span style={{ fontWeight: '700', fontSize: '15px', borderBottom: '1px dotted #6b7280', flex: 1, paddingLeft: '4px', textAlign: 'center' }}>
-                  {format(new Date(billDetails.billDate), 'dd/MM/yyyy')}
+                  {formatLocalDate(billDetails.billDate, 'dd/MM/yyyy')}
                 </span>
               </div>
             </div>
@@ -335,54 +335,192 @@ const BillInvoiceTemplate: React.FC<BillInvoiceProps> = ({
             )}
 
             {/* Rental rows */}
-            {rentalCharges.map((charge, index) => {
-              const { udharQty, jamaQty, skip } = computeRentalRow(
-                charge, index, rentalCharges, billDetails.fromDate, billDetails.toDate,
-              );
-              if (skip) return null;
+            {(() => {
+              // Pre-calculate subtotals for each size group (shuttering vs jack size)
+              const groupSubtotals: Record<string, number> = {};
+              const groupIsJack: Record<string, boolean> = {};
+              const groupSizeLabel: Record<string, string> = {};
 
-              const rowStartDate = charge.startDate ? new Date(charge.startDate) : new Date(billDetails.fromDate);
-              const rowEndDate = charge.endDate ? new Date(charge.endDate) : new Date(billDetails.toDate);
-              const isZero = charge.pieces === 0 && charge.days === 0;
-              const bg = index % 2 === 0 ? '#fff' : '#f9fafb';
+              // Find all visible charges and populate subtotal mapping
+              const visibleCharges = rentalCharges.filter((charge, idx) => {
+                const { skip } = computeRentalRow(
+                  charge, idx, rentalCharges, billDetails.fromDate, billDetails.toDate
+                );
+                return !skip;
+              });
 
-              return (
-                <tr key={`rent-${index}`} style={{ backgroundColor: bg }}>
-                  <td style={C.dateRange}>
-                    {charge.days === 0
-                      ? format(rowEndDate, 'dd/MM/yyyy')
-                      : <>{format(rowStartDate, 'dd/MM/yyyy')} થી {format(rowEndDate, 'dd/MM/yyyy')}</>
-                    }
-                  </td>
-                  <td style={C.udharJama}>
-                    {(charge.udharDetails && charge.udharDetails.length > 1)
-                      ? charge.udharDetails.map((d, i) => <div key={i} style={{ color: '#dc2626', fontWeight: 'bold' }}>+{d.qty}</div>)
-                      : udharQty > 0 && <div style={{ color: '#dc2626', fontWeight: 'bold' }}>+{udharQty}</div>
-                    }
-                    {(charge.jamaDetails && charge.jamaDetails.length > 1)
-                      ? charge.jamaDetails.map((d, i) => <div key={i} style={{ color: '#16a34a', fontWeight: 'bold' }}>-{d.qty}</div>)
-                      : jamaQty > 0 && <div style={{ color: '#16a34a', fontWeight: 'bold' }}>-{jamaQty}</div>
-                    }
-                    {udharQty === 0 && jamaQty === 0
-                      && !(charge.udharDetails?.length) && !(charge.jamaDetails?.length)
-                      && <span style={{ color: '#9ca3af' }}>—</span>
-                    }
-                  </td>
-                  <td style={piecesCell(isZero)}>
-                    {charge.pieces}
-                  </td>
-                  <td style={C.rateDays}>
-                    {isZero ? '—' : (charge.rate || billDetails.dailyRent)}
-                  </td>
-                  <td style={C.rateDays}>
-                    {isZero ? '—' : charge.days}
-                  </td>
-                  <td style={C.amount}>
-                    {isZero ? '—' : formatIndianCurrency(Math.round(charge.amount))}
-                  </td>
-                </tr>
-              );
-            })}
+              visibleCharges.forEach(charge => {
+                const hasSize = charge.size && charge.size !== 'All';
+                const effectiveRate = charge.rate || billDetails.dailyRent;
+                const isDifferentRate = effectiveRate !== billDetails.dailyRent;
+                const isJack = hasSize && isDifferentRate;
+
+                // Group key is 'shuttering' or the specific jack sizeId
+                const key = isJack ? String(charge.sizeId || charge.size) : 'shuttering';
+                
+                groupSubtotals[key] = (groupSubtotals[key] || 0) + (charge.amount || 0);
+                groupIsJack[key] = isJack;
+                if (hasSize) {
+                  groupSizeLabel[key] = charge.size;
+                }
+              });
+
+              // Now map and render the visible charges
+              const renderedRows: React.ReactNode[] = [];
+
+              visibleCharges.forEach((charge, idx) => {
+                const { udharQty, jamaQty } = computeRentalRow(
+                  charge, rentalCharges.indexOf(charge), rentalCharges, billDetails.fromDate, billDetails.toDate
+                );
+
+                const rowStartDate = charge.startDate ? safeParseLocalDate(charge.startDate) : safeParseLocalDate(billDetails.fromDate);
+                const rowEndDate = charge.endDate ? safeParseLocalDate(charge.endDate) : safeParseLocalDate(billDetails.toDate);
+                const displayEndDate = charge.days === 0 
+                  ? rowEndDate 
+                  : new Date(rowEndDate.getFullYear(), rowEndDate.getMonth(), rowEndDate.getDate() - 1);
+                const isZero = charge.pieces === 0 && charge.days === 0;
+
+                const hasSize = charge.size && charge.size !== 'All';
+                const effectiveRate = charge.rate || billDetails.dailyRent;
+                const isDifferentRate = effectiveRate !== billDetails.dailyRent;
+                const isJackRow = hasSize && isDifferentRate;
+
+                const key = isJackRow ? String(charge.sizeId || charge.size) : 'shuttering';
+                
+                // Color configuration
+                const bg = isJackRow
+                  ? (idx % 2 === 0 ? '#faf5ff' : '#f3e8ff')
+                  : (idx % 2 === 0 ? '#fff' : '#f9fafb');
+
+                const topBorder = '1px solid #d1d5db';
+
+                const cellStyle = (extra?: React.CSSProperties): React.CSSProperties => ({
+                  ...BASE_CELL,
+                  borderTop: topBorder,
+                  ...extra,
+                });
+
+                renderedRows.push(
+                  <tr key={`rent-${idx}`} style={{ backgroundColor: bg }}>
+                    <td style={cellStyle({ fontWeight: '600', textAlign: 'center' })}>
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: '3px' }}>
+                        <div>
+                          {charge.days === 0
+                            ? formatLocalDate(displayEndDate, 'dd/MM/yyyy')
+                            : <>{formatLocalDate(rowStartDate, 'dd/MM/yyyy')} થી {formatLocalDate(displayEndDate, 'dd/MM/yyyy')}</>
+                          }
+                        </div>
+                        {hasSize && (
+                          <div style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', justifyContent: 'center' }}>
+                            <span style={{
+                              backgroundColor: isJackRow ? '#7c3aed' : '#374151',
+                              color: '#fff',
+                              fontSize: '10px',
+                              fontWeight: 'bold',
+                              padding: '1px 6px',
+                              borderRadius: '999px',
+                            }}>
+                              {isJackRow ? '⚙ ' : ''}{charge.size}
+                            </span>
+                            {isJackRow && (
+                              <span style={{ fontSize: '10px', color: '#7c3aed', fontWeight: '600' }}>(જેક)</span>
+                            )}
+                          </div>
+                        )}
+                      </div>
+                    </td>
+                    <td style={cellStyle({ textAlign: 'center', lineHeight: 1.5 })}>
+                      {(charge.udharDetails && charge.udharDetails.length > 1)
+                        ? charge.udharDetails.map((d, i) => <div key={i} style={{ color: '#dc2626', fontWeight: 'bold' }}>+{d.qty}</div>)
+                        : udharQty > 0 && <div style={{ color: '#dc2626', fontWeight: 'bold' }}>+{udharQty}</div>
+                      }
+                      {(charge.jamaDetails && charge.jamaDetails.length > 1)
+                        ? charge.jamaDetails.map((d, i) => <div key={i} style={{ color: '#16a34a', fontWeight: 'bold' }}>-{d.qty}</div>)
+                        : jamaQty > 0 && <div style={{ color: '#16a34a', fontWeight: 'bold' }}>-{jamaQty}</div>
+                      }
+                      {udharQty === 0 && jamaQty === 0
+                        && !(charge.udharDetails?.length) && !(charge.jamaDetails?.length)
+                        && <span style={{ color: '#9ca3af' }}>—</span>
+                      }
+                    </td>
+                    <td style={cellStyle({
+                      textAlign: 'center',
+                      fontWeight: isZero ? '900' : '700',
+                      fontSize: '14px',
+                      color: isZero ? '#dc2626' : '#111',
+                    })}>
+                      {charge.pieces}
+                    </td>
+                    <td style={cellStyle({
+                      textAlign: 'center',
+                      fontWeight: '600',
+                      color: isJackRow && !isZero ? '#7c3aed' : '#4b5563',
+                      background: isJackRow && !isZero ? 'rgba(124,58,237,0.07)' : undefined,
+                    })}>
+                      {isZero ? '—' : effectiveRate}
+                    </td>
+                    <td style={cellStyle({ textAlign: 'center', fontWeight: '600', color: '#4b5563' })}>
+                      {isZero ? '—' : charge.days}
+                    </td>
+                    <td style={cellStyle({
+                      textAlign: 'center',
+                      fontWeight: '700',
+                      fontSize: '14px',
+                      color: isJackRow && !isZero ? '#7c3aed' : '#111',
+                    })}>
+                      {isZero ? '—' : formatIndianCurrency(Math.round(charge.amount))}
+                    </td>
+                  </tr>
+                );
+
+                // Detect group change or end of list to inject the subtotal row
+                const nextCharge = idx < visibleCharges.length - 1 ? visibleCharges[idx + 1] : null;
+                const nextHasSize = nextCharge?.size && nextCharge.size !== 'All';
+                const nextRate = nextCharge ? (nextCharge.rate || billDetails.dailyRent) : billDetails.dailyRent;
+                const nextIsJack = nextHasSize && nextRate !== billDetails.dailyRent;
+                const nextKey = nextCharge ? (nextIsJack ? String(nextCharge.sizeId || nextCharge.size) : 'shuttering') : null;
+
+                if (!nextKey || nextKey !== key) {
+                  // End of the group!
+                  const subtotalValue = groupSubtotals[key] || 0;
+                  const isLastGroup = !nextKey;
+                  const subtotalBg = isJackRow ? '#faf5ff' : '#ffffff';
+
+                  renderedRows.push(
+                    <tr key={`subtotal-${key}`} style={{ backgroundColor: subtotalBg, fontWeight: 'bold' }}>
+                      <td colSpan={5} style={{
+                        ...BASE_CELL,
+                        borderTop: '1.5px solid #111',
+                        borderBottom: isLastGroup ? '1.5px solid #111' : '3px solid #111',
+                        padding: '9px 12px',
+                        textAlign: 'right',
+                        fontSize: '13.5px',
+                        color: isJackRow ? '#7c3aed' : '#1f2937',
+                      }}>
+                        {isJackRow
+                          ? `કુલ જેક ભાડું (સાઈઝ: ${groupSizeLabel[key] || ''}):`
+                          : 'કુલ શટરિંગ ભાડું (કમ્બાઈન):'
+                        }
+                      </td>
+                      <td style={{
+                        ...BASE_CELL,
+                        borderTop: '1.5px solid #111',
+                        borderBottom: isLastGroup ? '1.5px solid #111' : '3px solid #111',
+                        padding: '9px 12px',
+                        textAlign: 'center',
+                        fontWeight: '800',
+                        fontSize: '15px',
+                        color: isJackRow ? '#7c3aed' : '#111',
+                      }}>
+                        {formatIndianCurrency(Math.round(subtotalValue))}
+                      </td>
+                    </tr>
+                  );
+                }
+              });
+
+              return renderedRows;
+            })()}
 
             {/* Extra costs rows */}
             {extraCosts.map((cost, index) => (
@@ -415,7 +553,7 @@ const BillInvoiceTemplate: React.FC<BillInvoiceProps> = ({
                 {payments.map((p, i) => (
                   <tr key={i}>
                     <td style={{ padding: '3px 0', width: '22%', color: '#4b5563' }}>
-                      {format(new Date(p.date), 'dd/MM/yyyy')}
+                      {formatLocalDate(p.date, 'dd/MM/yyyy')}
                     </td>
                     <td style={{ padding: '3px 0', color: '#374151' }}>
                       {p.method}{p.note ? ` (${p.note})` : ''}
@@ -461,10 +599,38 @@ const BillInvoiceTemplate: React.FC<BillInvoiceProps> = ({
             <table style={{ width: '100%', borderCollapse: 'collapse' }}>
               <tbody>
                 <tr>
-                  <td style={{ padding: '11px 14px', borderBottom: '1px solid #e5e7eb', fontWeight: '600', fontSize: '14px' }}>
+                  <td style={{ padding: '8px 14px', borderBottom: '1px solid #e5e7eb', fontWeight: '600', fontSize: '13.5px' }}>
+                    કુલ ભાડું:
+                  </td>
+                  <td style={{ padding: '8px 14px', borderBottom: '1px solid #e5e7eb', textAlign: 'right', fontWeight: '700', fontSize: '14.5px' }}>
+                    {formatIndianCurrency(Math.round(summary.totalRent))}
+                  </td>
+                </tr>
+                {summary.serviceCharge > 0 && (
+                  <tr>
+                    <td style={{ padding: '8px 14px', borderBottom: '1px solid #e5e7eb', fontWeight: '600', fontSize: '13.5px' }}>
+                      સર્વિસ ચાર્જ:
+                    </td>
+                    <td style={{ padding: '8px 14px', borderBottom: '1px solid #e5e7eb', textAlign: 'right', fontWeight: '700', fontSize: '14.5px' }}>
+                      {formatIndianCurrency(Math.round(summary.serviceCharge))}
+                    </td>
+                  </tr>
+                )}
+                {summary.totalExtraCosts > 0 && (
+                  <tr>
+                    <td style={{ padding: '8px 14px', borderBottom: '1px solid #e5e7eb', fontWeight: '600', fontSize: '13.5px' }}>
+                      વધારાનો ખર્ચ:
+                    </td>
+                    <td style={{ padding: '8px 14px', borderBottom: '1px solid #e5e7eb', textAlign: 'right', fontWeight: '700', fontSize: '14.5px' }}>
+                      {formatIndianCurrency(Math.round(summary.totalExtraCosts))}
+                    </td>
+                  </tr>
+                )}
+                <tr style={{ backgroundColor: '#f9fafb' }}>
+                  <td style={{ padding: '10px 14px', borderBottom: '1.5px solid #111', fontWeight: '700', fontSize: '14px' }}>
                     કુલ રકમ:
                   </td>
-                  <td style={{ padding: '11px 14px', borderBottom: '1px solid #e5e7eb', textAlign: 'right', fontWeight: '700', fontSize: '15px' }}>
+                  <td style={{ padding: '10px 14px', borderBottom: '1.5px solid #111', textAlign: 'right', fontWeight: '800', fontSize: '15.5px' }}>
                     {formatIndianCurrency(Math.round(summary.grandTotal))}
                   </td>
                 </tr>
