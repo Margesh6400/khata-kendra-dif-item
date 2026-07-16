@@ -3,11 +3,22 @@ import React, { createContext, useContext, useState, useEffect, ReactNode } from
 export type DateSortingMethod = 'standard' | 'jamaFirst';
 export type LedgerDownloadFormat = 'detailed' | 'simple' | 'split';
 
+const MIN_FONT_SIZE = 12;
+const MAX_FONT_SIZE = 22;
+const DEFAULT_FONT_SIZE = 16;
+
 interface SettingsContextType {
   dateSortingMethod: DateSortingMethod;
   setDateSortingMethod: (method: DateSortingMethod) => void;
   defaultLedgerDownloadFormat: LedgerDownloadFormat;
   setDefaultLedgerDownloadFormat: (format: LedgerDownloadFormat) => void;
+  fontSize: number;
+  setFontSize: (size: number) => void;
+  increaseFontSize: () => void;
+  decreaseFontSize: () => void;
+  resetFontSize: () => void;
+  showDriverDetails: boolean;
+  setShowDriverDetails: (show: boolean) => void;
 }
 
 const SettingsContext = createContext<SettingsContextType | undefined>(undefined);
@@ -23,6 +34,17 @@ export const SettingsProvider: React.FC<{ children: ReactNode }> = ({ children }
     return (saved === 'detailed' || saved === 'simple' || saved === 'split') ? saved : 'detailed';
   });
 
+  const [fontSize, setFontSizeState] = useState<number>(() => {
+    const saved = localStorage.getItem('appFontSize');
+    const parsed = saved ? parseInt(saved, 10) : DEFAULT_FONT_SIZE;
+    return isNaN(parsed) ? DEFAULT_FONT_SIZE : Math.min(MAX_FONT_SIZE, Math.max(MIN_FONT_SIZE, parsed));
+  });
+
+  const [showDriverDetails, setShowDriverDetailsState] = useState<boolean>(() => {
+    const saved = localStorage.getItem('showDriverDetails');
+    return saved === 'true'; // Default is false unless explicitly enabled
+  });
+
   useEffect(() => {
     localStorage.setItem('dateSortingMethod', dateSortingMethod);
   }, [dateSortingMethod]);
@@ -30,6 +52,16 @@ export const SettingsProvider: React.FC<{ children: ReactNode }> = ({ children }
   useEffect(() => {
     localStorage.setItem('defaultLedgerDownloadFormat', defaultLedgerDownloadFormat);
   }, [defaultLedgerDownloadFormat]);
+
+  // Apply font size to the root html element so rem-based sizes scale globally
+  useEffect(() => {
+    document.documentElement.style.fontSize = `${fontSize}px`;
+    localStorage.setItem('appFontSize', String(fontSize));
+  }, [fontSize]);
+
+  useEffect(() => {
+    localStorage.setItem('showDriverDetails', String(showDriverDetails));
+  }, [showDriverDetails]);
 
   const setDateSortingMethod = (method: DateSortingMethod) => {
     setDateSortingMethodState(method);
@@ -39,14 +71,41 @@ export const SettingsProvider: React.FC<{ children: ReactNode }> = ({ children }
     setDefaultLedgerDownloadFormatState(format);
   };
 
+  const setFontSize = (size: number) => {
+    setFontSizeState(Math.min(MAX_FONT_SIZE, Math.max(MIN_FONT_SIZE, size)));
+  };
+
+  const increaseFontSize = () => {
+    setFontSizeState(prev => Math.min(MAX_FONT_SIZE, prev + 1));
+  };
+
+  const decreaseFontSize = () => {
+    setFontSizeState(prev => Math.max(MIN_FONT_SIZE, prev - 1));
+  };
+
+  const resetFontSize = () => {
+    setFontSizeState(DEFAULT_FONT_SIZE);
+  };
+
+  const setShowDriverDetails = (show: boolean) => {
+    setShowDriverDetailsState(show);
+  };
+
   return (
     <SettingsContext.Provider value={{
       dateSortingMethod,
       setDateSortingMethod,
       defaultLedgerDownloadFormat,
-      setDefaultLedgerDownloadFormat
+      setDefaultLedgerDownloadFormat,
+      fontSize,
+      setFontSize,
+      increaseFontSize,
+      decreaseFontSize,
+      resetFontSize,
+      showDriverDetails,
+      setShowDriverDetails,
     }}>
-      {children} 
+      {children}
     </SettingsContext.Provider>
   );
 };

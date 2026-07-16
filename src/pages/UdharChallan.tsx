@@ -35,6 +35,7 @@ interface StockData {
   updated_at: string;
 }
 import { useLanguage } from '../contexts/LanguageContext';
+import { useSettings } from '../contexts/SettingsContext';
 import { supabase } from '../utils/supabase';
 import { generateJPEG } from '../utils/generateJPEG';
 import Navbar from '../components/Navbar';
@@ -251,6 +252,10 @@ interface ChallanDetailsStepProps {
   hideExtraColumns: boolean;
   setHideExtraColumns: (value: boolean) => void;
   stockData: StockData[];
+  driverPhone: string;
+  setDriverPhone: (val: string) => void;
+  vehicleNumber: string;
+  setVehicleNumber: (val: string) => void;
 }
 
 const ChallanDetailsStep: React.FC<ChallanDetailsStepProps> = ({
@@ -276,9 +281,14 @@ const ChallanDetailsStep: React.FC<ChallanDetailsStepProps> = ({
   showSuccess,
   hideExtraColumns,
   setHideExtraColumns,
-  stockData
+  stockData,
+  driverPhone,
+  setDriverPhone,
+  vehicleNumber,
+  setVehicleNumber
 }) => {
   const { t } = useLanguage();
+  const { showDriverDetails } = useSettings();
   const navigate = useNavigate();
 
   return (
@@ -491,6 +501,37 @@ const ChallanDetailsStep: React.FC<ChallanDetailsStepProps> = ({
                 </div>
               </div>
             </div>
+
+            {showDriverDetails && (
+              <div className="grid grid-cols-2 gap-4 mt-3 sm:mt-4">
+                <div>
+                  <label className="flex items-center gap-1 sm:gap-1.5 mb-1.5 sm:mb-2 text-xs sm:text-xs lg:text-sm font-medium text-gray-700">
+                    <Phone className="w-3 h-3 sm:w-3.5 sm:h-3.5" />
+                    {t('driverPhone') || 'Driver Mobile'}
+                  </label>
+                  <input
+                    type="text"
+                    value={driverPhone}
+                    onChange={(e) => setDriverPhone(e.target.value)}
+                    placeholder={t('optional')}
+                    className="w-full px-2.5 py-2 sm:px-3 sm:py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-xs sm:text-sm"
+                  />
+                </div>
+                <div>
+                  <label className="flex items-center gap-1 sm:gap-1.5 mb-1.5 sm:mb-2 text-xs sm:text-xs lg:text-sm font-medium text-gray-700">
+                    <FileText className="w-3 h-3 sm:w-3.5 sm:h-3.5" />
+                    {t('vehicleNumber') || 'Vehicle Number'}
+                  </label>
+                  <input
+                    type="text"
+                    value={vehicleNumber}
+                    onChange={(e) => setVehicleNumber(e.target.value)}
+                    placeholder={t('optional')}
+                    className="w-full px-2.5 py-2 sm:px-3 sm:py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-xs sm:text-sm"
+                  />
+                </div>
+              </div>
+            )}
           </div>
         </div>
 
@@ -587,6 +628,8 @@ const UdharChallan: React.FC = () => {
   const [errors, setErrors] = useState<{ [key: string]: string }>({});
   const [showSuccess, setShowSuccess] = useState(false);
   const [hideExtraColumns, setHideExtraColumns] = useState(true);
+  const [driverPhone, setDriverPhone] = useState('');
+  const [vehicleNumber, setVehicleNumber] = useState('');
 
   const generateNextChallanNumber = async () => {
     try {
@@ -833,6 +876,8 @@ const UdharChallan: React.FC = () => {
         secondary_phone_number: secondaryPhone || null,
         udhar_date: date,
         driver_name: driverName || null,
+        driver_mobile: driverPhone || null,
+        vehicle_number: vehicleNumber || null,
       });
 
     if (challanError) {
@@ -847,7 +892,7 @@ const UdharChallan: React.FC = () => {
       .insert({
         udhar_challan_number: challanNumber,
         items: mapRecordToArray(items),
-        main_note: items.main_note,
+        main_note: items.main_note || null,
       });
 
     if (itemsError) {
@@ -1021,6 +1066,10 @@ const UdharChallan: React.FC = () => {
                 hideExtraColumns={hideExtraColumns}
                 setHideExtraColumns={setHideExtraColumns}
                 stockData={stockData}
+                driverPhone={driverPhone}
+                setDriverPhone={setDriverPhone}
+                vehicleNumber={vehicleNumber}
+                setVehicleNumber={setVehicleNumber}
               />
             )
           )}
@@ -1049,7 +1098,9 @@ const UdharChallan: React.FC = () => {
                     clientSortName={selectedClient.client_nic_name}
                     site={alternativeSite || selectedClient.site}
                     phone={secondaryPhone || selectedClient.primary_phone_number}
-                    driverName={driverName}
+                    driverName={
+                      driverName + (driverPhone || vehicleNumber ? ` (${driverPhone || '-'} / ${vehicleNumber || '-'})` : '')
+                    }
                     items={items}
                   />
                 </div>
@@ -1066,7 +1117,9 @@ const UdharChallan: React.FC = () => {
                     clientSortName={selectedClient.client_nic_name}
                     site={alternativeSite || selectedClient.site}
                     phone={secondaryPhone || selectedClient.primary_phone_number}
-                    driverName={driverName}
+                    driverName={
+                      driverName + (driverPhone || vehicleNumber ? ` (${driverPhone || '-'} / ${vehicleNumber || '-'})` : '')
+                    }
                     items={items}
                   />
                 </div>

@@ -18,6 +18,8 @@ interface ChallanData {
   site: string;
   phone: string;
   driverName: string | null;
+  driverMobile?: string | null;
+  vehicleNumber?: string | null;
   isAlternativeSite: boolean;
   isSecondaryPhone: boolean;
   items: ItemsData;
@@ -148,9 +150,21 @@ const ChallanDetailsModal: React.FC<ChallanDetailsModalProps> = ({
                 </p>
               </div>
               {challan.driverName && (
-                <div className="col-span-2 md:col-span-1">
+                <div>
                   <p className="text-[10px] md:text-sm text-gray-600">{t('driver')}</p>
                   <p className="text-xs md:text-base font-medium text-gray-900">{challan.driverName}</p>
+                </div>
+              )}
+              {challan.driverMobile && (
+                <div>
+                  <p className="text-[10px] md:text-sm text-gray-600">{t('driverPhone') || 'Driver Mobile'}</p>
+                  <p className="text-xs md:text-base font-medium text-gray-900">{challan.driverMobile}</p>
+                </div>
+              )}
+              {challan.vehicleNumber && (
+                <div className="col-span-2 md:col-span-1">
+                  <p className="text-[10px] md:text-sm text-gray-600">{t('vehicleNumber') || 'Vehicle Number'}</p>
+                  <p className="text-xs md:text-base font-medium text-gray-900">{challan.vehicleNumber}</p>
                 </div>
               )}
             </div>

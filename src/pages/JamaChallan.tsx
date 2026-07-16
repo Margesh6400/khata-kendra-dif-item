@@ -28,6 +28,7 @@ import { generateJPEG } from '../utils/generateJPEG';
 import Navbar from '../components/Navbar';
 import toast, { Toaster } from 'react-hot-toast';
 import { fetchClientTransactions } from '../utils/challanFetching';
+import { useSettings } from '../contexts/SettingsContext';
 
 
 interface ClientFormData {
@@ -246,6 +247,10 @@ interface ChallanDetailsStepProps {
   isAllReturn: boolean;
   onAllReturn: () => void;
   stockData: any[];
+  driverPhone: string;
+  setDriverPhone: (val: string) => void;
+  vehicleNumber: string;
+  setVehicleNumber: (val: string) => void;
 }
 
 
@@ -273,8 +278,13 @@ const ChallanDetailsStep: React.FC<ChallanDetailsStepProps> = ({
   isAllReturn,
   onAllReturn,
   stockData,
+  driverPhone,
+  setDriverPhone,
+  vehicleNumber,
+  setVehicleNumber
 }) => {
   const { t } = useLanguage();
+  const { showDriverDetails } = useSettings();
   const navigate = useNavigate();
 
 
@@ -455,6 +465,37 @@ const ChallanDetailsStep: React.FC<ChallanDetailsStepProps> = ({
                 </div>
               </div>
             </div>
+
+            {showDriverDetails && (
+              <div className="grid grid-cols-2 gap-4 mt-3 sm:mt-4">
+                <div>
+                  <label className="flex items-center gap-1 sm:gap-1.5 mb-1.5 sm:mb-2 text-xs sm:text-xs lg:text-sm font-medium text-gray-700">
+                    <Phone className="w-3 h-3 sm:w-3.5 sm:h-3.5" />
+                    {t('driverPhone') || 'Driver Mobile'}
+                  </label>
+                  <input
+                    type="text"
+                    value={driverPhone}
+                    onChange={(e) => setDriverPhone(e.target.value)}
+                    placeholder={t('optional')}
+                    className="w-full px-2.5 py-2 sm:px-3 sm:py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent text-xs sm:text-sm"
+                  />
+                </div>
+                <div>
+                  <label className="flex items-center gap-1 sm:gap-1.5 mb-1.5 sm:mb-2 text-xs sm:text-xs lg:text-sm font-medium text-gray-700">
+                    <FileText className="w-3 h-3 sm:w-3.5 sm:h-3.5" />
+                    {t('vehicleNumber') || 'Vehicle Number'}
+                  </label>
+                  <input
+                    type="text"
+                    value={vehicleNumber}
+                    onChange={(e) => setVehicleNumber(e.target.value)}
+                    placeholder={t('optional')}
+                    className="w-full px-2.5 py-2 sm:px-3 sm:py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent text-xs sm:text-sm"
+                  />
+                </div>
+              </div>
+            )}
           </div>
         </div>
 
@@ -549,6 +590,8 @@ const JamaChallan: React.FC = () => {
   const [previousDriversVisible, setPreviousDriversVisible] = useState(false);
   const [errors, setErrors] = useState<{ [key: string]: string }>({});
   const [showSuccess, setShowSuccess] = useState(false);
+  const [driverPhone, setDriverPhone] = useState('');
+  const [vehicleNumber, setVehicleNumber] = useState('');
 
   const generateNextChallanNumber = async () => {
     try {
@@ -923,6 +966,8 @@ const JamaChallan: React.FC = () => {
           client_id: selectedClient.id,
           jama_date: date,
           driver_name: driverName,
+          driver_mobile: driverPhone || null,
+          vehicle_number: vehicleNumber || null,
           is_all_return: isAllReturn,
         },
       ]);
@@ -935,7 +980,7 @@ const JamaChallan: React.FC = () => {
         {
           jama_challan_number: challanNumber,
           items: mapRecordToArray(items),
-          main_note: items.main_note,
+          main_note: items.main_note || null,
         },
       ]);
 
@@ -1068,6 +1113,10 @@ const JamaChallan: React.FC = () => {
                 isAllReturn={isAllReturn}
                 onAllReturn={handleAllReturn}
                 stockData={stockData}
+                driverPhone={driverPhone}
+                setDriverPhone={setDriverPhone}
+                vehicleNumber={vehicleNumber}
+                setVehicleNumber={setVehicleNumber}
               />
             )
           )}
@@ -1097,7 +1146,9 @@ const JamaChallan: React.FC = () => {
                     clientSortName={selectedClient.client_nic_name}
                     site={selectedClient.site}
                     phone={selectedClient.primary_phone_number}
-                    driverName={driverName}
+                    driverName={
+                      driverName + (driverPhone || vehicleNumber ? ` (${driverPhone || '-'} / ${vehicleNumber || '-'})` : '')
+                    }
                     items={items}
                   />
                 </div>
@@ -1114,7 +1165,9 @@ const JamaChallan: React.FC = () => {
                     clientSortName={selectedClient.client_nic_name}
                     site={selectedClient.site}
                     phone={selectedClient.primary_phone_number}
-                    driverName={driverName}
+                    driverName={
+                      driverName + (driverPhone || vehicleNumber ? ` (${driverPhone || '-'} / ${vehicleNumber || '-'})` : '')
+                    }
                     items={items}
                   />
                 </div>

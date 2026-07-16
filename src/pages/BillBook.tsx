@@ -357,6 +357,31 @@ export default function BillBook() {
     navigate(`/billing/create/${bill.client_id}?edit=${encodedBillNumber}`);
   };
 
+  const handleShareBill = (bill: BillRecord) => {
+    const phone = bill.client?.primary_phone_number || "";
+    const amount = bill.grand_total || bill.total_amount || 0;
+    const due = bill.due_payment || 0;
+    const dateStr = bill.billdate || bill.billing_date || bill.bill_date || bill.created_at;
+    const formattedDate = dateStr ? new Date(dateStr).toLocaleDateString('en-GB') : "";
+
+    const text = `*ખાતા કેન્દ્ર (Khata Kendra)*\n\n` +
+      `📄 *બિલ નંબર:* #${bill.bill_number}\n` +
+      `📅 *તારીખ:* ${formattedDate}\n` +
+      `👤 *ગ્રાહક:* ${bill.client?.client_name || ""}\n` +
+      `📍 *સાઇટ:* ${bill.client?.site || ""}\n\n` +
+      `💰 *કુલ રકમ:* ₹${amount.toLocaleString("en-IN")}\n` +
+      `🔴 *બાકી રકમ:* ₹${due.toLocaleString("en-IN")}\n\n` +
+      `આભાર! 🙏`;
+
+    const encodedText = encodeURIComponent(text);
+    const cleanPhone = phone.replace(/\D/g, "");
+    
+    // Add country code if not present (defaulting to India +91)
+    const finalPhone = cleanPhone.length === 10 ? `91${cleanPhone}` : cleanPhone;
+    
+    window.open(`https://api.whatsapp.com/send?phone=${finalPhone}&text=${encodedText}`, "_blank");
+  };
+
   return (
     <div className="flex min-h-screen bg-gray-50">
       <Navbar />
@@ -478,6 +503,7 @@ export default function BillBook() {
                   onDownload={handleDownloadBill}
                   onDelete={handleDeleteBill}
                   onEdit={handleEditBill}
+                  onShare={handleShareBill}
                 />
               ))}
             </div>
@@ -519,6 +545,19 @@ export default function BillBook() {
                 >
                   <Download className="w-5 h-5" />
                   <span className="text-sm font-medium hidden sm:inline">{t("download")}</span>
+                </button>
+                <button
+                  onClick={() => {
+                    const billRecord = bills.find(b => b.bill_number === selectedBill.billDetails.billNumber);
+                    if (billRecord) handleShareBill(billRecord);
+                  }}
+                  className="p-2 text-green-700 hover:bg-green-50 rounded-lg flex items-center gap-1"
+                  title="Share on WhatsApp"
+                >
+                  <svg className="w-5 h-5 text-green-600 fill-current" viewBox="0 0 24 24">
+                    <path d="M.057 24l1.687-6.163c-1.041-1.804-1.588-3.849-1.587-5.946C.06 5.348 5.397.01 12.008.01c3.202.001 6.212 1.246 8.477 3.514 2.266 2.268 3.507 5.28 3.505 8.484-.004 6.657-5.34 11.997-11.953 11.997-2.005-.001-3.973-.502-5.724-1.457L0 24zm6.59-4.846c1.6.95 3.188 1.449 4.625 1.45 5.536 0 10.038-4.502 10.04-10.04.002-2.684-1.038-5.207-2.93-7.101C16.43 1.57 13.918.531 11.238.531 5.707.531 1.206 5.033 1.204 10.564c-.001 1.507.412 2.977 1.196 4.275L1.44 20.248l5.207-1.365-.001.271z" />
+                  </svg>
+                  <span className="text-sm font-medium hidden sm:inline">Share</span>
                 </button>
                 <button
                   onClick={() => setShowModal(false)}

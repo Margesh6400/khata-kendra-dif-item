@@ -36,9 +36,10 @@ export interface BillCardProps {
     onDownload: (bill: BillRecord) => void;
     onDelete: (bill: BillRecord) => void;
     onEdit: (bill: BillRecord) => void;
+    onShare: (bill: BillRecord) => void;
 }
 
-const BillCard: React.FC<BillCardProps> = ({ bill, t, onView, onDownload, onDelete, onEdit }) => {
+const BillCard: React.FC<BillCardProps> = ({ bill, t, onView, onDownload, onDelete, onEdit, onShare }) => {
     const amount = bill.grand_total || bill.total_amount || 0;
     // Fallback chain for date
     const date = bill.billdate || bill.billing_date || bill.bill_date || bill.created_at;
@@ -113,6 +114,16 @@ const BillCard: React.FC<BillCardProps> = ({ bill, t, onView, onDownload, onDele
                     >
                         <Download className="w-3.5 h-3.5" />
                         PDF
+                    </button>
+                    <button
+                        onClick={() => onShare(bill)}
+                        className="flex-1 flex items-center justify-center gap-1.5 px-2 py-1.5 text-xs font-medium text-green-700 bg-green-50 rounded hover:bg-green-100 transition-colors"
+                        title="Share on WhatsApp"
+                    >
+                        <svg className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="currentColor">
+                            <path d="M.057 24l1.687-6.163c-1.041-1.804-1.588-3.849-1.587-5.946C.06 5.348 5.397.01 12.008.01c3.202.001 6.212 1.246 8.477 3.514 2.266 2.268 3.507 5.28 3.505 8.484-.004 6.657-5.34 11.997-11.953 11.997-2.005-.001-3.973-.502-5.724-1.457L0 24zm6.59-4.846c1.6.95 3.188 1.449 4.625 1.45 5.536 0 10.038-4.502 10.04-10.04.002-2.684-1.038-5.207-2.93-7.101C16.43 1.57 13.918.531 11.238.531 5.707.531 1.206 5.033 1.204 10.564c-.001 1.507.412 2.977 1.196 4.275L1.44 20.248l5.207-1.365-.001.271z" />
+                        </svg>
+                        Share
                     </button>
                     <button
                         onClick={() => onDelete(bill)}

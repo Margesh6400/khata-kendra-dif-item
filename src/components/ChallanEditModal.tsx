@@ -23,6 +23,8 @@ interface ChallanData {
   site: string;
   phone: string;
   driverName: string | null;
+  driverMobile?: string | null;
+  vehicleNumber?: string | null;
   isAlternativeSite: boolean;
   isSecondaryPhone: boolean;
   items: ItemsData;
@@ -50,6 +52,8 @@ const ChallanEditModal: React.FC<ChallanEditModalProps> = ({
   const [loading, setLoading] = useState(false);
   const [date, setDate] = useState('');
   const [driverName, setDriverName] = useState('');
+  const [driverMobile, setDriverMobile] = useState('');
+  const [vehicleNumber, setVehicleNumber] = useState('');
   const [alternativeSite, setAlternativeSite] = useState('');
   const [secondaryPhone, setSecondaryPhone] = useState('');
   const [items, setItems] = useState<FormItems>({
@@ -63,6 +67,8 @@ const ChallanEditModal: React.FC<ChallanEditModalProps> = ({
     if (challan && isOpen) {
       setDate(challan.date || '');
       setDriverName(challan.driverName || '');
+      setDriverMobile(challan.driverMobile || '');
+      setVehicleNumber(challan.vehicleNumber || '');
       setAlternativeSite(challan.isAlternativeSite ? challan.site : '');
       setSecondaryPhone(challan.isSecondaryPhone ? challan.phone : '');
       setOriginalItems(challan.items);
@@ -137,6 +143,8 @@ const ChallanEditModal: React.FC<ChallanEditModalProps> = ({
         p_secondary_phone_number: secondaryPhone || null,
         [dateField]: date,
         p_driver_name: driverName || null,
+        p_driver_mobile: driverMobile || null,
+        p_vehicle_number: vehicleNumber || null,
         p_old_items: oldItems,
         p_new_items: newItems,
         p_new_main_note: items.main_note,
@@ -205,6 +213,32 @@ const ChallanEditModal: React.FC<ChallanEditModalProps> = ({
                     type="text"
                     value={driverName}
                     onChange={(e) => setDriverName(e.target.value)}
+                    className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  />
+                </div>
+              </div>
+
+              {/* Driver Mobile and Vehicle Number Row */}
+              <div className="grid grid-cols-2 gap-3 sm:gap-4">
+                <div>
+                  <label className="block mb-1 text-xs font-medium text-gray-700 sm:text-sm">
+                    {t('driverPhone') || 'Driver Mobile'}
+                  </label>
+                  <input
+                    type="text"
+                    value={driverMobile}
+                    onChange={(e) => setDriverMobile(e.target.value)}
+                    className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  />
+                </div>
+                <div>
+                  <label className="block mb-1 text-xs font-medium text-gray-700 sm:text-sm">
+                    {t('vehicleNumber') || 'Vehicle Number'}
+                  </label>
+                  <input
+                    type="text"
+                    value={vehicleNumber}
+                    onChange={(e) => setVehicleNumber(e.target.value)}
                     className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                   />
                 </div>
