@@ -176,6 +176,9 @@ VALUES
   (9, '10x2', 9, 'shuttering')
 ON CONFLICT (id) DO NOTHING;
 
+-- Reset the serial sequence to match max seeded ID, preventing unique constraint violations on future inserts
+SELECT setval(pg_get_serial_sequence('plate_sizes', 'id'), COALESCE(MAX(id), 1)) FROM plate_sizes;
+
 -- Seed matching records in stock table
 INSERT INTO stock (size, total_stock, on_rent_stock, borrowed_stock, lost_stock)
 VALUES 

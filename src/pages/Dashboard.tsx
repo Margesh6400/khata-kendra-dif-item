@@ -2,13 +2,14 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
   UserPlus,
-  FileText,
-  FileCheck,
+  ArrowUpRight,
+  ArrowDownLeft,
+  Wallet,
   Package,
-  BookOpen,
-  BookMarked,
-  Activity,
-  ArrowUpRight
+  ClipboardList,
+  Receipt,
+  Files,
+  Activity
 } from 'lucide-react';
 import { useLanguage } from '../contexts/LanguageContext';
 import Navbar from '../components/Navbar';
@@ -31,7 +32,7 @@ const Dashboard: React.FC = () => {
     {
       title: t('udharChallan'),
       description: t('create_rental'),
-      icon: FileText,
+      icon: ArrowUpRight,
       path: '/udhar-challan',
       gradient: 'from-red-500 to-red-700',
       hoverGradient: 'hover:from-red-600 hover:to-red-800',
@@ -39,7 +40,7 @@ const Dashboard: React.FC = () => {
     {
       title: t('jamaChallan'),
       description: t('record_returns'),
-      icon: FileCheck,
+      icon: ArrowDownLeft,
       path: '/jama-challan',
       gradient: 'from-green-500 to-green-700',
       hoverGradient: 'hover:from-green-600 hover:to-green-800',
@@ -47,7 +48,7 @@ const Dashboard: React.FC = () => {
     {
       title: t('clientLedger'),
       description: t('track_balances'),
-      icon: BookMarked,
+      icon: Wallet,
       path: '/client-ledger',
       gradient: 'from-indigo-500 to-indigo-700',
       hoverGradient: 'hover:from-indigo-600 hover:to-indigo-800',
@@ -71,7 +72,7 @@ const Dashboard: React.FC = () => {
     {
       title: t('challanBook'),
       description: t('view_all_challans'),
-      icon: BookOpen,
+      icon: ClipboardList,
       path: '/challan-book',
       gradient: 'from-teal-500 to-teal-700',
       hoverGradient: 'hover:from-teal-600 hover:to-teal-800'
@@ -79,7 +80,7 @@ const Dashboard: React.FC = () => {
     {
       title: t('createBill'),
       description: t('createNewBill'),
-      icon: FileText,
+      icon: Receipt,
       path: '/billing',
       gradient: 'from-amber-500 to-amber-700',
       hoverGradient: 'hover:from-amber-600 hover:to-amber-800'
@@ -87,7 +88,7 @@ const Dashboard: React.FC = () => {
     {
       title: t('billBook'),
       description: t('billingManagement'),
-      icon: BookOpen,
+      icon: Files,
       path: '/bill-book',
       gradient: 'from-cyan-500 to-cyan-700',
       hoverGradient: 'hover:from-cyan-600 hover:to-cyan-800'
