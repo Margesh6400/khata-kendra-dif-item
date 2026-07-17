@@ -1,4 +1,5 @@
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
+import { supabase } from '../utils/supabase';
 
 export type DateSortingMethod = 'standard' | 'jamaFirst';
 export type LedgerDownloadFormat = 'detailed' | 'simple' | 'split';
@@ -77,6 +78,14 @@ export const SettingsProvider: React.FC<{ children: ReactNode }> = ({ children }
 
   const setDateSortingMethod = (method: DateSortingMethod) => {
     setDateSortingMethodState(method);
+    // Sync to DB so server-side jobs (monthly bill cron) use the same
+    // bill-calculation setting as the app. Fire-and-forget.
+    supabase
+      .from('app_settings')
+      .upsert({ key: 'date_sorting_method', value: method, updated_at: new Date().toISOString() })
+      .then(({ error }) => {
+        if (error) console.error('Failed to sync date_sorting_method to app_settings:', error);
+      });
   };
 
   const setDefaultLedgerDownloadFormat = (format: LedgerDownloadFormat) => {

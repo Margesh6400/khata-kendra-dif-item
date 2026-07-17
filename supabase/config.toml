@@ -1,0 +1,6 @@
+project_id = "khata-kendra"
+
+[functions.generate-monthly-bills]
+enabled = true
+verify_jwt = false
+entrypoint = "./functions/generate-monthly-bills/index.ts"

@@ -596,7 +596,9 @@ export function calculateBill(
   grandTotal: number;
   dueAmount: number;
 } {
-  console.log('[calculateBill] jamaFirst =', jamaFirst, '| dateSortingMethod from localStorage =', localStorage.getItem('dateSortingMethod'));
+  // localStorage is absent when this runs server-side (monthly bill cron)
+  const storedSortMethod = typeof localStorage !== 'undefined' ? localStorage.getItem('dateSortingMethod') : 'n/a (server)';
+  console.log('[calculateBill] jamaFirst =', jamaFirst, '| dateSortingMethod from localStorage =', storedSortMethod);
   const entries = createCombinedEntryList(udharChallans, jamaReturns, jamaFirst);
 
   // Helper: build ChallanEntry list for a specific set of sizeIds

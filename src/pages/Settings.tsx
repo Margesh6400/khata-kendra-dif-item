@@ -2,8 +2,9 @@ import React from 'react';
 import Navbar from '../components/Navbar';
 import { useLanguage } from '../contexts/LanguageContext';
 import { useSettings } from '../contexts/SettingsContext';
-import { Settings as SettingsIcon, Globe, Layers, CheckCircle, Download, Type, Lock, Shield, Fingerprint, Key, Share2 } from 'lucide-react';
+import { Settings as SettingsIcon, Globe, Layers, CheckCircle, Download, Type, Lock, Shield, Fingerprint, Key, Share2, CalendarClock } from 'lucide-react';
 import toast, { Toaster } from 'react-hot-toast';
+import { supabase } from '../utils/supabase';
 
 const Settings: React.FC = () => {
   const { t, language, setLanguage } = useLanguage();
@@ -29,6 +30,41 @@ const Settings: React.FC = () => {
   const [showAuthModal, setShowAuthModal] = React.useState(false);
   const [authPin, setAuthPin] = React.useState('');
   const [pendingToggle, setPendingToggle] = React.useState<boolean | null>(null);
+
+  // Monthly bill cron on/off — stored in app_settings so the server-side
+  // cron job can check it. null while loading from DB.
+  const [cronEnabled, setCronEnabled] = React.useState<boolean | null>(null);
+
+  React.useEffect(() => {
+    supabase
+      .from('app_settings')
+      .select('value')
+      .eq('key', 'monthly_bill_cron_enabled')
+      .maybeSingle()
+      .then(({ data, error }) => {
+        if (error) {
+          console.error('Failed to load cron setting:', error);
+          return;
+        }
+        setCronEnabled(data ? data.value !== 'false' : true);
+      });
+  }, []);
+
+  const handleToggleCron = async () => {
+    if (cronEnabled === null) return; // still loading
+    const next = !cronEnabled;
+    setCronEnabled(next);
+    const { error } = await supabase
+      .from('app_settings')
+      .upsert({ key: 'monthly_bill_cron_enabled', value: String(next), updated_at: new Date().toISOString() });
+    if (error) {
+      console.error('Failed to save cron setting:', error);
+      setCronEnabled(!next); // revert on failure
+      toast.error('Failed to save setting');
+    } else {
+      toast.success(next ? (t('cronEnabled') || 'Monthly billing on') : (t('cronDisabled') || 'Monthly billing off'));
+    }
+  };
 
   React.useEffect(() => {
     if (window.PublicKeyCredential && PublicKeyCredential.isUserVerifyingPlatformAuthenticatorAvailable) {
@@ -559,6 +595,40 @@ const Settings: React.FC = () => {
                   <div className={`relative inline-flex h-7 w-12 flex-shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-300 ease-in-out shadow-inner ${showDriverDetails ? 'bg-blue-600' : 'bg-gray-300'}`}>
                     <span
                       className={`pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow-md ring-0 transition duration-300 ease-in-out ${showDriverDetails ? 'translate-x-5' : 'translate-x-0'}`}
+                    />
+                  </div>
+                </button>
+              </div>
+            </div>
+
+            {/* Monthly Bill Cron Card */}
+            <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
+              <div className="p-4 sm:p-6 border-b border-gray-100 bg-gray-50/50 flex items-center gap-3">
+                <CalendarClock className="w-5 h-5 text-blue-600" />
+                <h3 className="font-bold text-gray-900 text-base sm:text-lg">
+                  {t('monthlyBillCronSettings') || 'Automatic Monthly Billing'}
+                </h3>
+              </div>
+              <div className="p-4 sm:p-6">
+                <button
+                  onClick={handleToggleCron}
+                  disabled={cronEnabled === null}
+                  className={`w-full flex items-center justify-between p-4 rounded-xl border text-left transition-all disabled:opacity-60 ${cronEnabled
+                      ? 'border-blue-600 bg-blue-50/40 ring-1 ring-blue-500'
+                      : 'border-gray-200 hover:border-gray-300 bg-white'
+                    }`}
+                >
+                  <div className="pr-4">
+                    <span className="font-bold text-sm sm:text-base text-gray-900 block mb-1">
+                      {t('enableMonthlyBillCron') || 'Auto-create bills on the 1st'}
+                    </span>
+                    <p className="text-xs text-gray-500 leading-relaxed">
+                      {t('enableMonthlyBillCronDesc') || 'On the 1st of every month, draft bills are created automatically for all clients with pending billing. Turn off to stop scheduled billing; the Create All Bills button keeps working either way.'}
+                    </p>
+                  </div>
+                  <div className={`relative inline-flex h-7 w-12 flex-shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-300 ease-in-out shadow-inner ${cronEnabled ? 'bg-blue-600' : 'bg-gray-300'}`}>
+                    <span
+                      className={`pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow-md ring-0 transition duration-300 ease-in-out ${cronEnabled ? 'translate-x-5' : 'translate-x-0'}`}
                     />
                   </div>
                 </button>

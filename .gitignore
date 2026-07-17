@@ -21,3 +21,10 @@ dist-ssr
 *.sln
 *.sw?
 
+# Added by code-review-graph
+.code-review-graph/
+.vercel
+.env*
+.claude
+CLAUDE.md
+.mcp.json

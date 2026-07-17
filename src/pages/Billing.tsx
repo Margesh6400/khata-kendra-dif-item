@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { Search, MapPin, Phone, User, ChevronRight } from "lucide-react";
+import { Search, MapPin, Phone, User, ChevronRight, FileStack, Loader2, X, CheckSquare, Square } from "lucide-react";
 import { useLanguage } from "../contexts/LanguageContext";
 import { supabase } from "../utils/supabase";
 import Navbar from "../components/Navbar";
@@ -63,10 +63,66 @@ export default function Billing() {
   const [clients, setClients] = useState<ClientFormData[]>([]);
   const [clientBalances, setClientBalances] = useState<Record<string, number>>({});
   const [searchQuery, setSearchQuery] = useState("");
+  const [isGeneratingAll, setIsGeneratingAll] = useState(false);
+  const [showClientPicker, setShowClientPicker] = useState(false);
+  const [selectedClientIds, setSelectedClientIds] = useState<Set<string>>(new Set());
 
   useEffect(() => {
     fetchClients();
   }, []);
+
+  // Step 1: open the picker with every client pre-selected
+  const openClientPicker = () => {
+    if (isGeneratingAll) return;
+    setSelectedClientIds(new Set(clients.map((c) => c.id || "").filter(Boolean)));
+    setShowClientPicker(true);
+  };
+
+  const toggleClientSelection = (clientId: string) => {
+    setSelectedClientIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(clientId)) next.delete(clientId);
+      else next.add(clientId);
+      return next;
+    });
+  };
+
+  // Step 2: trigger the same edge function the monthly cron runs, limited to
+  // the checked clients. Idempotent: clients already billed through the
+  // previous month are skipped, so extra clicks are harmless. Bills land as
+  // drafts marked generated_by='manual'.
+  const handleGenerateAllBills = async () => {
+    if (isGeneratingAll || selectedClientIds.size === 0) return;
+
+    setShowClientPicker(false);
+    setIsGeneratingAll(true);
+    const loadingToast = toast.loading(t("creatingBills"));
+    try {
+      const { data, error } = await supabase.functions.invoke("generate-monthly-bills", {
+        body: { client_ids: Array.from(selectedClientIds) },
+      });
+      if (error) throw error;
+
+      const createdCount = data?.created?.length || 0;
+      const errorCount = data?.errors?.length || 0;
+      toast.success(
+        `${createdCount} bills created, ${data?.skipped?.length || 0} skipped` +
+          (data?.continued ? " (still processing more…)" : ""),
+        { duration: 6000 }
+      );
+      if (errorCount > 0) {
+        console.error("Bill generation errors:", data.errors);
+        toast.error(`${errorCount} clients failed — check console`, { duration: 8000 });
+      }
+      fetchClients(); // refresh balances shown on the cards
+    } catch (error) {
+      console.error("Error generating bills:", error);
+      toast.error("Failed to generate bills");
+    } finally {
+      toast.dismiss(loadingToast);
+      setIsGeneratingAll(false);
+    }
+  };
 
   const fetchClients = async () => {
     try {
@@ -156,9 +212,25 @@ export default function Billing() {
               <h3 className="text-lg font-semibold text-gray-900 lg:text-xl">{t("selectClient")}</h3>
               <p className="mt-0.5 text-xs text-gray-500 lg:text-sm">{t('billingSubtitle')}</p>
             </div>
+            <button
+              onClick={openClientPicker}
+              disabled={isGeneratingAll}
+              className="flex items-center gap-2 px-4 py-2 text-sm font-medium text-white transition-colors bg-blue-600 rounded-lg hover:bg-blue-700 disabled:opacity-60 disabled:cursor-not-allowed touch-manipulation active:scale-95"
+            >
+              {isGeneratingAll ? <Loader2 className="w-4 h-4 animate-spin" /> : <FileStack className="w-4 h-4" />}
+              {isGeneratingAll ? t("creatingBills") : t("createAllBills")}
+            </button>
           </div>
 
           <div className="space-y-3 sm:space-y-4 lg:space-y-6">
+            <button
+              onClick={openClientPicker}
+              disabled={isGeneratingAll}
+              className="flex items-center justify-center w-full gap-2 px-4 py-2.5 text-sm font-medium text-white transition-colors bg-blue-600 rounded-lg sm:hidden hover:bg-blue-700 disabled:opacity-60 disabled:cursor-not-allowed touch-manipulation active:scale-95"
+            >
+              {isGeneratingAll ? <Loader2 className="w-4 h-4 animate-spin" /> : <FileStack className="w-4 h-4" />}
+              {isGeneratingAll ? t("creatingBills") : t("createAllBills")}
+            </button>
             <div className="relative">
               <Search className="absolute text-gray-400 transform -translate-y-1/2 left-2.5 sm:left-3 top-1/2 w-4 h-4 sm:w-4.5 sm:h-4.5" />
               <input
@@ -209,6 +281,96 @@ export default function Billing() {
           </div>
         </div>
       </main>
+
+      {/* Client picker for bulk bill generation */}
+      {showClientPicker && (
+        <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/50 sm:items-center" onClick={() => setShowClientPicker(false)}>
+          <div
+            className="flex flex-col w-full max-w-lg bg-white rounded-t-2xl sm:rounded-2xl max-h-[85dvh] shadow-xl"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="flex items-center justify-between p-4 border-b border-gray-200">
+              <div>
+                <h3 className="text-base font-semibold text-gray-900 sm:text-lg">{t("selectClientsForBilling") || "Select clients for billing"}</h3>
+                <p className="text-xs text-gray-500 mt-0.5">
+                  {selectedClientIds.size} / {clients.length}
+                </p>
+              </div>
+              <button
+                onClick={() => setShowClientPicker(false)}
+                className="p-2 text-gray-400 rounded-lg hover:bg-gray-100 hover:text-gray-600 touch-manipulation"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <div className="flex gap-2 px-4 py-2 border-b border-gray-100">
+              <button
+                onClick={() => setSelectedClientIds(new Set(clients.map((c) => c.id || "").filter(Boolean)))}
+                className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-blue-600 rounded-lg hover:bg-blue-50 touch-manipulation"
+              >
+                <CheckSquare className="w-3.5 h-3.5" /> {t("selectAllClients") || "Select all"}
+              </button>
+              <button
+                onClick={() => setSelectedClientIds(new Set())}
+                className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-gray-600 rounded-lg hover:bg-gray-100 touch-manipulation"
+              >
+                <Square className="w-3.5 h-3.5" /> {t("deselectAllClients") || "Deselect all"}
+              </button>
+            </div>
+
+            <div className="flex-1 overflow-y-auto p-2">
+              {clients.map((client) => {
+                const id = client.id || "";
+                const checked = selectedClientIds.has(id);
+                return (
+                  <label
+                    key={id}
+                    className={`flex items-center gap-3 p-3 mb-1 rounded-lg cursor-pointer transition-colors touch-manipulation ${checked ? "bg-blue-50" : "hover:bg-gray-50"}`}
+                  >
+                    <input
+                      type="checkbox"
+                      checked={checked}
+                      onChange={() => toggleClientSelection(id)}
+                      className="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
+                    />
+                    <div className="flex-1 min-w-0">
+                      <span className="block text-sm font-semibold text-gray-900 truncate">
+                        {client.client_nic_name}
+                        {client.is_hidden && (
+                          <span className="ml-2 px-1.5 py-0.5 text-[10px] font-medium text-gray-500 bg-gray-100 rounded">Hidden</span>
+                        )}
+                      </span>
+                      <span className="block text-xs text-gray-500 truncate">{client.client_name} · {client.site}</span>
+                    </div>
+                    {clientBalances[id] > 0 && (
+                      <span className="text-xs font-bold text-red-600">₹{clientBalances[id].toLocaleString("en-IN")}</span>
+                    )}
+                  </label>
+                );
+              })}
+            </div>
+
+            <div className="flex gap-2 p-4 border-t border-gray-200">
+              <button
+                onClick={() => setShowClientPicker(false)}
+                className="flex-1 px-4 py-2.5 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 touch-manipulation active:scale-95"
+              >
+                {t("cancel")}
+              </button>
+              <button
+                onClick={handleGenerateAllBills}
+                disabled={selectedClientIds.size === 0}
+                className="flex-1 flex items-center justify-center gap-2 px-4 py-2.5 text-sm font-medium text-white bg-blue-600 rounded-lg hover:bg-blue-700 disabled:opacity-60 disabled:cursor-not-allowed touch-manipulation active:scale-95"
+              >
+                <FileStack className="w-4 h-4" />
+                {t("createAllBills")} ({selectedClientIds.size})
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       <Toaster />
     </div>
   );
