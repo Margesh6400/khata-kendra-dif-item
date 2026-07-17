@@ -265,7 +265,7 @@ const ChallanBook: React.FC = () => {
     toast.success('Challan updated successfully');
   };
 
-  const transformItems = (items: ItemsData) => ({
+  const transformItems = (items: ItemsData): any => ({
     ...items,
     size_1_note: items.size_1_note || '', size_2_note: items.size_2_note || '',
     size_3_note: items.size_3_note || '', size_4_note: items.size_4_note || '',

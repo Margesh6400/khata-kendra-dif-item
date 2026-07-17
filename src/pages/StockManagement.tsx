@@ -52,8 +52,8 @@ const StockManagement: React.FC = () => {
   const [isAddingSize, setIsAddingSize] = useState(false);
   const [isReordering, setIsReordering] = useState(false);
   const [tempSizes, setTempSizes] = useState<PlateSize[]>([]);
-  const [selectedCategory, setSelectedCategory] = useState<'shuttering' | 'jack' | 'other'>('shuttering');
-  const [newSizeCategory, setNewSizeCategory] = useState<'shuttering' | 'jack' | 'other'>('shuttering');
+  const [selectedCategory, setSelectedCategory] = useState<'shuttering' | 'jack' | 'cuplock' | 'other'>('shuttering');
+  const [newSizeCategory, setNewSizeCategory] = useState<'shuttering' | 'jack' | 'cuplock' | 'other'>('shuttering');
   const [editingId, setEditingId] = useState<number | null>(null);
   const [editName, setEditName] = useState('');
 
@@ -682,6 +682,16 @@ const StockManagement: React.FC = () => {
                   }`}
                 >
                   {t('jack')}
+                </button>
+                <button
+                  onClick={() => setSelectedCategory('cuplock')}
+                  className={`px-4 py-2 text-xs sm:text-sm font-semibold rounded-md transition-colors ${
+                    selectedCategory === 'cuplock'
+                      ? 'bg-white text-blue-600 shadow-sm'
+                      : 'text-gray-500 hover:text-gray-900'
+                  }`}
+                >
+                  કપલોક (Cuplock)
                 </button>
                 <button
                   onClick={() => setSelectedCategory('other')}
@@ -1357,6 +1367,17 @@ const StockManagement: React.FC = () => {
                       className="text-blue-600 focus:ring-blue-500"
                     />
                     {t('jack')}
+                  </label>
+                  <label className="flex items-center gap-1.5 text-sm font-medium text-gray-700 cursor-pointer">
+                    <input
+                      type="radio"
+                      name="newSizeCategory"
+                      value="cuplock"
+                      checked={newSizeCategory === 'cuplock'}
+                      onChange={() => setNewSizeCategory('cuplock')}
+                      className="text-blue-600 focus:ring-blue-500"
+                    />
+                    કપલોક (Cuplock)
                   </label>
                   <label className="flex items-center gap-1.5 text-sm font-medium text-gray-700 cursor-pointer">
                     <input

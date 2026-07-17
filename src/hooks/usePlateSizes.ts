@@ -31,7 +31,7 @@ export const usePlateSizes = () => {
 
     try {
       const data = await fetchPromise;
-      setSizes(data);
+      setSizes(data || []);
     } catch (err: any) {
       setError(err.message);
     } finally {

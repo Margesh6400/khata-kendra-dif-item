@@ -7,7 +7,7 @@ export interface PlateSize {
   id: number;
   name: string;
   sort_order: number;
-  category?: 'shuttering' | 'jack' | 'other';
+  category?: 'shuttering' | 'jack' | 'cuplock' | 'other';
 }
 
 export interface ItemDetail {
@@ -69,6 +69,7 @@ const ItemsTable: React.FC<ItemsTableProps> = ({
   const [collapsedSections, setCollapsedSections] = React.useState<Record<string, boolean>>({
     shuttering: false,
     jack: false,
+    cuplock: false,
     other: false,
   });
 
@@ -359,6 +360,28 @@ const ItemsTable: React.FC<ItemsTableProps> = ({
             </tr>
             {!collapsedSections.jack && plateSizes.filter(ps => ps.category === 'jack').map(renderDesktopRow)}
 
+            {/* Cuplock Section */}
+            {plateSizes.some(ps => ps.category === 'cuplock') && (
+              <>
+                <tr 
+                  onClick={() => toggleSection('cuplock')}
+                  className="bg-orange-50/70 font-semibold border-y border-orange-100 cursor-pointer select-none hover:bg-orange-100/70 transition-colors"
+                >
+                  <td colSpan={10} className="px-4 py-2 text-xs sm:text-sm text-orange-800 font-bold text-left">
+                    <div className="flex items-center gap-2">
+                      {collapsedSections.cuplock ? (
+                        <ChevronRight className="w-4 h-4 text-orange-600" />
+                      ) : (
+                        <ChevronDown className="w-4 h-4 text-orange-600" />
+                      )}
+                      <span>કપલોક આઈટમ્સ (Cuplock Items)</span>
+                    </div>
+                  </td>
+                </tr>
+                {!collapsedSections.cuplock && plateSizes.filter(ps => ps.category === 'cuplock').map(renderDesktopRow)}
+              </>
+            )}
+
             {/* Other Section */}
             {plateSizes.some(ps => ps.category === 'other') && (
               <>
@@ -461,6 +484,28 @@ const ItemsTable: React.FC<ItemsTableProps> = ({
                     </td>
                   </tr>
                   {!collapsedSections.jack && plateSizes.filter(ps => ps.category === 'jack').map((ps, idx) => renderMobileRow(ps, idx))}
+
+                  {/* Cuplock Section */}
+                  {plateSizes.some(ps => ps.category === 'cuplock') && (
+                    <>
+                      <tr 
+                        onClick={() => toggleSection('cuplock')}
+                        className="bg-orange-50/70 font-semibold border-y border-orange-100 cursor-pointer select-none"
+                      >
+                        <td colSpan={10} className="px-2 py-1 text-[11px] sm:text-xs text-orange-800 font-bold sticky left-0 bg-orange-50/70 z-10 text-left">
+                          <div className="flex items-center gap-1.5">
+                            {collapsedSections.cuplock ? (
+                              <ChevronRight className="w-3.5 h-3.5 text-orange-600" />
+                            ) : (
+                              <ChevronDown className="w-3.5 h-3.5 text-orange-600" />
+                            )}
+                            <span>કપલોક આઈટમ્સ (Cuplock Items)</span>
+                          </div>
+                        </td>
+                      </tr>
+                      {!collapsedSections.cuplock && plateSizes.filter(ps => ps.category === 'cuplock').map((ps, idx) => renderMobileRow(ps, idx))}
+                    </>
+                  )}
 
                   {/* Other Section */}
                   {plateSizes.some(ps => ps.category === 'other') && (

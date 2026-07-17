@@ -2,6 +2,7 @@ import React, { createContext, useContext, useState, useEffect, ReactNode } from
 
 export type DateSortingMethod = 'standard' | 'jamaFirst';
 export type LedgerDownloadFormat = 'detailed' | 'simple' | 'split';
+export type ShareBillMode = 'image' | 'text';
 
 const MIN_FONT_SIZE = 12;
 const MAX_FONT_SIZE = 22;
@@ -19,6 +20,8 @@ interface SettingsContextType {
   resetFontSize: () => void;
   showDriverDetails: boolean;
   setShowDriverDetails: (show: boolean) => void;
+  shareBillMode: ShareBillMode;
+  setShareBillMode: (mode: ShareBillMode) => void;
 }
 
 const SettingsContext = createContext<SettingsContextType | undefined>(undefined);
@@ -45,6 +48,11 @@ export const SettingsProvider: React.FC<{ children: ReactNode }> = ({ children }
     return saved === 'true'; // Default is false unless explicitly enabled
   });
 
+  const [shareBillMode, setShareBillModeState] = useState<ShareBillMode>(() => {
+    const saved = localStorage.getItem('shareBillMode');
+    return (saved === 'text' || saved === 'image') ? saved : 'image';
+  });
+
   useEffect(() => {
     localStorage.setItem('dateSortingMethod', dateSortingMethod);
   }, [dateSortingMethod]);
@@ -62,6 +70,10 @@ export const SettingsProvider: React.FC<{ children: ReactNode }> = ({ children }
   useEffect(() => {
     localStorage.setItem('showDriverDetails', String(showDriverDetails));
   }, [showDriverDetails]);
+
+  useEffect(() => {
+    localStorage.setItem('shareBillMode', shareBillMode);
+  }, [shareBillMode]);
 
   const setDateSortingMethod = (method: DateSortingMethod) => {
     setDateSortingMethodState(method);
@@ -91,6 +103,10 @@ export const SettingsProvider: React.FC<{ children: ReactNode }> = ({ children }
     setShowDriverDetailsState(show);
   };
 
+  const setShareBillMode = (mode: ShareBillMode) => {
+    setShareBillModeState(mode);
+  };
+
   return (
     <SettingsContext.Provider value={{
       dateSortingMethod,
@@ -104,6 +120,8 @@ export const SettingsProvider: React.FC<{ children: ReactNode }> = ({ children }
       resetFontSize,
       showDriverDetails,
       setShowDriverDetails,
+      shareBillMode,
+      setShareBillMode,
     }}>
       {children}
     </SettingsContext.Provider>

@@ -2,7 +2,7 @@ import React from 'react';
 import Navbar from '../components/Navbar';
 import { useLanguage } from '../contexts/LanguageContext';
 import { useSettings } from '../contexts/SettingsContext';
-import { Settings as SettingsIcon, Globe, Layers, CheckCircle, Download, Type, Lock, Shield, Fingerprint, Key } from 'lucide-react';
+import { Settings as SettingsIcon, Globe, Layers, CheckCircle, Download, Type, Lock, Shield, Fingerprint, Key, Share2 } from 'lucide-react';
 import toast, { Toaster } from 'react-hot-toast';
 
 const Settings: React.FC = () => {
@@ -17,6 +17,8 @@ const Settings: React.FC = () => {
     resetFontSize,
     showDriverDetails,
     setShowDriverDetails,
+    shareBillMode,
+    setShareBillMode,
   } = useSettings();
 
   const [securityEnabled, setSecurityEnabled] = React.useState(() => localStorage.getItem('security_lock_enabled') === 'true');
@@ -468,6 +470,65 @@ const Settings: React.FC = () => {
                       }`}
                     />
                   </button>
+                </div>
+              </div>
+            </div>
+
+            {/* Bill Sharing Settings Card */}
+            <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
+              <div className="p-4 sm:p-6 border-b border-gray-100 bg-gray-50/50 flex items-center gap-3">
+                <Share2 className="w-5 h-5 text-blue-600" />
+                <h3 className="font-bold text-gray-900 text-base sm:text-lg">
+                  {t('billSharingSettings')}
+                </h3>
+              </div>
+              <div className="p-4 sm:p-6 space-y-6">
+                <div>
+                  <label className="block text-sm font-semibold text-gray-700 mb-3">
+                    {t('shareBillMode')}
+                  </label>
+                  <p className="text-xs text-gray-500 mb-4 leading-relaxed">
+                    {t('shareBillModeDesc')}
+                  </p>
+                  <div className="grid gap-4 sm:grid-cols-2">
+                    {/* Share as Image */}
+                    <button
+                      onClick={() => setShareBillMode('image')}
+                      className={`relative p-4 rounded-xl border text-left transition-all ${
+                        shareBillMode === 'image'
+                          ? 'border-blue-600 bg-blue-50/40 ring-1 ring-blue-500'
+                          : 'border-gray-200 hover:border-gray-300 bg-white'
+                      }`}
+                    >
+                      <div className="flex justify-between items-start mb-2">
+                        <span className="font-bold text-sm sm:text-base text-gray-900">
+                          {t('shareAsImage')}
+                        </span>
+                        {shareBillMode === 'image' && (
+                          <CheckCircle className="w-5 h-5 text-blue-600" />
+                        )}
+                      </div>
+                    </button>
+
+                    {/* Share as Text */}
+                    <button
+                      onClick={() => setShareBillMode('text')}
+                      className={`relative p-4 rounded-xl border text-left transition-all ${
+                        shareBillMode === 'text'
+                          ? 'border-blue-600 bg-blue-50/40 ring-1 ring-blue-500'
+                          : 'border-gray-200 hover:border-gray-300 bg-white'
+                      }`}
+                    >
+                      <div className="flex justify-between items-start mb-2">
+                        <span className="font-bold text-sm sm:text-base text-gray-900">
+                          {t('shareAsText')}
+                        </span>
+                        {shareBillMode === 'text' && (
+                          <CheckCircle className="w-5 h-5 text-blue-600" />
+                        )}
+                      </div>
+                    </button>
+                  </div>
                 </div>
               </div>
             </div>

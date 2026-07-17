@@ -11,12 +11,13 @@ import BillInvoiceTemplate from '../components/BillInvoiceTemplate';
 import toast, { Toaster } from 'react-hot-toast';
 import * as periodCalculations from "../utils/billingPeriodCalculations";
 import { usePlateSizes } from '../hooks/usePlateSizes';
+import { formatLocalDate } from '../utils/dateUtils';
 
 type Tab = 'pending' | 'cleared';
 
 export default function Payments() {
     const { t } = useLanguage();
-    const { dateSortingMethod } = useSettings();
+    const { dateSortingMethod, shareBillMode } = useSettings();
     const navigate = useNavigate();
     const { sizes: plateSizes } = usePlateSizes();
     const [activeTab, setActiveTab] = useState<Tab>('pending');
@@ -257,6 +258,54 @@ export default function Payments() {
     };
 
     const handleShareBill = async (bill: BillRecord) => {
+        if (shareBillMode === 'text') {
+            const phone = bill.client?.primary_phone_number || "";
+            const cleanPhone = phone.replace(/\D/g, "");
+            const finalPhone = cleanPhone.length === 10 ? `91${cleanPhone}` : cleanPhone;
+            
+            const date = bill.billdate || bill.billing_date || bill.bill_date || bill.created_at;
+            const formattedDate = date ? formatLocalDate(date, "dd MMM yyyy") : "";
+            const amount = bill.grand_total || bill.total_amount || 0;
+            const due = bill.due_payment || 0;
+            
+            const clientName = bill.client?.client_name || bill.client?.client_nic_name || "";
+            const site = bill.client?.site || "";
+            
+            let message = "";
+            const isGu = localStorage.getItem('language') === 'gu';
+            if (isGu) {
+                message = `પ્રિય ગ્રાહક,
+તમારા બિલની વિગતો નીચે મુજબ છે:
+
+બિલ નંબર: #${bill.bill_number}
+તારીખ: ${formattedDate}
+નામ: ${clientName}
+સાઈટ: ${site || '-'}
+કુલ રકમ: ₹${amount.toLocaleString("en-IN")}
+બાકી રકમ: ₹${due.toLocaleString("en-IN")}
+
+આભાર,
+ખાતા કેન્દ્ર`;
+            } else {
+                message = `Dear Customer,
+Here are your bill details:
+
+Bill Number: #${bill.bill_number}
+Date: ${formattedDate}
+Client: ${clientName}
+Site: ${site || '-'}
+Total Amount: ₹${amount.toLocaleString("en-IN")}
+Balance Due: ₹${due.toLocaleString("en-IN")}
+
+Thank you,
+Khata Kendra`;
+            }
+            
+            window.open(`https://api.whatsapp.com/send?phone=${finalPhone}&text=${encodeURIComponent(message)}`, "_blank");
+            toast.success("Opening WhatsApp...");
+            return;
+        }
+
         const toastId = toast.loading("Generating photo for WhatsApp...");
         try {
             const details = await fetchBillDetails(bill);

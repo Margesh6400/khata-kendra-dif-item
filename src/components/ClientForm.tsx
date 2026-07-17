@@ -23,6 +23,21 @@ interface ClientFormProps {
 const ClientForm: React.FC<ClientFormProps> = ({ initialData, onSubmit, onCancel, isQuickAdd = false }) => {
   const { t } = useLanguage();
   const { sizes: plateSizes } = usePlateSizes();
+
+  // Group plateSizes by category
+  const groupedSizes = React.useMemo(() => {
+    const groups: Record<string, typeof plateSizes> = {};
+    plateSizes.forEach(size => {
+      if (size.category === 'shuttering') return; // Shuttering rent is always the default daily rent
+      const category = size.category || 'other';
+      if (!groups[category]) {
+        groups[category] = [];
+      }
+      groups[category].push(size);
+    });
+    return groups;
+  }, [plateSizes]);
+
   const [formData, setFormData] = useState<ClientFormData>({
     client_nic_name: '',
     client_name: '',
@@ -163,41 +178,55 @@ const ClientForm: React.FC<ClientFormProps> = ({ initialData, onSubmit, onCancel
           {errors.primary_phone_number && <p className="mt-1 text-sm text-red-600">{errors.primary_phone_number}</p>}
         </div>
 
-        {plateSizes.filter(s => s.category === 'jack').length > 0 && (
-          <div className="pt-3 border-t border-gray-200">
-            <h4 className="block mb-2 text-sm font-bold text-gray-800">
-              જેક રોજનું ભાડું (Jack Daily Rents)
+        {plateSizes.length > 0 && (
+          <div className="pt-3 border-t border-gray-200 space-y-4">
+            <h4 className="block text-sm font-bold text-gray-800">
+              કસ્ટમ રોજનું ભાડું (Custom Daily Rents)
             </h4>
-            <div className="grid grid-cols-2 gap-3">
-              {plateSizes.filter(s => s.category === 'jack').map((size) => {
-                const currentRent = formData.jack_rents?.[size.id] ?? '';
-                return (
-                  <div key={size.id}>
-                    <label className="block mb-1 text-xs font-semibold text-gray-600">
-                      {size.name} ભાડું
-                    </label>
-                    <input
-                      type="number"
-                      value={currentRent}
-                      placeholder={`${formData.daily_rent_price ?? 1} (Default)`}
-                      onChange={(e) => {
-                        const val = parseFloat(e.target.value);
-                        const nextRents = { ...(formData.jack_rents || {}) };
-                        if (isNaN(val)) {
-                          delete nextRents[size.id];
-                        } else {
-                          nextRents[size.id] = val;
-                        }
-                        setFormData({ ...formData, jack_rents: nextRents });
-                      }}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm"
-                      min={0}
-                      step="any"
-                    />
+            
+            {Object.entries(groupedSizes).map(([category, sizes]) => {
+              if (sizes.length === 0) return null;
+              
+              const categoryLabel = t(category) || category.charAt(0).toUpperCase() + category.slice(1);
+              
+              return (
+                <div key={category} className="space-y-2">
+                  <h5 className="text-xs font-bold text-gray-500 uppercase tracking-wider">
+                    {categoryLabel}
+                  </h5>
+                  <div className="grid grid-cols-2 gap-3 pl-2 border-l-2 border-gray-100">
+                    {sizes.map((size) => {
+                      const currentRent = formData.jack_rents?.[size.id] ?? '';
+                      return (
+                        <div key={size.id}>
+                          <label className="block mb-1 text-xs font-semibold text-gray-600">
+                            {size.name} ભાડું
+                          </label>
+                          <input
+                            type="number"
+                            value={currentRent}
+                            placeholder={`${formData.daily_rent_price ?? 1} (Default)`}
+                            onChange={(e) => {
+                              const val = parseFloat(e.target.value);
+                              const nextRents = { ...(formData.jack_rents || {}) };
+                              if (isNaN(val)) {
+                                delete nextRents[size.id];
+                              } else {
+                                nextRents[size.id] = val;
+                              }
+                              setFormData({ ...formData, jack_rents: nextRents });
+                            }}
+                            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm"
+                            min={0}
+                            step="any"
+                          />
+                        </div>
+                      );
+                    })}
                   </div>
-                );
-              })}
-            </div>
+                </div>
+              );
+            })}
           </div>
         )}
       </div>

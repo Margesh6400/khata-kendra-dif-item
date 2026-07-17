@@ -526,14 +526,13 @@ export function calculateBill(
   let periods: any[] = [];
 
   if (plateSizes && plateSizes.length > 0) {
-    // Separate jack sizes (custom rent) from shuttering sizes (same rent)
+    // Separate sizes with custom rents from default rate sizes
     const jackCustomSizes = plateSizes.filter(ps =>
-      ps.category === 'jack' &&
       jackRents &&
       typeof jackRents[ps.id] === 'number'
     );
     const shutteringSizes = plateSizes.filter(ps =>
-      !(ps.category === 'jack' && jackRents && typeof jackRents[ps.id] === 'number')
+      !(jackRents && typeof jackRents[ps.id] === 'number')
     );
 
     // ── SHUTTERING: combined global calculation across all shuttering+same-rate sizes ──
