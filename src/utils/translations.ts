@@ -461,7 +461,7 @@ export const translations = {
     jamaChallanSubtitle: "પરત આવેલ માલ માટે નવું જમા ચલણ બનાવો",
     challanBookSubtitle: "બધા ચલણ જુઓ અને મેનેજ કરો",
     billingSubtitle: "બિલિંગ માટે ગ્રાહક પસંદ કરો",
-    saveConfiguration: "Setિંગ્સ સાચવો",
+    saveConfiguration: "સાચવો",
     due: "બાકી",
     view: "જુઓ",
     share: "શેર",
