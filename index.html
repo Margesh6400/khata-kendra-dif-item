@@ -12,7 +12,122 @@
 </head>
 
 <body>
-  <div id="root"></div>
+  <div id="root">
+    <div style="
+      position: fixed;
+      inset: 0;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      background: linear-gradient(135deg, #0f172a 0%, #0d1527 50%, #070b15 100%);
+      color: #ffffff;
+      font-family: 'Noto Sans Gujarati', system-ui, -apple-system, sans-serif;
+      z-index: 99999;
+      user-select: none;
+      -webkit-user-select: none;
+      overflow: hidden;
+    ">
+      <!-- Ambient Glow Blobs -->
+      <div style="
+        position: absolute;
+        width: 300px;
+        height: 300px;
+        border-radius: 50%;
+        top: -50px;
+        left: -50px;
+        background: radial-gradient(circle, rgba(37,99,235,0.12) 0%, transparent 70%);
+        pointer-events: none;
+      "></div>
+      <div style="
+        position: absolute;
+        width: 250px;
+        height: 250px;
+        border-radius: 50%;
+        bottom: -50px;
+        right: -50px;
+        background: radial-gradient(circle, rgba(99,102,241,0.08) 0%, transparent 70%);
+        pointer-events: none;
+      "></div>
+
+      <!-- Core Logo / Spinner Container -->
+      <div style="
+        position: relative;
+        margin-bottom: 24px;
+        width: 84px;
+        height: 84px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+      ">
+        <!-- Outer pulse ring -->
+        <div style="
+          position: absolute;
+          inset: -6px;
+          border-radius: 50%;
+          border: 2px dashed rgba(59,130,246,0.25);
+          animation: loader-spin-reverse 15s linear infinite;
+        "></div>
+
+        <!-- Inner fast spin ring -->
+        <div style="
+          position: absolute;
+          inset: 0;
+          border-radius: 50%;
+          border: 3px solid rgba(59,130,246,0.08);
+          border-top-color: #3b82f6;
+          border-right-color: #3b82f6;
+          animation: loader-spin 0.85s cubic-bezier(0.5, 0.1, 0.5, 0.9) infinite;
+        "></div>
+        
+        <!-- App icon SVG (Shield with lock) -->
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" style="width: 32px; height: 32px; color: #3b82f6; z-index: 2; filter: drop-shadow(0 2px 8px rgba(59,130,246,0.3));">
+          <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
+        </svg>
+      </div>
+
+      <!-- Title / Branding -->
+      <h1 style="
+        font-size: 24px;
+        font-weight: 800;
+        color: #f8fafc;
+        margin: 0 0 6px;
+        letter-spacing: -0.3px;
+        animation: loader-text-pulse 2s ease-in-out infinite;
+        text-shadow: 0 2px 10px rgba(0,0,0,0.5);
+      ">
+        ખાતા કેન્દ્ર
+      </h1>
+      
+      <!-- Loading Text -->
+      <p style="
+        font-size: 12px;
+        color: #64748b;
+        margin: 0;
+        font-weight: 600;
+        letter-spacing: 0.5px;
+        text-transform: uppercase;
+      ">
+        લોડ થઈ રહ્યું છે...
+      </p>
+
+      <!-- Styling Animations -->
+      <style>
+        @keyframes loader-spin {
+          0% { transform: rotate(0deg); }
+          100% { transform: rotate(360deg); }
+        }
+        @keyframes loader-spin-reverse {
+          0% { transform: rotate(360deg); }
+          100% { transform: rotate(0deg); }
+        }
+        @keyframes loader-text-pulse {
+          0%, 100% { opacity: 0.85; transform: scale(1); }
+          50% { opacity: 1; transform: scale(1.02); }
+        }
+      </style>
+    </div>
+  </div>
   <script type="module" src="/src/main.tsx"></script>
 </body>
 

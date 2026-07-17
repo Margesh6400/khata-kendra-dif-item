@@ -229,14 +229,13 @@ const Settings: React.FC = () => {
       <main className="flex-1 w-full px-4 py-8 pb-24 sm:px-6 lg:px-8 lg:ml-64 transition-all duration-200">
         <div className="max-w-4xl mx-auto space-y-6">
 
-          {/* Header */}
-          <div className="flex items-center gap-3 border-b border-gray-200 pb-4">
+          {/* Header — hidden on mobile (navbar already shows page title) */}
+          <div className="hidden lg:flex items-center gap-3 border-b border-gray-200 pb-4">
             <div className="p-2.5 bg-blue-100 text-blue-600 rounded-xl">
               <SettingsIcon className="w-6 h-6 animate-[spin_10s_linear_infinite]" />
             </div>
             <div>
               <h1 className="text-2xl font-bold text-gray-900">{t('settings')}</h1>
-              <p className="text-xs sm:text-sm text-gray-500">{t('settingsSubtitle')}</p>
             </div>
           </div>
 

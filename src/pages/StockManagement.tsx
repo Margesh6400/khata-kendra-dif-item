@@ -179,7 +179,7 @@ const StockManagement: React.FC = () => {
       toast.error("Error adding size to stock: " + err.message);
     }
   };
-  const { t } = useLanguage();
+  const { t, language } = useLanguage();
   const [stocks, setStocks] = useState<StockData[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -686,50 +686,39 @@ const StockManagement: React.FC = () => {
           {/* Table Container */}
           <div className="bg-white rounded-xl border border-gray-200 overflow-hidden shadow-sm">
             {/* Table Header with Controls */}
-            <div className="p-3 border-b border-gray-200 sm:p-4 lg:p-6 flex items-center justify-between">
-              <div className="flex bg-gray-100 p-1 rounded-lg">
-                <button
-                  onClick={() => setSelectedCategory('shuttering')}
-                  className={`px-4 py-2 text-xs sm:text-sm font-semibold rounded-md transition-colors ${
-                    selectedCategory === 'shuttering'
-                      ? 'bg-white text-blue-600 shadow-sm'
-                      : 'text-gray-500 hover:text-gray-900'
-                  }`}
-                >
-                  {t('shuttering')}
-                </button>
-                <button
-                  onClick={() => setSelectedCategory('jack')}
-                  className={`px-4 py-2 text-xs sm:text-sm font-semibold rounded-md transition-colors ${
-                    selectedCategory === 'jack'
-                      ? 'bg-white text-blue-600 shadow-sm'
-                      : 'text-gray-500 hover:text-gray-900'
-                  }`}
-                >
-                  {t('jack')}
-                </button>
-                <button
-                  onClick={() => setSelectedCategory('cuplock')}
-                  className={`px-4 py-2 text-xs sm:text-sm font-semibold rounded-md transition-colors ${
-                    selectedCategory === 'cuplock'
-                      ? 'bg-white text-blue-600 shadow-sm'
-                      : 'text-gray-500 hover:text-gray-900'
-                  }`}
-                >
-                  કપલોક (Cuplock)
-                </button>
-                <button
-                  onClick={() => setSelectedCategory('other')}
-                  className={`px-4 py-2 text-xs sm:text-sm font-semibold rounded-md transition-colors ${
-                    selectedCategory === 'other'
-                      ? 'bg-white text-blue-600 shadow-sm'
-                      : 'text-gray-500 hover:text-gray-900'
-                  }`}
-                >
-                  {t('other')}
-                </button>
+            <div className="border-b border-gray-200">
+              {/* Mobile scrollable category tabs */}
+              <div className="overflow-x-auto no-scrollbar">
+                <div className="flex gap-1 p-2 min-w-max sm:min-w-0 sm:flex-wrap sm:p-3">
+                  {([
+                    { key: 'shuttering', label: t('shuttering'), color: 'blue' },
+                    { key: 'jack', label: t('jack'), color: 'amber' },
+                    { key: 'cuplock', label: language === 'gu' ? 'કપલોક' : 'Cuplock', color: 'indigo' },
+                    { key: 'other', label: t('other'), color: 'gray' },
+                  ] as const).map(({ key, label, color }) => {
+                    const isActive = selectedCategory === key;
+                    const activeStyles: Record<string, string> = {
+                      blue: 'bg-blue-600 text-white shadow-md shadow-blue-200',
+                      amber: 'bg-amber-500 text-white shadow-md shadow-amber-200',
+                      indigo: 'bg-indigo-600 text-white shadow-md shadow-indigo-200',
+                      gray: 'bg-gray-600 text-white shadow-md shadow-gray-200',
+                    };
+                    return (
+                      <button
+                        key={key}
+                        onClick={() => setSelectedCategory(key)}
+                        className={`px-4 py-2 text-xs sm:text-sm font-semibold rounded-full transition-all whitespace-nowrap active:scale-95 ${
+                          isActive
+                            ? activeStyles[color]
+                            : 'bg-gray-100 text-gray-500 hover:bg-gray-200 hover:text-gray-800'
+                        }`}
+                      >
+                        {label}
+                      </button>
+                    );
+                  })}
+                </div>
               </div>
-              <div className="flex items-center justify-end"></div>
             </div>
             {/* Desktop Table */}
             <div className="hidden overflow-x-auto lg:block">
@@ -1078,43 +1067,55 @@ const StockManagement: React.FC = () => {
     </main>
 
       {/* Mobile Bottom Action Bar */}
-      <div className="fixed bottom-0 left-0 right-0 p-2 bg-white border-t border-gray-200 shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.1)] lg:hidden z-40 flex gap-2">
-        <button
-          onClick={() => handleActionClick("add")}
-          className="flex-1 inline-flex items-center justify-center gap-1.5 px-3 py-2 text-sm font-bold text-white bg-green-600 rounded-xl shadow-md hover:bg-green-700 active:scale-95 transition-all"
-        >
-          <Plus className="w-4 h-4" />
-          {t("addStock")}
-        </button>
-        <button
-          onClick={() => setIsAddingSize(true)}
-          className="flex-1 inline-flex items-center justify-center gap-1.5 px-3 py-2 text-sm font-bold text-white bg-blue-600 rounded-xl shadow-md hover:bg-blue-700 active:scale-95 transition-all"
-        >
-          <Plus className="w-4 h-4" />
-          નવી સાઈઝ
-        </button>
-        <button
-          onClick={() => handleActionClick("remove")}
-          className="flex-1 inline-flex items-center justify-center gap-1.5 px-3 py-2 text-sm font-bold text-white bg-red-600 rounded-xl shadow-md hover:bg-red-700 active:scale-95 transition-all"
-        >
-          <Minus className="w-4 h-4" />
-          {t("removeStock")}
-        </button>
-        <Link
-          to="/stock-history"
-          className="inline-flex items-center justify-center p-2 text-gray-700 bg-gray-50 border border-gray-200 rounded-xl shadow-sm active:scale-95 transition-all"
-        >
-          <BookOpen className="w-5 h-5" />
-        </Link>
-        <button
-          onClick={() => fetchStock(true)}
-          disabled={refreshing}
-          className="inline-flex items-center justify-center p-2 text-gray-700 bg-gray-50 border border-gray-200 rounded-xl shadow-sm active:scale-95 transition-all"
-        >
-          <RefreshCw
-            className={`w-5 h-5 ${refreshing ? "animate-spin" : ""}`}
-          />
-        </button>
+      <div className="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.1)] lg:hidden z-40">
+        {/* Top row: primary actions */}
+        <div className="flex gap-2 px-2 pt-2">
+          <button
+            onClick={() => handleActionClick("add")}
+            className="flex-1 inline-flex items-center justify-center gap-1.5 px-2 py-2 text-xs font-bold text-white bg-green-600 rounded-xl shadow-md hover:bg-green-700 active:scale-95 transition-all"
+          >
+            <Plus className="w-4 h-4 flex-shrink-0" />
+            {t("addStock")}
+          </button>
+          <button
+            onClick={() => handleActionClick("remove")}
+            className="flex-1 inline-flex items-center justify-center gap-1.5 px-2 py-2 text-xs font-bold text-white bg-red-600 rounded-xl shadow-md hover:bg-red-700 active:scale-95 transition-all"
+          >
+            <Minus className="w-4 h-4 flex-shrink-0" />
+            {t("removeStock")}
+          </button>
+        </div>
+        {/* Bottom row: secondary actions */}
+        <div className="flex gap-2 px-2 py-2">
+          <button
+            onClick={() => setIsAddingSize(true)}
+            className="flex-1 inline-flex items-center justify-center gap-1.5 px-2 py-2 text-xs font-semibold text-blue-700 bg-blue-50 border border-blue-200 rounded-xl active:scale-95 transition-all"
+          >
+            <Plus className="w-3.5 h-3.5 flex-shrink-0" />
+            {language === 'gu' ? 'નવી સાઈઝ' : 'New Size'}
+          </button>
+          <button
+            onClick={() => setIsReordering(true)}
+            className="flex-1 inline-flex items-center justify-center gap-1.5 px-2 py-2 text-xs font-semibold text-indigo-700 bg-indigo-50 border border-indigo-200 rounded-xl active:scale-95 transition-all"
+          >
+            <ArrowUpDown className="w-3.5 h-3.5 flex-shrink-0" />
+            {t('reorderSizesButton')}
+          </button>
+          <Link
+            to="/stock-history"
+            className="flex-1 inline-flex items-center justify-center gap-1.5 px-2 py-2 text-xs font-semibold text-gray-700 bg-gray-50 border border-gray-200 rounded-xl active:scale-95 transition-all"
+          >
+            <BookOpen className="w-3.5 h-3.5 flex-shrink-0" />
+            {t("stockHistory")}
+          </Link>
+          <button
+            onClick={() => fetchStock(true)}
+            disabled={refreshing}
+            className="inline-flex items-center justify-center p-2 text-gray-600 bg-gray-50 border border-gray-200 rounded-xl active:scale-95 transition-all disabled:opacity-50"
+          >
+            <RefreshCw className={`w-4 h-4 ${refreshing ? 'animate-spin' : ''}`} />
+          </button>
+        </div>
       </div>
 
       {/* Action Modal (Bulk Update) */}
@@ -1187,37 +1188,60 @@ const StockManagement: React.FC = () => {
 
               <div className="border-t border-gray-100 my-2"></div>
 
-              {/* Sizes Grid */}
+              {/* Sizes Grid — grouped by category */}
               <h4 className="text-sm font-bold text-gray-800 mb-2">{t("sizesQuantities")}</h4>
-              <div className="space-y-2 max-h-[30vh] overflow-y-auto pr-1">
-                {plateSizes.map((ps) => {
-                  const sizeStr = ps.name;
-                  const index = ps.id;
-                  const exists = stocks.some(s => s.size === index);
-                  if (!exists) {
-                    return (
-                      <button
-                        key={index}
-                        type="button"
-                        onClick={() => handleAddMissingSize(index)}
-                        className="w-full px-4 py-2 bg-yellow-50 border border-yellow-250 rounded-xl hover:bg-yellow-100 transition-all font-semibold text-xs text-yellow-800 flex items-center justify-between group"
-                      >
-                        <span>નવી સાઈઝ {sizeStr} સ્ટોકમાં સેટઅપ કરો (Setup Size {sizeStr})</span>
-                        <Plus className="w-4 h-4 text-yellow-600 group-hover:scale-110 transition-transform" />
-                      </button>
-                    );
-                  }
+              <div className="space-y-1 max-h-[38vh] overflow-y-auto pr-1">
+                {([
+                  { cat: 'shuttering', label: language === 'gu' ? 'શટરિંગ' : 'Shuttering', color: 'blue' },
+                  { cat: 'jack', label: language === 'gu' ? 'જેક' : 'Jack', color: 'amber' },
+                  { cat: 'cuplock', label: language === 'gu' ? 'કપલોક' : 'Cuplock', color: 'indigo' },
+                  { cat: 'other', label: language === 'gu' ? 'અન્ય' : 'Other', color: 'gray' },
+                ] as const).map(({ cat, label, color }) => {
+                  const catSizes = plateSizes.filter(ps => (ps.category || 'shuttering') === cat);
+                  if (catSizes.length === 0) return null;
+                  const headerColors: Record<string, string> = {
+                    blue: 'bg-blue-50 text-blue-700 border-blue-200',
+                    amber: 'bg-amber-50 text-amber-700 border-amber-200',
+                    indigo: 'bg-indigo-50 text-indigo-700 border-indigo-200',
+                    gray: 'bg-gray-100 text-gray-600 border-gray-200',
+                  };
                   return (
-                    <div key={index} className="flex items-center justify-between p-2.5 bg-gray-50 rounded-xl border border-gray-150">
-                      <span className="font-bold text-gray-800 text-sm">{sizeStr}</span>
-                      <input
-                        type="number"
-                        min="0"
-                        value={bulkAction.quantities[index] || ""}
-                        onChange={(e) => handleQuantityChange(index, e.target.value)}
-                        placeholder="0"
-                        className="w-24 px-3 py-1.5 text-center border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none text-sm font-semibold"
-                      />
+                    <div key={cat}>
+                      <div className={`px-3 py-1.5 text-[11px] font-bold uppercase tracking-wider rounded-lg border mb-1 ${headerColors[color]}`}>
+                        {label}
+                      </div>
+                      <div className="space-y-1.5 mb-3">
+                        {catSizes.map((ps) => {
+                          const index = ps.id;
+                          const exists = stocks.some(s => s.size === index);
+                          if (!exists) {
+                            return (
+                              <button
+                                key={index}
+                                type="button"
+                                onClick={() => handleAddMissingSize(index)}
+                                className="w-full px-4 py-2 bg-yellow-50 border border-yellow-200 rounded-xl hover:bg-yellow-100 transition-all font-semibold text-xs text-yellow-800 flex items-center justify-between group"
+                              >
+                                <span>{language === 'gu' ? `સ્ટોકમાં ઉમેરો: ${ps.name}` : `Setup: ${ps.name}`}</span>
+                                <Plus className="w-4 h-4 text-yellow-600 group-hover:scale-110 transition-transform" />
+                              </button>
+                            );
+                          }
+                          return (
+                            <div key={index} className="flex items-center justify-between p-2.5 bg-gray-50 rounded-xl border border-gray-100">
+                              <span className="font-bold text-gray-800 text-sm">{ps.name}</span>
+                              <input
+                                type="number"
+                                min="0"
+                                value={bulkAction.quantities[index] || ''}
+                                onChange={(e) => handleQuantityChange(index, e.target.value)}
+                                placeholder="0"
+                                className="w-24 px-3 py-1.5 text-center border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none text-sm font-semibold"
+                              />
+                            </div>
+                          );
+                        })}
+                      </div>
                     </div>
                   );
                 })}
@@ -1506,10 +1530,10 @@ const StockManagement: React.FC = () => {
                         className="px-1.5 py-0.5 text-[11px] font-medium border border-gray-300 rounded bg-white outline-none focus:ring-1 focus:ring-indigo-500 cursor-pointer text-gray-700 flex-shrink-0 ml-auto"
                         onClick={(e) => e.stopPropagation()}
                       >
-                        <option value="shuttering">Shuttering</option>
-                        <option value="jack">Jack</option>
-                        <option value="cuplock">Cuplock</option>
-                        <option value="other">Other</option>
+                        <option value="shuttering">{language === 'gu' ? 'શટ.' : 'Shuttering'}</option>
+                        <option value="jack">{language === 'gu' ? 'જેક' : 'Jack'}</option>
+                        <option value="cuplock">{language === 'gu' ? 'કપલોક' : 'Cuplock'}</option>
+                        <option value="other">{language === 'gu' ? 'અન્ય' : 'Other'}</option>
                       </select>
                     </div>
                     <div className="flex gap-1 flex-shrink-0">

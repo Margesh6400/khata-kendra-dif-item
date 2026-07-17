@@ -4,6 +4,10 @@
 @tailwind components;
 @tailwind utilities;
 
+/* Utility: hide scrollbar but keep scroll */
+.no-scrollbar::-webkit-scrollbar { display: none; }
+.no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+
 :root {
   --primary-blue: #2563eb;
   --primary-hover: #1d4ed8;

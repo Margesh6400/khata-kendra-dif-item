@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { useParams, useNavigate, useSearchParams } from "react-router-dom";
 import { format, parseISO, differenceInDays, addDays } from "date-fns";
 import { formatLocalDate, safeParseLocalDate } from "../utils/dateUtils";
@@ -130,7 +130,7 @@ export default function CreateBill() {
   const [searchParams] = useSearchParams();
   const editBillNumber = searchParams.get("edit");
   const isEditMode = !!editBillNumber;
-  const { t } = useLanguage();
+  const { t, language } = useLanguage();
   const { dateSortingMethod } = useSettings();
   const { sizes: plateSizes } = usePlateSizes();
 
@@ -138,6 +138,25 @@ export default function CreateBill() {
   const [billResult, setBillResult] = useState<ReturnType<
     typeof periodCalculations.calculateBill
   > | null>(null);
+  const [showCustomRents, setShowCustomRents] = useState(false);
+
+  const groupedSizes = useMemo(() => {
+    const groups: Record<string, typeof plateSizes> = {
+      shuttering: [],
+      jack: [],
+      cuplock: [],
+      other: [],
+    };
+    plateSizes.forEach((size) => {
+      const cat = size.category || "shuttering";
+      if (groups[cat]) {
+        groups[cat].push(size);
+      } else {
+        groups[cat] = [size];
+      }
+    });
+    return groups;
+  }, [plateSizes]);
   const [billData, setBillData] = useState<BillData>({
     billNumber: "",
     billDate: format(new Date(), "yyyy-MM-dd"),
@@ -181,7 +200,7 @@ export default function CreateBill() {
       }, 500);
       return () => clearTimeout(timer);
     }
-  }, [billData.toDate, billData.dailyRent]);
+  }, [billData.toDate, billData.dailyRent, JSON.stringify(client?.jack_rents)]);
 
   const fetchBillForEdit = async (billNumber: string) => {
     setIsLoading(true);
@@ -534,6 +553,14 @@ export default function CreateBill() {
     try {
       setIsLoading(true);
 
+      // Save client custom rents to the database client profile to persist them
+      if (client && clientId) {
+        await supabase
+          .from("clients")
+          .update({ jack_rents: client.jack_rents || {} })
+          .eq("id", clientId);
+      }
+
       if (isEditMode) {
         // UPDATE EXISTING BILL
 
@@ -721,6 +748,25 @@ export default function CreateBill() {
     } catch (error) {
       console.error("Error updating daily rent:", error);
       toast.error("Failed to update daily rent");
+    }
+  };
+
+  const handleUpdateCustomRents = async (newRents: Record<string, number>) => {
+    if (!clientId) return;
+    const loadingToast = toast.loading("Saving custom rents...");
+    try {
+      const { error } = await supabase
+        .from('clients')
+        .update({ jack_rents: newRents })
+        .eq('id', clientId);
+
+      if (error) throw error;
+      toast.success(t("saveSuccess") || "Saved Successfully");
+    } catch (error) {
+      console.error("Error updating custom rents:", error);
+      toast.error("Failed to update custom rents");
+    } finally {
+      toast.dismiss(loadingToast);
     }
   };
 
@@ -953,7 +999,7 @@ export default function CreateBill() {
     <div className="min-h-screen bg-gray-50 flex">
       <Navbar />
       <main className="flex-1 w-full ml-0 overflow-auto pt-14 pb-20 sm:pt-0 sm:pb-0 lg:ml-64">
-        <div className="w-full max-w-6xl px-4 py-4 mx-auto sm:px-6 lg:px-8 sm:py-6 lg:py-8 mt-16 sm:mt-0">
+        <div className="w-full max-w-6xl px-4 py-4 mx-auto sm:px-6 lg:px-8 sm:py-6 lg:py-8">
           <div className="space-y-4">
           {/* Section A: Client Information */}
           <div className="px-4 py-3 bg-white border border-gray-200 rounded-xl">
@@ -995,110 +1041,198 @@ export default function CreateBill() {
           </div>
 
           {/* Section B: Bill Header Information */}
-          <div className="p-4 bg-white border border-gray-200 rounded-xl">
-            <h4 className="mb-4 text-base font-medium text-gray-900">
+          <div className="p-4 bg-white border border-gray-200 rounded-xl space-y-4">
+            <h4 className="text-base font-bold text-gray-900">
               {t("billDetails")}
             </h4>
-            <form className="space-y-4">
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-                <div>
-                  <label className="block mb-1 text-sm font-medium text-gray-700">
-                    {t("billNumber")}
-                    <span className="text-red-500">*</span>
-                  </label>
-                  <div className="relative">
-                    <Receipt className="absolute w-5 h-5 text-gray-400 transform -translate-y-1/2 left-3 top-1/2" />
-                    <input
-                      type="text"
-                      disabled={isEditMode}
-                      value={billData.billNumber}
-                      onChange={(e) =>
-                        handleInputChange("billNumber", e.target.value)
-                      }
-                      className={`block w-full py-2 pl-10 pr-3 text-sm border rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent ${billData.errors.billNumber
-                        ? "border-red-500"
-                        : "border-gray-300"
-                        } ${isEditMode ? "bg-gray-100 text-gray-500 cursor-not-allowed" : ""}`}
-                      placeholder="Auto-generated (BILL-YYYYMM-###)"
-                    />
-                  </div>
-                  {billData.errors.billNumber && (
-                    <p className="mt-1 text-xs text-red-500">
-                      {billData.errors.billNumber}
-                    </p>
-                  )}
-                </div>
-
-
-
-                <div>
-                  <label className="block mb-1 text-sm font-medium text-gray-700">
-                    {t("tillDate")}
-                    <span className="text-red-500">*</span>
-                  </label>
-                  <div className="relative">
-                    <Calendar className="absolute w-5 h-5 text-gray-400 transform -translate-y-1/2 left-3 top-1/2" />
-                    <input
-                      type="date"
-                      value={billData.toDate}
-                      onChange={(e) =>
-                        handleInputChange("toDate", e.target.value)
-                      }
-                      className="block w-full py-2 pl-10 pr-3 text-sm border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500"
-                    />
-                  </div>
-                </div>
-
-                <div>
-                  <label className="block mb-1 text-sm font-medium text-gray-700">
-                    {t("dailyRent")}
-                    <span className="text-red-500">*</span>
-                  </label>
-                  <div className="flex items-center gap-2 w-full">
-                    <div className="relative flex-1 min-w-[120px]">
-                      <CreditCard className="absolute w-5 h-5 text-gray-400 transform -translate-y-1/2 left-3 top-1/2" />
+            <form className="space-y-4" onSubmit={(e) => e.preventDefault()}>
+              <div className="space-y-3">
+                {/* Line 1: Bill Number & Till Date side-by-side */}
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <label className="block mb-1 text-xs font-semibold text-gray-700">
+                      {t("billNumber")}
+                      <span className="text-red-500">*</span>
+                    </label>
+                    <div className="relative">
+                      <Receipt className="absolute w-4 h-4 text-gray-400 transform -translate-y-1/2 left-2.5 top-1/2" />
                       <input
-                        type="number"
-                        step="0.01"
-                        value={billData.dailyRent}
+                        type="text"
+                        disabled={isEditMode}
+                        value={billData.billNumber}
                         onChange={(e) =>
-                          handleInputChange(
-                            "dailyRent",
-                            parseFloat(e.target.value)
-                          )
+                          handleInputChange("billNumber", e.target.value)
                         }
-                        onWheel={(e) => (e.target as HTMLInputElement).blur()}
-                        className="block w-full py-2 pl-10 pr-3 text-sm border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500"
-                        placeholder="E.g., 5.00"
+                        className={`block w-full py-1.5 pl-8 pr-2 text-xs border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent ${billData.errors.billNumber
+                          ? "border-red-500"
+                          : "border-gray-300"
+                          } ${isEditMode ? "bg-gray-100 text-gray-500 cursor-not-allowed" : ""}`}
+                        placeholder="BILL-..."
                       />
                     </div>
+                    {billData.errors.billNumber && (
+                      <p className="mt-1 text-[10px] text-red-500">
+                        {billData.errors.billNumber}
+                      </p>
+                    )}
+                  </div>
+
+                  <div>
+                    <label className="block mb-1 text-xs font-semibold text-gray-700">
+                      {t("tillDate")}
+                      <span className="text-red-500">*</span>
+                    </label>
+                    <div className="relative">
+                      <Calendar className="absolute w-4 h-4 text-gray-400 transform -translate-y-1/2 left-2.5 top-1/2" />
+                      <input
+                        type="date"
+                        value={billData.toDate}
+                        onChange={(e) =>
+                          handleInputChange("toDate", e.target.value)
+                        }
+                        className="block w-full py-1.5 pl-8 pr-2 text-xs border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500"
+                      />
+                    </div>
+                  </div>
+                </div>
+
+                {/* Line 2: Daily Rent & Custom Rents Toggle side-by-side */}
+                <div className="grid grid-cols-2 gap-3 items-end">
+                  <div>
+                    <label className="block mb-1 text-xs font-semibold text-gray-700">
+                      {t("dailyRent")}
+                      <span className="text-red-500">*</span>
+                    </label>
+                    <div className="flex items-center gap-1.5 w-full">
+                      <div className="relative flex-1 min-w-0">
+                        <CreditCard className="absolute w-4 h-4 text-gray-400 transform -translate-y-1/2 left-2.5 top-1/2" />
+                        <input
+                          type="number"
+                          step="0.01"
+                          value={billData.dailyRent}
+                          onChange={(e) =>
+                            handleInputChange(
+                              "dailyRent",
+                              parseFloat(e.target.value)
+                            )
+                          }
+                          onWheel={(e) => (e.target as HTMLInputElement).blur()}
+                          className="block w-full py-1.5 pl-8 pr-2 text-xs border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500 font-medium"
+                          placeholder="1.50"
+                        />
+                      </div>
+                      <button
+                        type="button"
+                        onClick={handleUpdateDailyRent}
+                        className="p-1.5 text-white bg-blue-600 rounded-lg hover:bg-blue-700 flex items-center justify-center shrink-0 min-h-[32px] min-w-[32px]"
+                        title="Save Default"
+                      >
+                        <Save className="w-4 h-4" />
+                      </button>
+                    </div>
+                  </div>
+
+                  <div>
+                    <label className="block mb-1 text-xs font-semibold text-gray-700">
+                      {language === 'gu' ? 'કસ્ટમ સાઈઝ ભાડું' : 'Custom Rents'}
+                    </label>
                     <button
                       type="button"
-                      onClick={handleUpdateDailyRent}
-                      className="p-2 text-white bg-blue-600 rounded-md hover:bg-blue-700 flex items-center justify-center shrink-0"
-                      title="Update Default Rent"
+                      onClick={() => setShowCustomRents(!showCustomRents)}
+                      className={`flex items-center justify-between w-full py-1.5 px-3 text-xs font-semibold rounded-lg border transition-all min-h-[32px] ${
+                        showCustomRents
+                          ? 'bg-blue-50 border-blue-300 text-blue-700'
+                          : 'bg-white border-gray-300 text-gray-700 hover:bg-gray-50'
+                      }`}
                     >
-                      <Save className="w-5 h-5" />
-                    </button>
-                    <button
-                      type="button"
-                      onClick={calculateBill}
-                      disabled={
-                        isLoading ||
-                        !billData.billNumber ||
-                        !billData.billDate ||
-                        !billData.toDate ||
-                        !billData.dailyRent ||
-                        Object.keys(billData.errors).length > 0
-                      }
-                      className="px-4 py-2 text-sm font-medium text-white transition-colors bg-blue-600 rounded-md hover:bg-blue-700 disabled:bg-blue-300 flex items-center justify-center shrink-0 whitespace-nowrap"
-                    >
-                      {isLoading ? "ગણતરી થય રહી છે..." : `${t("calculateBill")}`}
+                      <span className="flex items-center gap-1">
+                        <span>📂</span>
+                        <span>{language === 'gu' ? 'સેટ કરો' : 'Configure'}</span>
+                      </span>
+                      <ChevronDown className={`w-3.5 h-3.5 transition-transform duration-200 ${showCustomRents ? 'rotate-180 text-blue-500' : ''}`} />
                     </button>
                   </div>
                 </div>
               </div>
+
+              {/* Calculate Bill Button below */}
+              <div className="pt-1">
+                <button
+                  type="button"
+                  onClick={calculateBill}
+                  disabled={
+                    isLoading ||
+                    !billData.billNumber ||
+                    !billData.billDate ||
+                    !billData.toDate ||
+                    !billData.dailyRent ||
+                    Object.keys(billData.errors).length > 0
+                  }
+                  className="w-full px-4 py-2 text-xs font-bold text-white transition-colors bg-blue-600 rounded-lg hover:bg-blue-700 disabled:bg-blue-300 flex items-center justify-center min-h-[36px] active:scale-[0.98] transition-transform"
+                >
+                  {isLoading ? "ગણતરી થય રહી છે..." : `${t("calculateBill")}`}
+                </button>
+              </div>
             </form>
+
+            {/* Custom size rents collapsible accordion section */}
+            {showCustomRents && (
+              <div className="border-t border-gray-150 pt-3 mt-1 p-3 bg-gray-50 rounded-xl space-y-4">
+                {Object.entries(groupedSizes).map(([category, sizes]) => {
+                  if (sizes.length === 0 || category === 'shuttering') return null;
+                  const categoryLabel = category === 'jack' ? (language === 'gu' ? 'જેક' : 'Jack') :
+                                       category === 'cuplock' ? (language === 'gu' ? 'કપલોક' : 'Cuplock') :
+                                       (language === 'gu' ? 'અન્ય' : 'Other');
+                  return (
+                    <div key={category} className="space-y-2">
+                      <h5 className="text-xs font-bold text-gray-500 uppercase tracking-wider">
+                        {categoryLabel}
+                      </h5>
+                      <div className="grid grid-cols-2 gap-3 pl-2 border-l-2 border-gray-200 sm:grid-cols-4">
+                        {sizes.map((size) => {
+                          const currentRent = client?.jack_rents?.[size.id] ?? '';
+                          return (
+                            <div key={size.id} className="space-y-1">
+                              <label className="block text-xs font-semibold text-gray-600 truncate">
+                                  {size.name}
+                              </label>
+                              <input
+                                type="number"
+                                value={currentRent}
+                                placeholder={`${billData.dailyRent} (${language === 'gu' ? 'ડિફોલ્ટ' : 'Default'})`}
+                                onChange={(e) => {
+                                  const val = parseFloat(e.target.value);
+                                  const nextRents = { ...(client?.jack_rents || {}) };
+                                  if (isNaN(val)) {
+                                    delete nextRents[size.id];
+                                  } else {
+                                    nextRents[size.id] = val;
+                                  }
+                                  setClient(prev => prev ? { ...prev, jack_rents: nextRents } : null);
+                                }}
+                                className="w-full px-2 py-1 text-xs border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white font-medium text-center"
+                                min={0}
+                                step="any"
+                              />
+                            </div>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  );
+                })}
+                <div className="flex justify-end pt-2 border-t border-gray-200">
+                  <button
+                    type="button"
+                    onClick={() => handleUpdateCustomRents(client?.jack_rents || {})}
+                    className="inline-flex items-center gap-1 px-3 py-1.5 text-xs font-bold text-white bg-blue-600 rounded-lg hover:bg-blue-700 transition-colors shadow-sm"
+                  >
+                    <Save className="w-3.5 h-3.5" />
+                    {language === 'gu' ? 'કસ્ટમ ભાડું સાચવો' : 'Save Custom Rents'}
+                  </button>
+                </div>
+              </div>
+            )}
           </div>
 
           {/* Billing Mode Selector removed */}
