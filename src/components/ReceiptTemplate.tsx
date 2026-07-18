@@ -59,27 +59,36 @@ const ReceiptTemplate: React.FC<ReceiptTemplateProps> = ({
     
     let qty = 0;
     let borrowedStock = 0;
+    let lost = 0;
+    let damaged = 0;
     let note = '';
 
     if (items.items) {
-      const itemData = items.items[ps.id] || { qty: 0, borrowed: 0, note: '' };
+      const itemData = items.items[ps.id] || { qty: 0, borrowed: 0, lost: 0, damaged: 0, note: '' };
       qty = itemData.qty;
       borrowedStock = itemData.borrowed;
+      lost = itemData.lost || 0;
+      damaged = itemData.damaged || 0;
       note = itemData.note;
     } else {
       qty = (items as any)[`size_${ps.id}_qty`] || 0;
       borrowedStock = (items as any)[`size_${ps.id}_borrowed`] || 0;
+      lost = (items as any)[`size_${ps.id}_lost`] || 0;
+      damaged = (items as any)[`size_${ps.id}_damaged`] || 0;
       note = (items as any)[`size_${ps.id}_note`] || '';
     }
-    
+
     const total = (qty || 0) + (borrowedStock || 0);
-    
+    // Fixed-coordinate template has no lost/damaged columns; surface them in the note text
+    const extras = [lost > 0 ? `ગુમ: ${lost}` : '', damaged > 0 ? `નુકસાન: ${damaged}` : ''].filter(Boolean).join(' | ');
+    const noteWithLost = extras ? `${note ? note + ' | ' : ''}${extras}` : note;
+
     return {
       ...acc,
       [ps.name]: {
         pattern: getQtyOrZero(total),
         borrowedStock: getQtyOrZero(borrowedStock),
-        note: note || ''
+        note: noteWithLost || ''
       }
     };
   }, {} as Record<string, { pattern: string, borrowedStock: string, note: string }>);

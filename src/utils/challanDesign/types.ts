@@ -39,7 +39,7 @@ export interface PlacedField {
 }
 
 // Which per-row value a row-band column prints.
-export type BandColumnField = 'name' | 'qty' | 'borrowed' | 'note' | 'total' | 'index';
+export type BandColumnField = 'name' | 'qty' | 'borrowed' | 'lost' | 'damaged' | 'note' | 'total' | 'index';
 
 // One column of the repeating item table.
 export interface BandColumn {
@@ -91,6 +91,8 @@ export interface ChallanRow {
   name: string;
   qty: number;
   borrowed: number;
+  lost?: number;
+  damaged?: number;
   total: number;
   note: string;
 }

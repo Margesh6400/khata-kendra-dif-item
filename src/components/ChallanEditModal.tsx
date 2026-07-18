@@ -95,7 +95,7 @@ const ChallanEditModal: React.FC<ChallanEditModalProps> = ({
 
   if (!isOpen || !challan) return null;
 
-  const handleItemChange = (size: number, field: 'qty' | 'borrowed' | 'note', value: string | number) => {
+  const handleItemChange = (size: number, field: 'qty' | 'borrowed' | 'lost' | 'damaged' | 'note', value: string | number) => {
     setItems(prev => ({
       ...prev,
       // notes stay string|null, qty/borrowed become number|null
@@ -119,9 +119,11 @@ const ChallanEditModal: React.FC<ChallanEditModalProps> = ({
       plateSizes.forEach((ps) => {
         const qty = (originalItems as any)[`size_${ps.id}_qty`] || 0;
         const borrowed = (originalItems as any)[`size_${ps.id}_borrowed`] || 0;
+        const lost = (originalItems as any)[`size_${ps.id}_lost`] || 0;
+        const damaged = (originalItems as any)[`size_${ps.id}_damaged`] || 0;
         const note = (originalItems as any)[`size_${ps.id}_note`] || '';
-        if (qty > 0 || borrowed > 0 || note) {
-          oldItems.push({ size_id: ps.id, qty, borrowed, note });
+        if (qty > 0 || borrowed > 0 || lost > 0 || damaged > 0 || note) {
+          oldItems.push({ size_id: ps.id, qty, borrowed, lost, damaged, note });
         }
       });
 
@@ -130,9 +132,11 @@ const ChallanEditModal: React.FC<ChallanEditModalProps> = ({
       plateSizes.forEach((ps) => {
         const qty = (items as FormItems)[`size_${ps.id}_qty` as keyof FormItems] ?? 0;
         const borrowed = (items as FormItems)[`size_${ps.id}_borrowed` as keyof FormItems] ?? 0;
+        const lost = ((items as FormItems)[`size_${ps.id}_lost` as keyof FormItems] ?? 0) as number;
+        const damaged = ((items as FormItems)[`size_${ps.id}_damaged` as keyof FormItems] ?? 0) as number;
         const note = (items as FormItems)[`size_${ps.id}_note` as keyof FormItems] || '';
-        if ((qty as number) > 0 || (borrowed as number) > 0 || note) {
-          newItems.push({ size_id: ps.id, qty: qty as number, borrowed: borrowed as number, note: note as string });
+        if ((qty as number) > 0 || (borrowed as number) > 0 || lost > 0 || damaged > 0 || note) {
+          newItems.push({ size_id: ps.id, qty: (qty as number) || 0, borrowed: (borrowed as number) || 0, lost: lost || 0, damaged: damaged || 0, note: note as string });
         }
       });
 
@@ -152,15 +156,41 @@ const ChallanEditModal: React.FC<ChallanEditModalProps> = ({
 
       if (error) throw error;
 
-      if (data && typeof data === 'object' && 'success' in data) {
-        if (data.success) {
-          alert(t('challanUpdated'));
-          onSave();
-          onClose();
-        } else {
-          alert(`Error: ${data.message}`);
-        }
+      const rpcFailed = data && typeof data === 'object' && 'success' in data && !data.success;
+
+      if (rpcFailed) {
+        alert(`Error: ${(data as any).message}`);
       } else {
+        // Keep stock_history in sync with the lost_stock/damaged_stock deltas the RPC applied
+        if (type === 'jama') {
+          const lostDelta: { [key: number]: number } = {};
+          const damagedDelta: { [key: number]: number } = {};
+          plateSizes.forEach((ps) => {
+            const oldItem = oldItems.find(i => i.size_id === ps.id);
+            const newItem = newItems.find(i => i.size_id === ps.id);
+            const oldLost = oldItem?.lost || 0;
+            const newLost = newItem?.lost || 0;
+            if (newLost !== oldLost) lostDelta[ps.id] = newLost - oldLost;
+            const oldDamaged = oldItem?.damaged || 0;
+            const newDamaged = newItem?.damaged || 0;
+            if (newDamaged !== oldDamaged) damagedDelta[ps.id] = newDamaged - oldDamaged;
+          });
+          for (const delta of [
+            { type: 'lost', items: lostDelta },
+            { type: 'damaged', items: damagedDelta },
+          ]) {
+            if (Object.keys(delta.items).length > 0) {
+              await supabase.from('stock_history').insert({
+                type: delta.type,
+                party_name: challan.clientNicName || '',
+                note: `ચલણ #${challan.challanNumber} સુધારેલ`,
+                amount: 0,
+                items: delta.items,
+                date: new Date().toISOString(),
+              });
+            }
+          }
+        }
         alert(t('challanUpdated'));
         onSave();
         onClose();
@@ -286,6 +316,16 @@ const ChallanEditModal: React.FC<ChallanEditModalProps> = ({
                     <th className="px-4 py-2 text-xs font-medium text-left text-gray-500 uppercase">
                       {t('quantity')}
                     </th>
+                    {type === 'jama' && (
+                      <>
+                        <th className="px-4 py-2 text-xs font-medium text-left text-amber-700 uppercase">
+                          {t('lost')}
+                        </th>
+                        <th className="px-4 py-2 text-xs font-medium text-left text-rose-700 uppercase">
+                          {t('damaged')}
+                        </th>
+                      </>
+                    )}
                     <th className="px-4 py-2 text-xs font-medium text-left text-gray-500 uppercase">
                       {t('borrowedStock')}
                     </th>
@@ -310,6 +350,30 @@ const ChallanEditModal: React.FC<ChallanEditModalProps> = ({
                           className="w-24 px-3 py-2.5 text-sm text-center border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent min-h-[44px]"
                         />
                       </td>
+                      {type === 'jama' && (
+                        <>
+                          <td className="px-4 py-2 whitespace-nowrap">
+                            <input
+                              type="number"
+                              min="0"
+                              inputMode="numeric"
+                              value={(items as FormItems)[`size_${ps.id}_lost` as keyof FormItems] ?? ''}
+                              onChange={(e) => handleItemChange(ps.id, 'lost', e.target.value)}
+                              className="w-24 px-3 py-2.5 text-sm text-center border border-amber-400 bg-amber-50/50 rounded-lg focus:ring-2 focus:ring-amber-500 focus:border-transparent min-h-[44px]"
+                            />
+                          </td>
+                          <td className="px-4 py-2 whitespace-nowrap">
+                            <input
+                              type="number"
+                              min="0"
+                              inputMode="numeric"
+                              value={(items as FormItems)[`size_${ps.id}_damaged` as keyof FormItems] ?? ''}
+                              onChange={(e) => handleItemChange(ps.id, 'damaged', e.target.value)}
+                              className="w-24 px-3 py-2.5 text-sm text-center border border-rose-400 bg-rose-50/50 rounded-lg focus:ring-2 focus:ring-rose-500 focus:border-transparent min-h-[44px]"
+                            />
+                          </td>
+                        </>
+                      )}
                       <td className="px-4 py-2 whitespace-nowrap">
                         <input
                           type="number"
@@ -348,6 +412,16 @@ const ChallanEditModal: React.FC<ChallanEditModalProps> = ({
                           <th className="px-1 py-1.5 text-[8px] sm:text-[10px] font-semibold text-center text-gray-700 border-r border-gray-200 min-w-[60px] sm:min-w-[70px]">
                             {t('quantity')}
                           </th>
+                          {type === 'jama' && (
+                            <>
+                              <th className="px-1 py-1.5 text-[8px] sm:text-[10px] font-semibold text-center text-amber-700 border-r border-gray-200 min-w-[60px] sm:min-w-[70px]">
+                                {t('lost')}
+                              </th>
+                              <th className="px-1 py-1.5 text-[8px] sm:text-[10px] font-semibold text-center text-rose-700 border-r border-gray-200 min-w-[60px] sm:min-w-[70px]">
+                                {t('damaged')}
+                              </th>
+                            </>
+                          )}
                           <th className="px-1 py-1.5 text-[8px] sm:text-[10px] font-semibold text-center text-gray-700 border-r border-gray-200 min-w-[60px] sm:min-w-[70px]">
                             {t('borrowedStock')}
                           </th>
@@ -375,6 +449,30 @@ const ChallanEditModal: React.FC<ChallanEditModalProps> = ({
                                 className="w-full px-2 py-2 text-[13px] sm:text-sm text-center border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent min-h-[40px] sm:min-h-[44px] touch-manipulation active:scale-[0.97]"
                               />
                             </td>
+                            {type === 'jama' && (
+                              <>
+                                <td className="px-1 py-1.5 border-r border-gray-200">
+                                  <input
+                                    type="number"
+                                    min="0"
+                                    inputMode="numeric"
+                                    value={(items as FormItems)[`size_${ps.id}_lost` as keyof FormItems] ?? ''}
+                                    onChange={(e) => handleItemChange(ps.id, 'lost', e.target.value)}
+                                    className="w-full px-2 py-2 text-[13px] sm:text-sm text-center border border-amber-400 bg-amber-50/50 rounded-lg focus:ring-2 focus:ring-amber-500 focus:border-transparent min-h-[40px] sm:min-h-[44px] touch-manipulation active:scale-[0.97]"
+                                  />
+                                </td>
+                                <td className="px-1 py-1.5 border-r border-gray-200">
+                                  <input
+                                    type="number"
+                                    min="0"
+                                    inputMode="numeric"
+                                    value={(items as FormItems)[`size_${ps.id}_damaged` as keyof FormItems] ?? ''}
+                                    onChange={(e) => handleItemChange(ps.id, 'damaged', e.target.value)}
+                                    className="w-full px-2 py-2 text-[13px] sm:text-sm text-center border border-rose-400 bg-rose-50/50 rounded-lg focus:ring-2 focus:ring-rose-500 focus:border-transparent min-h-[40px] sm:min-h-[44px] touch-manipulation active:scale-[0.97]"
+                                  />
+                                </td>
+                              </>
+                            )}
                             <td className="px-1 py-1.5 border-r border-gray-200">
                               <input
                                 type="number"

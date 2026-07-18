@@ -31,6 +31,7 @@ interface StockData {
   on_rent_stock: number;
   borrowed_stock: number;
   lost_stock: number;
+  damaged_stock?: number;
   available_stock: number;
   updated_at: string;
 }
@@ -725,7 +726,7 @@ const UdharChallan: React.FC = () => {
         const rentStock = calculations.get(s.size) || 0;
         return {
           ...s,
-          available_stock: Math.max(0, (s.total_stock || 0) - rentStock - (s.lost_stock || 0))
+          available_stock: Math.max(0, (s.total_stock || 0) - rentStock - (s.lost_stock || 0) - (s.damaged_stock || 0))
         };
       });
 

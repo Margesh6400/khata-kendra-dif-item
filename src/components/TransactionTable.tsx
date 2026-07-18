@@ -131,11 +131,13 @@ export default function TransactionTable({
     setSortOrder(prev => prev === 'asc' ? 'desc' : 'asc');
   };
 
-  const formatSizeValue = (size?: { qty: number; borrowed: number }, note?: string | null) => {
+  const formatSizeValue = (size?: { qty: number; borrowed: number; lost?: number; damaged?: number }, note?: string | null) => {
     if (!size) return '-';
+    const lost = size.lost || 0;
+    const damaged = size.damaged || 0;
     const total = (size.qty || 0) + (size.borrowed || 0);
 
-    if (total === 0 && !note) return '-';
+    if (total === 0 && lost === 0 && damaged === 0 && !note) return '-';
 
     let valueDisplay = null;
     if (total > 0) {
@@ -170,7 +172,17 @@ export default function TransactionTable({
       valueDisplay = <sup className="text-xs font-bold text-red-700">({note})</sup>;
     }
 
-    return <div>{valueDisplay || '-'}</div>;
+    return (
+      <div>
+        {valueDisplay || (lost > 0 || damaged > 0 ? null : '-')}
+        {lost > 0 && (
+          <sup className="ml-1 text-xs font-bold text-amber-600">ગુમ {lost}</sup>
+        )}
+        {damaged > 0 && (
+          <sup className="ml-1 text-xs font-bold text-rose-600">નુકસાન {damaged}</sup>
+        )}
+      </div>
+    );
   };
 
   const formatBalanceValue = (sizeBalance?: { main: number; borrowed: number; total: number }) => {

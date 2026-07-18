@@ -885,11 +885,87 @@ export default function CreateBill() {
           }
         }
 
+        // Sum lost and damaged quantities from jama challans inside the billing period
+        // so a charge line can be prefilled per size per bucket.
+        const lostBySize: Record<number, number> = {};
+        const damagedBySize: Record<number, number> = {};
+        (jamaChallans || []).forEach((ch: any) => {
+          if (billData.fromDate && ch.jama_date < billData.fromDate) return;
+          if (ch.jama_date > billData.toDate) return;
+          const row = Array.isArray(ch.items) ? ch.items[0] : ch.items;
+          const itemsArr = Array.isArray(row?.items) ? row.items : [];
+          itemsArr.forEach((it: any) => {
+            if ((it.lost || 0) > 0) {
+              lostBySize[it.size_id] = (lostBySize[it.size_id] || 0) + it.lost;
+            }
+            if ((it.damaged || 0) > 0) {
+              damagedBySize[it.size_id] = (damagedBySize[it.size_id] || 0) + it.damaged;
+            }
+          });
+        });
+
+        // idPrefix: 'lost-'/'damaged-'; notePrefix builds 'ગુમ - <size>' / 'નુકસાન - <size>'.
+        // legacyNotePrefix matches pre-split saved rows ('ગુમ/નુકસાન - <size>') so they
+        // still block auto-adding a duplicate charge in edit mode.
+        const mergeBucketExtraCosts = (
+          extraCosts: ExtraCost[],
+          bySize: Record<number, number>,
+          idPrefix: string,
+          notePrefix: string,
+          legacyNotePrefix?: string,
+        ): ExtraCost[] => {
+          const next = extraCosts
+            // Drop stale unpriced auto rows whose size no longer has quantity in the period
+            .filter((c) => {
+              if (!c.id.startsWith(idPrefix)) return true;
+              const sizeId = parseInt(c.id.slice(idPrefix.length));
+              return (bySize[sizeId] || 0) > 0 || c.pricePerPiece > 0;
+            })
+            // Keep unpriced auto rows in sync with the recalculated quantities
+            .map((c) => {
+              if (!c.id.startsWith(idPrefix) || c.pricePerPiece > 0) return c;
+              const sizeId = parseInt(c.id.slice(idPrefix.length));
+              const qty = bySize[sizeId] || c.pieces;
+              const sizeName = plateSizes.find((ps) => ps.id === sizeId)?.name || String(sizeId);
+              return { ...c, pieces: qty, note: `${notePrefix} - ${sizeName} (${qty} નંગ)`, total: qty * c.pricePerPiece };
+            });
+
+          Object.entries(bySize).forEach(([sizeIdStr, qty]) => {
+            const sizeId = parseInt(sizeIdStr);
+            const sizeName = plateSizes.find((ps) => ps.id === sizeId)?.name || sizeIdStr;
+            const autoExists = next.some((c) => c.id === `${idPrefix}${sizeId}`);
+            // In edit mode, previously saved damage lines come back with uuid ids —
+            // match them by note prefix so we don't double-add.
+            const savedExists = next.some((c) =>
+              !c.id.startsWith(idPrefix) &&
+              (c.note.startsWith(`${notePrefix} - ${sizeName}`) ||
+                (legacyNotePrefix ? c.note.startsWith(`${legacyNotePrefix} - ${sizeName}`) : false)));
+            if (!autoExists && !savedExists) {
+              next.push({
+                id: `${idPrefix}${sizeId}`,
+                date: billData.toDate,
+                note: `${notePrefix} - ${sizeName} (${qty} નંગ)`,
+                pieces: qty,
+                pricePerPiece: 0,
+                total: 0,
+              });
+            }
+          });
+
+          return next;
+        };
+
+        const mergeLostExtraCosts = (extraCosts: ExtraCost[]): ExtraCost[] =>
+          mergeBucketExtraCosts(
+            mergeBucketExtraCosts(extraCosts, lostBySize, 'lost-', 'ગુમ', 'ગુમ/નુકસાન'),
+            damagedBySize, 'damaged-', 'નુકસાન');
+
         // Update state with the calculated results
         setCurrentBalance(balance);
         setBillData((prev) => ({
           ...prev,
           // fromDate: earliestDate, // REMOVED: Do not override user selection
+          extraCosts: mergeLostExtraCosts(prev.extraCosts),
           currentBalance: balance,
           // Convert transactions from the ledger for UI display
           transactions: result.billingPeriods.ledger.map((entry) => ({
@@ -1657,6 +1733,8 @@ export default function CreateBill() {
                     <datalist id="cost-suggestions">
                       <option value="સર્વિસ ચાર્જ" />
                       <option value="ભરાઈ / ઉતરાઈ" />
+                      <option value="ગુમ" />
+                      <option value="નુકસાન" />
                     </datalist>
                   </div>
 

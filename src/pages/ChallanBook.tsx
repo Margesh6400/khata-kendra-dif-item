@@ -55,6 +55,8 @@ const convertJSONToFlatItems = (jsonItemsArray: any[], mainNote: string | null):
       if (sizeId >= 1) {
         result[`size_${sizeId}_qty`] = item.qty || 0;
         result[`size_${sizeId}_borrowed`] = item.borrowed || 0;
+        result[`size_${sizeId}_lost`] = item.lost || 0;
+        result[`size_${sizeId}_damaged`] = item.damaged || 0;
         result[`size_${sizeId}_note`] = item.note || null;
       }
     });
@@ -68,7 +70,7 @@ function calcTotalItems(items: ItemsData): number {
   Object.keys(items).forEach(key => {
     if (key.endsWith('_qty') && key.startsWith('size_')) {
       const sizeId = key.split('_')[1];
-      total += ((items as any)[key] || 0) + ((items as any)[`size_${sizeId}_borrowed`] || 0);
+      total += ((items as any)[key] || 0) + ((items as any)[`size_${sizeId}_borrowed`] || 0) + ((items as any)[`size_${sizeId}_lost`] || 0) + ((items as any)[`size_${sizeId}_damaged`] || 0);
     }
   });
   return total;
@@ -330,12 +332,16 @@ const ChallanBook: React.FC = () => {
           const sizeId = parseInt(key.split('_')[1]);
           const qty = (challan.items as any)[`size_${sizeId}_qty`] || 0;
           const borrowed = (challan.items as any)[`size_${sizeId}_borrowed`] || 0;
+          const lost = (challan.items as any)[`size_${sizeId}_lost`] || 0;
+          const damaged = (challan.items as any)[`size_${sizeId}_damaged`] || 0;
           const note = (challan.items as any)[`size_${sizeId}_note`] || '';
-          if (qty > 0 || borrowed > 0 || note) {
+          if (qty > 0 || borrowed > 0 || lost > 0 || damaged > 0 || note) {
             itemsList.push({
               size_id: sizeId,
               qty,
               borrowed,
+              lost,
+              damaged,
               note
             });
           }
@@ -352,6 +358,30 @@ const ChallanBook: React.FC = () => {
 
       const success = !data || typeof data !== 'object' || !('success' in data) || (data as any).success;
       if (success) {
+        // Keep stock_history consistent: the RPC already reversed stock.lost_stock/damaged_stock
+        if (activeTab === 'jama') {
+          const lostReversal: { [key: number]: number } = {};
+          const damagedReversal: { [key: number]: number } = {};
+          itemsList.forEach(i => {
+            if ((i.lost || 0) > 0) lostReversal[i.size_id] = -i.lost;
+            if ((i.damaged || 0) > 0) damagedReversal[i.size_id] = -i.damaged;
+          });
+          for (const rev of [
+            { type: 'lost', items: lostReversal },
+            { type: 'damaged', items: damagedReversal },
+          ]) {
+            if (Object.keys(rev.items).length > 0) {
+              await supabase.from('stock_history').insert({
+                type: rev.type,
+                party_name: challan.clientNicName || '',
+                note: `ચલણ #${challan.challanNumber} ડિલીટ`,
+                amount: 0,
+                items: rev.items,
+                date: new Date().toISOString(),
+              });
+            }
+          }
+        }
         toast.success('Challan deleted successfully');
         // Update tab badge count
         if (activeTab === 'udhar') setUdharTabCount(n => Math.max(0, n - 1));

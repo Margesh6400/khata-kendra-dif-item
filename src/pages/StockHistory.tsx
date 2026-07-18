@@ -12,10 +12,11 @@ import { useLanguage } from "../contexts/LanguageContext";
 interface StockHistoryItem {
     id: string;
     date: string;
-    type: "add" | "remove";
+    type: "add" | "remove" | "lost" | "damaged";
     party_name: string;
     note: string;
     amount: number;
+    // For types 'lost'/'damaged', quantities are signed: + marked, − recovered/repaired
     items: { [key: number]: number };
 }
 
@@ -24,7 +25,7 @@ const StockHistory: React.FC = () => {
     const { t } = useLanguage();
     const [history, setHistory] = useState<StockHistoryItem[]>([]);
     const [loading, setLoading] = useState(true);
-    const [filterType, setFilterType] = useState<"all" | "add" | "remove">("all");
+    const [filterType, setFilterType] = useState<"all" | "add" | "remove" | "lost" | "damaged">("all");
     const [searchQuery, setSearchQuery] = useState("");
 
     const fetchHistory = async () => {
@@ -71,6 +72,20 @@ const StockHistory: React.FC = () => {
             const updates = Object.entries(item.items).map(async ([sizeStr, qty]) => {
                 const size = parseInt(sizeStr);
                 const quantity = qty as number;
+
+                if (item.type === 'lost' || item.type === 'damaged') {
+                    // Signed quantities: negating reverses both mark and recovery/repair entries
+                    if (quantity === 0) return;
+                    const { error: bucketError } = await supabase.rpc(
+                        item.type === 'lost' ? "adjust_lost_stock" : "adjust_damaged_stock",
+                        {
+                            p_size: size,
+                            p_delta: -quantity,
+                        }
+                    );
+                    if (bucketError) throw bucketError;
+                    return;
+                }
 
                 if (quantity <= 0) return;
 
@@ -167,6 +182,18 @@ const StockHistory: React.FC = () => {
                                 >
                                     {t("removed")}
                                 </button>
+                                <button
+                                    onClick={() => setFilterType("lost")}
+                                    className={`px-3 py-1.5 text-xs font-medium rounded-md transition-colors ${filterType === 'lost' ? 'bg-amber-100 text-amber-800' : 'text-gray-600 hover:bg-gray-50'}`}
+                                >
+                                    {t("lost")}
+                                </button>
+                                <button
+                                    onClick={() => setFilterType("damaged")}
+                                    className={`px-3 py-1.5 text-xs font-medium rounded-md transition-colors ${filterType === 'damaged' ? 'bg-rose-100 text-rose-800' : 'text-gray-600 hover:bg-gray-50'}`}
+                                >
+                                    {t("damaged")}
+                                </button>
                             </div>
                         </div>
                     </div>
@@ -198,14 +225,20 @@ const StockHistory: React.FC = () => {
                                         {history.map((item) => {
                                             const totalQty = Object.values(item.items).reduce((sum, qty) => sum + (qty || 0), 0);
                                             const isAdd = item.type === 'add';
+                                            const isLost = item.type === 'lost';
+                                            const isDamaged = item.type === 'damaged';
 
                                             return (
                                                 <tr key={item.id} className="hover:bg-gray-50 transition-colors">
                                                     <td className="px-4 py-4 text-gray-600 whitespace-nowrap">
                                                         {format(new Date(item.date), "dd MMM yyyy")}
                                                     </td>
-                                                    <td className={`px-4 py-4 font-bold whitespace-nowrap ${isAdd ? 'text-green-600' : 'text-red-600'}`}>
-                                                        {isAdd ? '+' : '-'}{totalQty}
+                                                    <td className={`px-4 py-4 font-bold whitespace-nowrap ${isLost ? 'text-amber-600' : isDamaged ? 'text-rose-600' : isAdd ? 'text-green-600' : 'text-red-600'}`}>
+                                                        {isLost
+                                                            ? <span>{totalQty > 0 ? '+' : ''}{totalQty} <span className="text-[10px] font-semibold bg-amber-100 text-amber-700 px-1.5 py-0.5 rounded">{t("lost")}</span></span>
+                                                            : isDamaged
+                                                                ? <span>{totalQty > 0 ? '+' : ''}{totalQty} <span className="text-[10px] font-semibold bg-rose-100 text-rose-700 px-1.5 py-0.5 rounded">{t("damaged")}</span></span>
+                                                                : <>{isAdd ? '+' : '-'}{totalQty}</>}
                                                     </td>
                                                     {plateSizes.map((ps) => {
                                                         const qty = item.items[ps.id];

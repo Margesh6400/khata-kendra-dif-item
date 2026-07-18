@@ -34,6 +34,7 @@ interface StockData {
   on_rent_stock: number;
   borrowed_stock: number;
   lost_stock: number;
+  damaged_stock: number;
   available_stock: number;
   updated_at: string;
 }
@@ -44,7 +45,8 @@ type SortField =
   | "available_stock"
   | "on_rent_stock"
   | "borrowed_stock"
-  | "lost_stock";
+  | "lost_stock"
+  | "damaged_stock";
 type SortOrder = "asc" | "desc";
 
 const StockManagement: React.FC = () => {
@@ -171,7 +173,7 @@ const StockManagement: React.FC = () => {
     try {
       const { error } = await supabase
         .from('stock')
-        .insert([{ size: sizeId, total_stock: 0, on_rent_stock: 0, borrowed_stock: 0, lost_stock: 0 }]);
+        .insert([{ size: sizeId, total_stock: 0, on_rent_stock: 0, borrowed_stock: 0, lost_stock: 0, damaged_stock: 0 }]);
       if (error) throw error;
       toast.success("Size added to stock successfully");
       fetchStock();
@@ -244,17 +246,19 @@ const StockManagement: React.FC = () => {
         }
       });
 
-      // Process Jama (Incoming)
+      // Process Jama (Incoming) — lost/damaged plates also leave "on rent"
       allJama.forEach(challan => {
         for (const ps of plateSizes) {
-          const itemData = challan.items.items?.[ps.id] || { qty: 0, borrowed: 0 };
+          const itemData = challan.items.items?.[ps.id] || { qty: 0, borrowed: 0, lost: 0, damaged: 0 };
           const qty = itemData.qty;
           const borrowed = itemData.borrowed;
+          const lost = itemData.lost || 0;
+          const damaged = itemData.damaged || 0;
           const i = ps.id;
 
           const current = calculations.get(i) || { rent: 0, borrowed: 0 };
           calculations.set(i, {
-            rent: current.rent - qty,
+            rent: current.rent - qty - lost - damaged,
             borrowed: current.borrowed - borrowed
           });
         }
@@ -293,7 +297,7 @@ const StockManagement: React.FC = () => {
   // State for bulk stock update
   const [bulkAction, setBulkAction] = useState<{
     isOpen: boolean;
-    type: "add" | "remove";
+    type: "add" | "remove" | "lost-add" | "lost-remove" | "damaged-add" | "damaged-remove";
     quantities: { [key: number]: number };
     partyName: string;
     note: string;
@@ -309,7 +313,7 @@ const StockManagement: React.FC = () => {
     date: new Date().toISOString().split('T')[0],
   });
 
-  const handleActionClick = (type: "add" | "remove") => {
+  const handleActionClick = (type: "add" | "remove" | "lost-add" | "lost-remove" | "damaged-add" | "damaged-remove") => {
     setBulkAction({
       isOpen: true,
       type,
@@ -348,17 +352,25 @@ const StockManagement: React.FC = () => {
     }
 
     const loadingToast = toast.loading(t("updatingStock"));
+    const isLostAction = type === "lost-add" || type === "lost-remove";
+    const isDamagedAction = type === "damaged-add" || type === "damaged-remove";
+    const isBucketAction = isLostAction || isDamagedAction;
+    const isRecoverAction = type === "lost-remove" || type === "damaged-remove";
 
     try {
-      // 1. Log to stock_history
+      // 1. Log to stock_history (lost/damaged entries store signed quantities: + marked, − recovered/repaired)
+      const historyItems = isBucketAction && isRecoverAction
+        ? Object.fromEntries(Object.entries(quantities).filter(([, q]) => q > 0).map(([s, q]) => [s, -q]))
+        : quantities;
+
       const { error: historyError } = await supabase
         .from("stock_history")
         .insert({
-          type,
+          type: isLostAction ? "lost" : isDamagedAction ? "damaged" : type,
           party_name: partyName,
           note: note,
           amount: parseFloat(amount) || 0,
-          items: quantities,
+          items: historyItems,
           date: new Date(date).toISOString(),
         });
 
@@ -368,6 +380,20 @@ const StockManagement: React.FC = () => {
       const updates = Object.entries(quantities).map(async ([sizeStr, qty]) => {
         if (qty <= 0) return;
         const size = parseInt(sizeStr);
+
+        if (isBucketAction) {
+          // total_stock stays put: recovered/repaired plates re-enter "available" because
+          // available = total − rent − lost_stock − damaged_stock
+          const { error: bucketError } = await supabase.rpc(
+            isLostAction ? "adjust_lost_stock" : "adjust_damaged_stock",
+            {
+              p_size: size,
+              p_delta: isRecoverAction ? -qty : qty,
+            }
+          );
+          if (bucketError) throw bucketError;
+          return;
+        }
 
         // Fetch current stock
         const { data: currentStock, error: fetchError } = await supabase
@@ -559,8 +585,8 @@ const StockManagement: React.FC = () => {
             aVal = calcA.borrowed;
             bVal = calcB.borrowed;
           } else if (sortField === "available_stock") {
-            aVal = Math.max(0, a.total_stock - calcA.rent - a.lost_stock);
-            bVal = Math.max(0, b.total_stock - calcB.rent - b.lost_stock);
+            aVal = Math.max(0, a.total_stock - calcA.rent - a.lost_stock - (a.damaged_stock || 0));
+            bVal = Math.max(0, b.total_stock - calcB.rent - b.lost_stock - (b.damaged_stock || 0));
           }
         }
 
@@ -659,6 +685,13 @@ const StockManagement: React.FC = () => {
               >
                 <Minus className="w-4 h-4" />
                 {t("removeStock")}
+              </button>
+              <button
+                onClick={() => handleActionClick("lost-add")}
+                className="inline-flex items-center gap-1.5 px-3 py-2 text-sm font-medium text-white bg-amber-500 rounded-lg hover:bg-amber-600 transition-colors shadow-sm"
+              >
+                <Package className="w-4 h-4" />
+                {t("lostDamaged")}
               </button>
               <Link
                 to="/stock-history"
@@ -774,6 +807,30 @@ const StockManagement: React.FC = () => {
                       </div>
                     </th>
                     <th
+                      onClick={() => handleSort("lost_stock")}
+                      className="px-6 py-4 text-xs font-medium tracking-wider text-center text-amber-600 uppercase transition-colors cursor-pointer hover:bg-gray-100 group border-r border-gray-200"
+                    >
+                      <div className="flex items-center justify-center gap-2">
+                        {t("lost_stock")}
+                        <ArrowUpDown
+                          size={14}
+                          className="transition-opacity opacity-0 group-hover:opacity-100"
+                        />
+                      </div>
+                    </th>
+                    <th
+                      onClick={() => handleSort("damaged_stock")}
+                      className="px-6 py-4 text-xs font-medium tracking-wider text-center text-rose-600 uppercase transition-colors cursor-pointer hover:bg-gray-100 group border-r border-gray-200"
+                    >
+                      <div className="flex items-center justify-center gap-2">
+                        {t("damaged_stock")}
+                        <ArrowUpDown
+                          size={14}
+                          className="transition-opacity opacity-0 group-hover:opacity-100"
+                        />
+                      </div>
+                    </th>
+                    <th
                       onClick={() => handleSort("borrowed_stock")}
                       className="px-6 py-4 text-xs font-medium tracking-wider text-center text-gray-500 uppercase transition-colors cursor-pointer hover:bg-gray-100 group"
                     >
@@ -798,7 +855,7 @@ const StockManagement: React.FC = () => {
                     </>
                   ) : filteredAndSortedStocks.length === 0 ? (
                     <tr>
-                      <td colSpan={5} className="px-6 py-12 text-center">
+                      <td colSpan={7} className="px-6 py-12 text-center">
                         <div className="flex flex-col items-center gap-3">
                           <Package size={48} className="text-gray-300" />
                           <p className="font-medium text-gray-500">
@@ -815,7 +872,7 @@ const StockManagement: React.FC = () => {
                       const calculated = calculatedStocks.get(stock.size) || { rent: 0, borrowed: 0 };
                       const rentStock = calculated.rent;
                       const borrowedStock = calculated.borrowed;
-                      const availableStock = Math.max(0, stock.total_stock - rentStock - stock.lost_stock);
+                      const availableStock = Math.max(0, stock.total_stock - rentStock - stock.lost_stock - (stock.damaged_stock || 0));
 
                       return (
                         <tr
@@ -841,6 +898,16 @@ const StockManagement: React.FC = () => {
                             >
                               {rentStock}
                             </button>
+                          </td>
+                          <td className="px-6 py-4 text-center border-r border-gray-100">
+                            <span className="text-amber-600 font-bold text-sm">
+                              {stock.lost_stock}
+                            </span>
+                          </td>
+                          <td className="px-6 py-4 text-center border-r border-gray-100">
+                            <span className="text-rose-600 font-bold text-sm">
+                              {stock.damaged_stock || 0}
+                            </span>
                           </td>
                           <td className="px-6 py-4 text-center">
                             <button
@@ -868,7 +935,7 @@ const StockManagement: React.FC = () => {
                       <td className="px-6 py-4 text-center text-green-700 border-r border-gray-200">
                         {filteredAndSortedStocks.reduce((sum, stock) => {
                           const calculated = calculatedStocks.get(stock.size) || { rent: 0, borrowed: 0 };
-                          const available = Math.max(0, stock.total_stock - calculated.rent - stock.lost_stock);
+                          const available = Math.max(0, stock.total_stock - calculated.rent - stock.lost_stock - (stock.damaged_stock || 0));
                           return sum + available;
                         }, 0)}
                       </td>
@@ -877,6 +944,18 @@ const StockManagement: React.FC = () => {
                           const calculated = calculatedStocks.get(stock.size) || { rent: 0, borrowed: 0 };
                           return sum + calculated.rent;
                         }, 0)}
+                      </td>
+                      <td className="px-6 py-4 text-center text-amber-600 border-r border-gray-200">
+                        {filteredAndSortedStocks.reduce(
+                          (sum, stock) => sum + stock.lost_stock,
+                          0
+                        )}
+                      </td>
+                      <td className="px-6 py-4 text-center text-rose-600 border-r border-gray-200">
+                        {filteredAndSortedStocks.reduce(
+                          (sum, stock) => sum + (stock.damaged_stock || 0),
+                          0
+                        )}
                       </td>
                       <td className="px-6 py-4 text-center text-purple-600">
                         {filteredAndSortedStocks.reduce((sum, stock) => {
@@ -910,11 +989,12 @@ const StockManagement: React.FC = () => {
                   <th className="px-1 py-1.5 text-xs sm:text-sm font-semibold text-center text-gray-700 border-r border-gray-200 min-w-[60px] sm:min-w-[80px]">
                     {t("borrowed_stock")}
                   </th>
-                  {/* Lost Stock Column - Commented out
-                          <th className="px-1 py-1.5 text-xs sm:text-sm font-semibold text-center text-gray-700 border-r border-gray-200 min-w-[60px] sm:min-w-[80px]">
-                            {t('lost_stock')}
-                          </th>
-                          */}
+                  <th className="px-1 py-1.5 text-xs sm:text-sm font-semibold text-center text-amber-600 border-r border-gray-200 min-w-[60px] sm:min-w-[80px]">
+                    {t('lost_stock')}
+                  </th>
+                  <th className="px-1 py-1.5 text-xs sm:text-sm font-semibold text-center text-rose-600 min-w-[60px] sm:min-w-[80px]">
+                    {t('damaged_stock')}
+                  </th>
                 </tr>
               </thead>
               <tbody className="bg-white divide-y divide-gray-200">
@@ -942,7 +1022,7 @@ const StockManagement: React.FC = () => {
                   </>
                 ) : filteredAndSortedStocks.length === 0 ? (
                   <tr>
-                    <td colSpan={6} className="px-2 py-8 text-center">
+                    <td colSpan={7} className="px-2 py-8 text-center">
                       <Package
                         size={32}
                         className="mx-auto mb-2 text-gray-300"
@@ -957,7 +1037,7 @@ const StockManagement: React.FC = () => {
                     const calculated = calculatedStocks.get(stock.size) || { rent: 0, borrowed: 0 };
                     const rentStock = calculated.rent;
                     const borrowedStock = calculated.borrowed;
-                    const availableStock = Math.max(0, stock.total_stock - rentStock - stock.lost_stock);
+                    const availableStock = Math.max(0, stock.total_stock - rentStock - stock.lost_stock - (stock.damaged_stock || 0));
 
                     return (
                       <tr
@@ -983,13 +1063,23 @@ const StockManagement: React.FC = () => {
                             {rentStock}
                           </button>
                         </td>
-                        <td className="px-1 py-1.5 text-center">
+                        <td className="px-1 py-1.5 text-center border-r border-gray-200">
                           <button
                             onClick={() => fetchDistribution(stock.size, "borrowed")}
                             className="text-purple-600 hover:underline font-bold text-xs sm:text-sm focus:outline-none"
                           >
                             {borrowedStock}
                           </button>
+                        </td>
+                        <td className="px-1 py-1.5 text-center border-r border-gray-200">
+                          <span className="text-amber-600 font-bold text-xs sm:text-sm">
+                            {stock.lost_stock}
+                          </span>
+                        </td>
+                        <td className="px-1 py-1.5 text-center">
+                          <span className="text-rose-600 font-bold text-xs sm:text-sm">
+                            {stock.damaged_stock || 0}
+                          </span>
                         </td>
                       </tr>
                     );
@@ -1012,7 +1102,7 @@ const StockManagement: React.FC = () => {
                       <span className="text-xs font-bold sm:text-sm text-green-700">
                         {filteredAndSortedStocks.reduce((sum, stock) => {
                           const calculated = calculatedStocks.get(stock.size) || { rent: 0, borrowed: 0 };
-                          const available = Math.max(0, stock.total_stock - calculated.rent - stock.lost_stock);
+                          const available = Math.max(0, stock.total_stock - calculated.rent - stock.lost_stock - (stock.damaged_stock || 0));
                           return sum + available;
                         }, 0)}
                       </span>
@@ -1025,12 +1115,28 @@ const StockManagement: React.FC = () => {
                         }, 0)}
                       </span>
                     </td>
-                    <td className="px-1 py-2 text-center">
+                    <td className="px-1 py-2 text-center border-r border-gray-200">
                       <span className="text-xs font-bold sm:text-sm text-purple-600">
                         {filteredAndSortedStocks.reduce((sum, stock) => {
                           const calculated = calculatedStocks.get(stock.size) || { rent: 0, borrowed: 0 };
                           return sum + calculated.borrowed;
                         }, 0)}
+                      </span>
+                    </td>
+                    <td className="px-1 py-2 text-center border-r border-gray-200">
+                      <span className="text-xs font-bold sm:text-sm text-amber-600">
+                        {filteredAndSortedStocks.reduce(
+                          (sum, stock) => sum + stock.lost_stock,
+                          0
+                        )}
+                      </span>
+                    </td>
+                    <td className="px-1 py-2 text-center">
+                      <span className="text-xs font-bold sm:text-sm text-rose-600">
+                        {filteredAndSortedStocks.reduce(
+                          (sum, stock) => sum + (stock.damaged_stock || 0),
+                          0
+                        )}
                       </span>
                     </td>
                   </tr>
@@ -1058,6 +1164,14 @@ const StockManagement: React.FC = () => {
                     <div className="w-2.5 h-2.5 rounded-full bg-green-500 flex-shrink-0"></div>
                     <span className="text-xs text-green-600">ઉપલબ્ધ સ્ટોક</span>
                   </div>
+                  <div className="flex items-center gap-2">
+                    <div className="w-2.5 h-2.5 rounded-full bg-amber-500 flex-shrink-0"></div>
+                    <span className="text-xs text-amber-600">ગુમ થયેલા નંગ</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <div className="w-2.5 h-2.5 rounded-full bg-rose-500 flex-shrink-0"></div>
+                    <span className="text-xs text-rose-600">નુકસાન થયેલા નંગ (રિપેર શક્ય)</span>
+                  </div>
                 </div>
               </div>
             </div>
@@ -1083,6 +1197,13 @@ const StockManagement: React.FC = () => {
           >
             <Minus className="w-4 h-4 flex-shrink-0" />
             {t("removeStock")}
+          </button>
+          <button
+            onClick={() => handleActionClick("lost-add")}
+            className="flex-1 inline-flex items-center justify-center gap-1.5 px-2 py-2 text-xs font-bold text-white bg-amber-500 rounded-xl shadow-md hover:bg-amber-600 active:scale-95 transition-all"
+          >
+            <Package className="w-4 h-4 flex-shrink-0" />
+            {t("lostDamaged")}
           </button>
         </div>
         {/* Bottom row: secondary actions */}
@@ -1123,8 +1244,8 @@ const StockManagement: React.FC = () => {
         <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-4 bg-black bg-opacity-50 backdrop-blur-sm">
           <div className="w-full max-w-lg bg-white rounded-t-xl sm:rounded-xl shadow-2xl max-h-[90vh] overflow-y-auto">
             <div className="sticky top-0 z-10 flex items-center justify-between p-4 bg-white border-b border-gray-100">
-              <h3 className={`text-lg font-bold ${bulkAction.type === 'add' ? 'text-green-600' : 'text-red-600'}`}>
-                {bulkAction.type === "add" ? t("addStock") : t("removeStock")}
+              <h3 className={`text-lg font-bold ${bulkAction.type === 'add' ? 'text-green-600' : bulkAction.type === 'remove' ? 'text-red-600' : bulkAction.type.startsWith('damaged') ? 'text-rose-600' : 'text-amber-600'}`}>
+                {bulkAction.type === "add" ? t("addStock") : bulkAction.type === "remove" ? t("removeStock") : bulkAction.type.startsWith('damaged') ? t("adjustDamagedStock") : t("adjustLostStock")}
               </h3>
               <button
                 onClick={() => setBulkAction((prev) => ({ ...prev, isOpen: false }))}
@@ -1135,6 +1256,52 @@ const StockManagement: React.FC = () => {
             </div>
 
             <div className="p-4 space-y-4">
+              {bulkAction.type !== 'add' && bulkAction.type !== 'remove' && (
+                <>
+                  {/* Category: lost (gone) vs damaged (repairable) — keeps direction */}
+                  <div className="flex gap-2 p-1 bg-gray-100 rounded-lg">
+                    <button
+                      onClick={() => setBulkAction(prev => ({ ...prev, type: prev.type.endsWith('remove') ? 'lost-remove' : 'lost-add' }))}
+                      className={`flex-1 py-2 text-xs font-bold rounded-md transition-all ${bulkAction.type.startsWith('lost')
+                        ? 'bg-amber-500 text-white shadow'
+                        : 'text-gray-600 hover:bg-gray-200'
+                        }`}
+                    >
+                      {t("lost")}
+                    </button>
+                    <button
+                      onClick={() => setBulkAction(prev => ({ ...prev, type: prev.type.endsWith('remove') ? 'damaged-remove' : 'damaged-add' }))}
+                      className={`flex-1 py-2 text-xs font-bold rounded-md transition-all ${bulkAction.type.startsWith('damaged')
+                        ? 'bg-rose-500 text-white shadow'
+                        : 'text-gray-600 hover:bg-gray-200'
+                        }`}
+                    >
+                      {t("damaged")}
+                    </button>
+                  </div>
+                  {/* Direction: mark vs recover/repair — keeps category */}
+                  <div className="flex gap-2 p-1 bg-gray-100 rounded-lg">
+                    <button
+                      onClick={() => setBulkAction(prev => ({ ...prev, type: prev.type.startsWith('damaged') ? 'damaged-add' : 'lost-add' }))}
+                      className={`flex-1 py-2 text-xs font-bold rounded-md transition-all ${bulkAction.type.endsWith('add')
+                        ? (bulkAction.type.startsWith('damaged') ? 'bg-rose-500 text-white shadow' : 'bg-amber-500 text-white shadow')
+                        : 'text-gray-600 hover:bg-gray-200'
+                        }`}
+                    >
+                      {bulkAction.type.startsWith('damaged') ? t("markDamaged") : t("markLost")}
+                    </button>
+                    <button
+                      onClick={() => setBulkAction(prev => ({ ...prev, type: prev.type.startsWith('damaged') ? 'damaged-remove' : 'lost-remove' }))}
+                      className={`flex-1 py-2 text-xs font-bold rounded-md transition-all ${bulkAction.type.endsWith('remove')
+                        ? 'bg-emerald-600 text-white shadow'
+                        : 'text-gray-600 hover:bg-gray-200'
+                        }`}
+                    >
+                      {bulkAction.type.startsWith('damaged') ? t("damagedRepaired") : t("lostRecovered")}
+                    </button>
+                  </div>
+                </>
+              )}
               {/* Details Section */}
               <div className="space-y-3">
                 <div>
@@ -1252,10 +1419,19 @@ const StockManagement: React.FC = () => {
                   onClick={handleBulkSubmit}
                   className={`w-full py-2.5 px-4 text-sm font-bold text-white rounded-lg shadow-md transition-all active:scale-[0.98] ${bulkAction.type === 'add'
                     ? 'bg-gradient-to-r from-green-600 to-green-700 hover:from-green-700 hover:to-green-800 shadow-green-200'
-                    : 'bg-gradient-to-r from-red-600 to-red-700 hover:from-red-700 hover:to-red-800 shadow-red-200'
+                    : bulkAction.type === 'remove'
+                      ? 'bg-gradient-to-r from-red-600 to-red-700 hover:from-red-700 hover:to-red-800 shadow-red-200'
+                      : bulkAction.type.startsWith('damaged')
+                        ? 'bg-gradient-to-r from-rose-500 to-rose-600 hover:from-rose-600 hover:to-rose-700 shadow-rose-200'
+                        : 'bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-600 hover:to-amber-700 shadow-amber-200'
                     }`}
                 >
-                  {bulkAction.type === 'add' ? t("confirmAddStock") : t("confirmRemoveStock")}
+                  {bulkAction.type === 'add' ? t("confirmAddStock")
+                    : bulkAction.type === 'remove' ? t("confirmRemoveStock")
+                      : bulkAction.type === 'lost-add' ? t("markLost")
+                        : bulkAction.type === 'lost-remove' ? t("lostRecovered")
+                          : bulkAction.type === 'damaged-add' ? t("markDamaged")
+                            : t("damagedRepaired")}
                 </button>
               </div>
             </div>

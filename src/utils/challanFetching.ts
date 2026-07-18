@@ -1,6 +1,6 @@
 
 export const mapItemsToRecord = (rawItems: any, mainNote: string = '') => {
-  const record: Record<number, { qty: number, borrowed: number, note: string }> = {};
+  const record: Record<number, { qty: number, borrowed: number, lost: number, damaged: number, note: string }> = {};
   
   if (!rawItems) return { items: record, main_note: mainNote };
   
@@ -16,6 +16,8 @@ export const mapItemsToRecord = (rawItems: any, mainNote: string = '') => {
       record[item.size_id] = {
         qty: item.qty || 0,
         borrowed: item.borrowed || 0,
+        lost: item.lost || 0,
+        damaged: item.damaged || 0,
         note: item.note || ''
       };
     }
@@ -371,5 +373,5 @@ export const fetchBulkClientTransactions = async (clientIds: string[]): Promise<
 
 export const calculateTotalFromItems = (itemsData: any): number => {
   if (!itemsData || !itemsData.items) return 0;
-  return Object.values(itemsData.items).reduce((sum: number, item: any) => sum + (item.qty || 0) + (item.borrowed || 0), 0);
+  return Object.values(itemsData.items).reduce((sum: number, item: any) => sum + (item.qty || 0) + (item.borrowed || 0) + (item.lost || 0) + (item.damaged || 0), 0);
 };

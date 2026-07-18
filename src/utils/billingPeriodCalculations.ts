@@ -132,11 +132,11 @@ export function getChallanTotalPlates(challan: any): number {
   const row = Array.isArray(raw) ? (raw[0] || {}) : (raw || {});
 
   if (row.items && Array.isArray(row.items)) {
-    return row.items.reduce((sum: number, item: any) => sum + (item.qty || 0) + (item.borrowed || 0), 0);
+    return row.items.reduce((sum: number, item: any) => sum + (item.qty || 0) + (item.borrowed || 0) + (item.lost || 0) + (item.damaged || 0), 0);
   } else {
     let total = 0;
     for (let i = 1; i <= 50; i++) {
-      total += (row[`size_${i}_qty`] || 0) + (row[`size_${i}_borrowed`] || 0);
+      total += (row[`size_${i}_qty`] || 0) + (row[`size_${i}_borrowed`] || 0) + (row[`size_${i}_lost`] || 0) + (row[`size_${i}_damaged`] || 0);
     }
     return total;
   }
@@ -554,7 +554,7 @@ export function calculateBillingPeriods(
   };
 }
 
-export function getQtyForSize(challan: any, sizeId: number): { qty: number, borrowed: number, note: string | null } {
+export function getQtyForSize(challan: any, sizeId: number): { qty: number, borrowed: number, lost: number, damaged: number, note: string | null } {
   const raw = challan.items;
   const row = Array.isArray(raw) ? (raw[0] || {}) : (raw || {});
 
@@ -563,12 +563,16 @@ export function getQtyForSize(challan: any, sizeId: number): { qty: number, borr
     return {
       qty: matchedItem?.qty || 0,
       borrowed: matchedItem?.borrowed || 0,
+      lost: matchedItem?.lost || 0,
+      damaged: matchedItem?.damaged || 0,
       note: matchedItem?.note || null
     };
   } else {
     return {
       qty: row[`size_${sizeId}_qty`] || 0,
       borrowed: row[`size_${sizeId}_borrowed`] || 0,
+      lost: row[`size_${sizeId}_lost`] || 0,
+      damaged: row[`size_${sizeId}_damaged`] || 0,
       note: row[`size_${sizeId}_note`] || null
     };
   }
@@ -620,7 +624,7 @@ export function calculateBill(
     });
     jamaReturns.forEach(ch => {
       const details = getQtyForSize(ch, sizeId);
-      const qty = details.qty + details.borrowed;
+      const qty = details.qty + details.borrowed + details.lost + details.damaged;
       if (qty > 0) {
         const effectiveDate = jamaFirst
           ? ch.jama_date
@@ -679,7 +683,7 @@ export function calculateBill(
         let qty = 0;
         shutteringSizes.forEach(ps => {
           const d = getQtyForSize(ch, ps.id);
-          qty += d.qty + d.borrowed;
+          qty += d.qty + d.borrowed + d.lost + d.damaged;
         });
         if (qty > 0) {
           const effectiveDate = jamaFirst

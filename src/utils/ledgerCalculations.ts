@@ -12,7 +12,7 @@ export interface Transaction {
   challanNumber: string;
   date: string;
   grandTotal: number;
-  sizes: { [key: number]: { qty: number; borrowed: number } };
+  sizes: { [key: number]: { qty: number; borrowed: number; lost?: number; damaged?: number } };
   site: string;
   driverName: string;
   items: any;
@@ -105,13 +105,13 @@ export async function fetchClientLedger(clientId: string): Promise<ClientLedgerD
 
   (jamaChallans || []).forEach((challan: any) => {
     const parsedItems = mapItemsToRecord(challan.items);
-    const sizes: { [key: number]: { qty: number; borrowed: number } } = {};
+    const sizes: { [key: number]: { qty: number; borrowed: number; lost?: number; damaged?: number } } = {};
     let grandTotal = 0;
 
     Object.entries(parsedItems.items).forEach(([sizeId, data]: [string, any]) => {
       const id = parseInt(sizeId);
-      sizes[id] = { qty: data.qty, borrowed: data.borrowed };
-      grandTotal += data.qty + data.borrowed;
+      sizes[id] = { qty: data.qty, borrowed: data.borrowed, lost: data.lost || 0, damaged: data.damaged || 0 };
+      grandTotal += data.qty + data.borrowed + (data.lost || 0) + (data.damaged || 0);
     });
 
     transactions.push({
@@ -159,7 +159,7 @@ export function calculateBalance(transactions: Transaction[]): ClientBalance {
         balance.sizes[sizeId].main += sizeData.qty;
         balance.sizes[sizeId].borrowed += sizeData.borrowed;
       } else {
-        balance.sizes[sizeId].main -= sizeData.qty;
+        balance.sizes[sizeId].main -= sizeData.qty + (sizeData.lost || 0) + (sizeData.damaged || 0);
         balance.sizes[sizeId].borrowed -= sizeData.borrowed;
       }
       balance.sizes[sizeId].total = balance.sizes[sizeId].main + balance.sizes[sizeId].borrowed;

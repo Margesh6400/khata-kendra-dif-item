@@ -31,6 +31,8 @@ export const BAND_COLUMN_FIELDS: Array<{ field: BandColumnField; label: string; 
   { field: 'name', label: 'Item / Size', labelGu: 'આઈટમ / સાઇઝ' },
   { field: 'qty', label: 'Quantity', labelGu: 'નંગ' },
   { field: 'borrowed', label: 'Marco (Borrowed)', labelGu: 'માર્કો' },
+  { field: 'lost', label: 'Lost', labelGu: 'ગુમ' },
+  { field: 'damaged', label: 'Damaged', labelGu: 'નુકસાન' },
   { field: 'total', label: 'Total', labelGu: 'કુલ' },
   { field: 'note', label: 'Note', labelGu: 'નોંધ' },
 ];
@@ -89,6 +91,8 @@ export function resolveCellText(
     case 'name': return row.name ?? '';
     case 'qty': return row.qty ? String(row.qty) : '';
     case 'borrowed': return row.borrowed ? String(row.borrowed) : '';
+    case 'lost': return row.lost ? String(row.lost) : '';
+    case 'damaged': return row.damaged ? String(row.damaged) : '';
     case 'total': return row.total ? String(row.total) : '';
     case 'note': return row.note ?? '';
     default: return '';

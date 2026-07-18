@@ -91,6 +91,7 @@ CREATE TABLE IF NOT EXISTS stock (
   on_rent_stock integer DEFAULT 0 NOT NULL CHECK (on_rent_stock >= 0),
   borrowed_stock integer DEFAULT 0 NOT NULL CHECK (borrowed_stock >= 0),
   lost_stock integer DEFAULT 0 NOT NULL CHECK (lost_stock >= 0),
+  damaged_stock integer DEFAULT 0 NOT NULL CHECK (damaged_stock >= 0),
   updated_at timestamptz DEFAULT now()
 );
 
@@ -98,7 +99,7 @@ CREATE TABLE IF NOT EXISTS stock (
 CREATE TABLE IF NOT EXISTS stock_history (
   id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
   date timestamptz DEFAULT now() NOT NULL,
-  type text CHECK (type IN ('add', 'remove')) NOT NULL,
+  type text CHECK (type IN ('add', 'remove', 'lost', 'damaged')) NOT NULL,
   party_name text NOT NULL,
   note text,
   amount numeric DEFAULT 0 NOT NULL,
@@ -180,17 +181,17 @@ ON CONFLICT (id) DO NOTHING;
 SELECT setval(pg_get_serial_sequence('plate_sizes', 'id'), COALESCE(MAX(id), 1)) FROM plate_sizes;
 
 -- Seed matching records in stock table
-INSERT INTO stock (size, total_stock, on_rent_stock, borrowed_stock, lost_stock)
-VALUES 
-  (1, 0, 0, 0, 0),
-  (2, 0, 0, 0, 0),
-  (3, 0, 0, 0, 0),
-  (4, 0, 0, 0, 0),
-  (5, 0, 0, 0, 0),
-  (6, 0, 0, 0, 0),
-  (7, 0, 0, 0, 0),
-  (8, 0, 0, 0, 0),
-  (9, 0, 0, 0, 0)
+INSERT INTO stock (size, total_stock, on_rent_stock, borrowed_stock, lost_stock, damaged_stock)
+VALUES
+  (1, 0, 0, 0, 0, 0),
+  (2, 0, 0, 0, 0, 0),
+  (3, 0, 0, 0, 0, 0),
+  (4, 0, 0, 0, 0, 0),
+  (5, 0, 0, 0, 0, 0),
+  (6, 0, 0, 0, 0, 0),
+  (7, 0, 0, 0, 0, 0),
+  (8, 0, 0, 0, 0, 0),
+  (9, 0, 0, 0, 0, 0)
 ON CONFLICT (size) DO NOTHING;
 
 -- -----------------------------------------------------------------------------
@@ -389,6 +390,34 @@ EXCEPTION
 END;
 $$ LANGUAGE plpgsql SECURITY DEFINER;
 
+-- RPC: Signed lost_stock adjustment (positive = mark lost, negative = recover)
+CREATE OR REPLACE FUNCTION adjust_lost_stock(p_size INTEGER, p_delta INTEGER)
+RETURNS void AS $$
+BEGIN
+  UPDATE stock
+  SET lost_stock = GREATEST(0, lost_stock + COALESCE(p_delta, 0)),
+      updated_at = NOW()
+  WHERE size = p_size;
+  IF NOT FOUND THEN
+    RAISE EXCEPTION 'Size % not found in stock table', p_size;
+  END IF;
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER;
+
+-- RPC: Signed damaged_stock adjustment (positive = mark damaged, negative = repaired/recovered)
+CREATE OR REPLACE FUNCTION adjust_damaged_stock(p_size INTEGER, p_delta INTEGER)
+RETURNS void AS $$
+BEGIN
+  UPDATE stock
+  SET damaged_stock = GREATEST(0, damaged_stock + COALESCE(p_delta, 0)),
+      updated_at = NOW()
+  WHERE size = p_size;
+  IF NOT FOUND THEN
+    RAISE EXCEPTION 'Size % not found in stock table', p_size;
+  END IF;
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER;
+
 -- RPC: Update Jama Challan with Stock adjustments
 CREATE OR REPLACE FUNCTION update_jama_challan_with_stock(
   p_challan_number TEXT,
@@ -406,6 +435,10 @@ CREATE OR REPLACE FUNCTION update_jama_challan_with_stock(
 RETURNS JSON AS $$
 DECLARE
   v_item JSONB;
+  v_qty INTEGER;
+  v_borrowed INTEGER;
+  v_lost INTEGER;
+  v_damaged INTEGER;
 BEGIN
   -- Update challan details
   UPDATE jama_challans
@@ -426,26 +459,38 @@ BEGIN
     main_note = p_new_main_note
   WHERE jama_challan_number = p_challan_number;
 
-  -- Reverse old stock (Add back what was returned)
+  -- Reverse old stock (add back what was returned; un-mark old lost/damaged)
   FOR v_item IN SELECT * FROM jsonb_array_elements(p_old_items)
   LOOP
-    IF (v_item->>'qty')::INTEGER > 0 OR (v_item->>'borrowed')::INTEGER > 0 THEN
+    v_qty := COALESCE((v_item->>'qty')::INTEGER, 0);
+    v_borrowed := COALESCE((v_item->>'borrowed')::INTEGER, 0);
+    v_lost := COALESCE((v_item->>'lost')::INTEGER, 0);
+    v_damaged := COALESCE((v_item->>'damaged')::INTEGER, 0);
+    IF v_qty > 0 OR v_borrowed > 0 OR v_lost > 0 OR v_damaged > 0 THEN
       UPDATE stock
       SET
-        on_rent_stock = on_rent_stock + COALESCE((v_item->>'qty')::INTEGER, 0),
-        borrowed_stock = borrowed_stock + COALESCE((v_item->>'borrowed')::INTEGER, 0)
+        on_rent_stock = on_rent_stock + v_qty + v_lost + v_damaged,
+        borrowed_stock = borrowed_stock + v_borrowed,
+        lost_stock = GREATEST(0, lost_stock - v_lost),
+        damaged_stock = GREATEST(0, damaged_stock - v_damaged)
       WHERE size = (v_item->>'size_id')::INTEGER;
     END IF;
   END LOOP;
 
-  -- Apply new stock (Subtract new return values)
+  -- Apply new stock (subtract new return values; mark new lost/damaged)
   FOR v_item IN SELECT * FROM jsonb_array_elements(p_new_items)
   LOOP
-    IF (v_item->>'qty')::INTEGER > 0 OR (v_item->>'borrowed')::INTEGER > 0 THEN
+    v_qty := COALESCE((v_item->>'qty')::INTEGER, 0);
+    v_borrowed := COALESCE((v_item->>'borrowed')::INTEGER, 0);
+    v_lost := COALESCE((v_item->>'lost')::INTEGER, 0);
+    v_damaged := COALESCE((v_item->>'damaged')::INTEGER, 0);
+    IF v_qty > 0 OR v_borrowed > 0 OR v_lost > 0 OR v_damaged > 0 THEN
       UPDATE stock
       SET
-        on_rent_stock = GREATEST(0, on_rent_stock - COALESCE((v_item->>'qty')::INTEGER, 0)),
-        borrowed_stock = GREATEST(0, borrowed_stock - COALESCE((v_item->>'borrowed')::INTEGER, 0))
+        on_rent_stock = GREATEST(0, on_rent_stock - v_qty - v_lost - v_damaged),
+        borrowed_stock = GREATEST(0, borrowed_stock - v_borrowed),
+        lost_stock = lost_stock + v_lost,
+        damaged_stock = damaged_stock + v_damaged
       WHERE size = (v_item->>'size_id')::INTEGER;
     END IF;
   END LOOP;
@@ -494,14 +539,24 @@ CREATE OR REPLACE FUNCTION delete_jama_challan_with_stock(
 RETURNS JSON AS $$
 DECLARE
   v_item JSONB;
+  v_qty INTEGER;
+  v_borrowed INTEGER;
+  v_lost INTEGER;
+  v_damaged INTEGER;
 BEGIN
   FOR v_item IN SELECT * FROM jsonb_array_elements(p_items)
   LOOP
-    IF (v_item->>'qty')::INTEGER > 0 OR (v_item->>'borrowed')::INTEGER > 0 THEN
+    v_qty := COALESCE((v_item->>'qty')::INTEGER, 0);
+    v_borrowed := COALESCE((v_item->>'borrowed')::INTEGER, 0);
+    v_lost := COALESCE((v_item->>'lost')::INTEGER, 0);
+    v_damaged := COALESCE((v_item->>'damaged')::INTEGER, 0);
+    IF v_qty > 0 OR v_borrowed > 0 OR v_lost > 0 OR v_damaged > 0 THEN
       UPDATE stock
       SET
-        on_rent_stock = on_rent_stock + COALESCE((v_item->>'qty')::INTEGER, 0),
-        borrowed_stock = borrowed_stock + COALESCE((v_item->>'borrowed')::INTEGER, 0)
+        on_rent_stock = on_rent_stock + v_qty + v_lost + v_damaged,
+        borrowed_stock = borrowed_stock + v_borrowed,
+        lost_stock = GREATEST(0, lost_stock - v_lost),
+        damaged_stock = GREATEST(0, damaged_stock - v_damaged)
       WHERE size = (v_item->>'size_id')::INTEGER;
     END IF;
   END LOOP;
@@ -520,6 +575,8 @@ $$ LANGUAGE plpgsql SECURITY DEFINER;
 -- -----------------------------------------------------------------------------
 GRANT EXECUTE ON FUNCTION increment_stock(INTEGER, INTEGER, INTEGER) TO anon, authenticated;
 GRANT EXECUTE ON FUNCTION decrement_stock(INTEGER, INTEGER, INTEGER) TO anon, authenticated;
+GRANT EXECUTE ON FUNCTION adjust_lost_stock(INTEGER, INTEGER) TO anon, authenticated;
+GRANT EXECUTE ON FUNCTION adjust_damaged_stock(INTEGER, INTEGER) TO anon, authenticated;
 GRANT EXECUTE ON FUNCTION update_udhar_challan_with_stock TO anon, authenticated;
 GRANT EXECUTE ON FUNCTION update_jama_challan_with_stock TO anon, authenticated;
 GRANT EXECUTE ON FUNCTION delete_udhar_challan_with_stock TO anon, authenticated;

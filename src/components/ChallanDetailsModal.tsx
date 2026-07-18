@@ -188,6 +188,12 @@ const ChallanDetailsModal: React.FC<ChallanDetailsModalProps> = ({
                     <th className="px-2 py-2 text-[10px] sm:text-xs font-medium text-center text-gray-500 uppercase sm:px-4">
                       {t('borrowedStock')}
                     </th>
+                    <th className="px-2 py-2 text-[10px] sm:text-xs font-medium text-center text-amber-600 uppercase sm:px-4">
+                      {t('lost')}
+                    </th>
+                    <th className="px-2 py-2 text-[10px] sm:text-xs font-medium text-center text-rose-600 uppercase sm:px-4">
+                      {t('damaged')}
+                    </th>
                     <th className="px-2 py-2 text-[10px] sm:text-xs font-medium text-left text-gray-500 uppercase sm:px-4">
                       {t('note')}
                     </th>
@@ -197,9 +203,11 @@ const ChallanDetailsModal: React.FC<ChallanDetailsModalProps> = ({
                   {plateSizes.map((ps) => {
                     const qty = challan.items[`size_${ps.id}_qty` as keyof ItemsData] || 0;
                     const borrowed = challan.items[`size_${ps.id}_borrowed` as keyof ItemsData] || 0;
+                    const lost = challan.items[`size_${ps.id}_lost` as keyof ItemsData] || 0;
+                    const damaged = challan.items[`size_${ps.id}_damaged` as keyof ItemsData] || 0;
                     const note = challan.items[`size_${ps.id}_note` as keyof ItemsData] || '';
 
-                    if (qty === 0 && borrowed === 0 && !note) return null;
+                    if (qty === 0 && borrowed === 0 && lost === 0 && damaged === 0 && !note) return null;
 
                     return (
                       <tr key={ps.id} className="hover:bg-gray-50">
@@ -214,6 +222,16 @@ const ChallanDetailsModal: React.FC<ChallanDetailsModalProps> = ({
                         <td className="px-2 py-2 text-[11px] sm:text-sm text-gray-900 whitespace-nowrap text-center sm:px-4">
                           <span className="inline-block min-w-[40px] px-2 py-1 bg-orange-50 rounded">
                             {borrowed}
+                          </span>
+                        </td>
+                        <td className="px-2 py-2 text-[11px] sm:text-sm text-gray-900 whitespace-nowrap text-center sm:px-4">
+                          <span className="inline-block min-w-[40px] px-2 py-1 bg-amber-50 text-amber-800 rounded">
+                            {lost}
+                          </span>
+                        </td>
+                        <td className="px-2 py-2 text-[11px] sm:text-sm text-gray-900 whitespace-nowrap text-center sm:px-4">
+                          <span className="inline-block min-w-[40px] px-2 py-1 bg-rose-50 text-rose-800 rounded">
+                            {damaged}
                           </span>
                         </td>
                         <td className="px-2 py-2 text-[11px] sm:text-sm text-gray-600 sm:px-4">
@@ -240,6 +258,12 @@ const ChallanDetailsModal: React.FC<ChallanDetailsModalProps> = ({
                     <th className="px-2 py-1.5 text-[10px] font-semibold text-center text-gray-700 border-r border-gray-300">
                       {t('borrowedStock')}
                     </th>
+                    <th className="px-2 py-1.5 text-[10px] font-semibold text-center text-amber-700 border-r border-gray-300">
+                      {t('lost')}
+                    </th>
+                    <th className="px-2 py-1.5 text-[10px] font-semibold text-center text-rose-700 border-r border-gray-300">
+                      {t('damaged')}
+                    </th>
                     <th className="px-2 py-1.5 text-[10px] font-semibold text-left text-gray-700">
                       {t('note')}
                     </th>
@@ -249,9 +273,11 @@ const ChallanDetailsModal: React.FC<ChallanDetailsModalProps> = ({
                   {plateSizes.map((ps) => {
                     const qty = challan.items[`size_${ps.id}_qty` as keyof ItemsData] || 0;
                     const borrowed = challan.items[`size_${ps.id}_borrowed` as keyof ItemsData] || 0;
+                    const lost = challan.items[`size_${ps.id}_lost` as keyof ItemsData] || 0;
+                    const damaged = challan.items[`size_${ps.id}_damaged` as keyof ItemsData] || 0;
                     const note = challan.items[`size_${ps.id}_note` as keyof ItemsData] || '';
 
-                    if (qty === 0 && borrowed === 0 && !note) return null;
+                    if (qty === 0 && borrowed === 0 && lost === 0 && damaged === 0 && !note) return null;
 
                     return (
                       <tr key={ps.id} className="border-b border-gray-200">
@@ -266,6 +292,16 @@ const ChallanDetailsModal: React.FC<ChallanDetailsModalProps> = ({
                         <td className="px-2 py-1.5 text-[10px] text-center text-gray-900 whitespace-nowrap border-r border-gray-200">
                           <span className="inline-block min-w-[28px] px-1.5 py-0.5 bg-orange-100 text-orange-800 rounded text-[9px] font-semibold">
                             {borrowed}
+                          </span>
+                        </td>
+                        <td className="px-2 py-1.5 text-[10px] text-center text-gray-900 whitespace-nowrap border-r border-gray-200">
+                          <span className="inline-block min-w-[28px] px-1.5 py-0.5 bg-amber-100 text-amber-800 rounded text-[9px] font-semibold">
+                            {lost}
+                          </span>
+                        </td>
+                        <td className="px-2 py-1.5 text-[10px] text-center text-gray-900 whitespace-nowrap border-r border-gray-200">
+                          <span className="inline-block min-w-[28px] px-1.5 py-0.5 bg-rose-100 text-rose-800 rounded text-[9px] font-semibold">
+                            {damaged}
                           </span>
                         </td>
                         <td className="px-2 py-1.5 text-[9px] text-gray-600 max-w-[100px] truncate">

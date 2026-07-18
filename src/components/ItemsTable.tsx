@@ -14,6 +14,8 @@ export interface ItemDetail {
   size_id: number;
   qty: number;
   borrowed: number;
+  lost?: number;
+  damaged?: number;
   note: string;
 }
 
@@ -22,6 +24,8 @@ export interface ItemsData {
     [key: number]: {
       qty: number;
       borrowed: number;
+      lost?: number;
+      damaged?: number;
       note: string;
     };
   };
@@ -37,6 +41,7 @@ interface StockData {
   on_rent_stock: number;
   borrowed_stock: number;
   lost_stock: number;
+  damaged_stock?: number;
   available_stock: number;
   updated_at: string;
 }
@@ -50,6 +55,7 @@ interface ItemsTableProps {
   hideColumns?: boolean;
   stockData?: StockData[];
   showAvailable?: boolean;
+  showLost?: boolean;
 }
 
 const ItemsTable: React.FC<ItemsTableProps> = ({
@@ -61,6 +67,7 @@ const ItemsTable: React.FC<ItemsTableProps> = ({
   hideColumns = false,
   stockData = [],
   showAvailable = false,
+  showLost = false,
 }) => {
   const { t } = useLanguage();
   const { sizes: hookPlateSizes } = usePlateSizes();
@@ -77,7 +84,7 @@ const ItemsTable: React.FC<ItemsTableProps> = ({
   const activeCategory = React.useMemo(() => {
     for (const ps of plateSizes) {
       const item = items.items[ps.id];
-      if (item && ((item.qty || 0) > 0 || (item.borrowed || 0) > 0)) {
+      if (item && ((item.qty || 0) > 0 || (item.borrowed || 0) > 0 || (item.lost || 0) > 0 || (item.damaged || 0) > 0)) {
         return ps.category || 'shuttering';
       }
     }
@@ -130,8 +137,8 @@ const ItemsTable: React.FC<ItemsTableProps> = ({
   };
 
 
-  const handleChange = (sizeId: number, field: 'qty' | 'borrowed' | 'note', value: number | string) => {
-    const currentItem = items.items[sizeId] || { qty: 0, borrowed: 0, note: '' };
+  const handleChange = (sizeId: number, field: 'qty' | 'borrowed' | 'lost' | 'damaged' | 'note', value: number | string) => {
+    const currentItem = items.items[sizeId] || { qty: 0, borrowed: 0, lost: 0, damaged: 0, note: '' };
 
     let newValue = value;
     if (field !== 'note') {
@@ -194,6 +201,32 @@ const ItemsTable: React.FC<ItemsTableProps> = ({
           className="w-24 px-3 py-2 text-center border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
         />
       </td>
+      {showLost && (
+        <>
+          <td className="px-4 py-4 text-center whitespace-nowrap">
+            <input
+              type="number"
+              min="0"
+              value={
+                items.items[ps.id]?.lost || ""
+              }
+              onChange={(e) => handleChange(ps.id, 'lost', e.target.value)}
+              className="w-24 px-3 py-2 text-center border border-amber-400 bg-amber-50/50 rounded-lg focus:ring-2 focus:ring-amber-500 focus:border-transparent"
+            />
+          </td>
+          <td className="px-4 py-4 text-center whitespace-nowrap">
+            <input
+              type="number"
+              min="0"
+              value={
+                items.items[ps.id]?.damaged || ""
+              }
+              onChange={(e) => handleChange(ps.id, 'damaged', e.target.value)}
+              className="w-24 px-3 py-2 text-center border border-rose-400 bg-rose-50/50 rounded-lg focus:ring-2 focus:ring-rose-500 focus:border-transparent"
+            />
+          </td>
+        </>
+      )}
       {outstandingBalances && !hideColumns && (
         <td className="px-4 py-4 text-center whitespace-nowrap">
           <div
@@ -285,6 +318,38 @@ const ItemsTable: React.FC<ItemsTableProps> = ({
           className="w-full px-2 py-2 text-[13px] sm:text-sm text-center border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent min-h-[40px] sm:min-h-[44px] touch-manipulation active:scale-[0.97]"
         />
       </td>
+      {showLost && (
+        <>
+          <td className="px-1 py-1.5 border-r border-gray-200">
+            <input
+              type="number"
+              min="0"
+              inputMode="numeric"
+              value={
+                items.items[ps.id]?.lost || ""
+              }
+              onChange={(e) =>
+                handleChange(ps.id, 'lost', e.target.value)
+              }
+              className="w-full px-2 py-2 text-[13px] sm:text-sm text-center border border-amber-400 bg-amber-50/50 rounded-lg focus:ring-2 focus:ring-amber-500 focus:border-transparent min-h-[40px] sm:min-h-[44px] touch-manipulation active:scale-[0.97]"
+            />
+          </td>
+          <td className="px-1 py-1.5 border-r border-gray-200">
+            <input
+              type="number"
+              min="0"
+              inputMode="numeric"
+              value={
+                items.items[ps.id]?.damaged || ""
+              }
+              onChange={(e) =>
+                handleChange(ps.id, 'damaged', e.target.value)
+              }
+              className="w-full px-2 py-2 text-[13px] sm:text-sm text-center border border-rose-400 bg-rose-50/50 rounded-lg focus:ring-2 focus:ring-rose-500 focus:border-transparent min-h-[40px] sm:min-h-[44px] touch-manipulation active:scale-[0.97]"
+            />
+          </td>
+        </>
+      )}
       {outstandingBalances && !hideColumns && (
         <td className="px-1 py-1.5 text-center border-r border-gray-200">
           <div
@@ -355,6 +420,16 @@ const ItemsTable: React.FC<ItemsTableProps> = ({
               <th className="px-4 py-3 text-xs font-medium tracking-wider text-center text-gray-500 uppercase">
                 {t("quantity")}
               </th>
+              {showLost && (
+                <>
+                  <th className="px-4 py-3 text-xs font-medium tracking-wider text-center text-amber-700 uppercase">
+                    {t("lost")}
+                  </th>
+                  <th className="px-4 py-3 text-xs font-medium tracking-wider text-center text-rose-700 uppercase">
+                    {t("damaged")}
+                  </th>
+                </>
+              )}
               {outstandingBalances && !hideColumns && (
                 <th className="px-4 py-3 text-xs font-medium tracking-wider text-center text-gray-500 uppercase">
                   {t("borrowedOutstanding")}
@@ -504,6 +579,16 @@ const ItemsTable: React.FC<ItemsTableProps> = ({
                     <th className="px-1 py-1.5 text-xs sm:text-sm font-semibold text-center text-gray-700 border-r border-gray-200 min-w-[70px] sm:min-w-[80px]">
                       {t("quantity")}
                     </th>
+                    {showLost && (
+                      <>
+                        <th className="px-1 py-1.5 text-xs sm:text-sm font-semibold text-center text-amber-700 border-r border-gray-200 min-w-[70px] sm:min-w-[80px]">
+                          {t("lost")}
+                        </th>
+                        <th className="px-1 py-1.5 text-xs sm:text-sm font-semibold text-center text-rose-700 border-r border-gray-200 min-w-[70px] sm:min-w-[80px]">
+                          {t("damaged")}
+                        </th>
+                      </>
+                    )}
                     {outstandingBalances && !hideColumns && (
                       <th className="px-1 py-1.5 text-xs sm:text-sm font-semibold text-center text-gray-700 border-r border-gray-200 min-w-[70px] sm:min-w-[80px]">
                         {t("borrowedOutstanding")}
@@ -653,6 +738,20 @@ const ItemsTable: React.FC<ItemsTableProps> = ({
                         {Object.values(items.items || {}).reduce((sum, item) => sum + (item.qty || 0) + (item.borrowed || 0), 0)} કુલ
                       </div>
                     </td>
+                    {showLost && (
+                      <>
+                        <td className="px-1 py-3 text-xs font-bold text-center border-r border-gray-200 sm:text-sm">
+                          <div className="px-2 py-1 rounded-lg bg-amber-50 text-amber-800">
+                            {Object.values(items.items || {}).reduce((sum, item) => sum + (item.lost || 0), 0)} ગુમ
+                          </div>
+                        </td>
+                        <td className="px-1 py-3 text-xs font-bold text-center border-r border-gray-200 sm:text-sm">
+                          <div className="px-2 py-1 rounded-lg bg-rose-50 text-rose-800">
+                            {Object.values(items.items || {}).reduce((sum, item) => sum + (item.damaged || 0), 0)} નુકસાન
+                          </div>
+                        </td>
+                      </>
+                    )}
                     {outstandingBalances && !hideColumns && (
                       <td className="px-1 py-3 text-center border-r border-gray-200">
                         -

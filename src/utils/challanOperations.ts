@@ -5,8 +5,10 @@ export const mapRecordToArray = (itemsData: any) => {
     size_id: parseInt(sizeId),
     qty: data.qty || 0,
     borrowed: data.borrowed || 0,
+    lost: data.lost || 0,
+    damaged: data.damaged || 0,
     note: data.note || ''
-  })).filter(i => i.qty > 0 || i.borrowed > 0 || i.note !== '');
+  })).filter(i => i.qty > 0 || i.borrowed > 0 || i.lost > 0 || i.damaged > 0 || i.note !== '');
 };
 
 import { supabase } from './supabase';

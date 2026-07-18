@@ -157,14 +157,16 @@ function buildLedgerFromTransactions(client: any, rawTransactions: any[]): Clien
       const i = parseInt(sizeIdStr);
       const qty = itemData.qty || 0;
       const borrowed = itemData.borrowed || 0;
-      sizeData[i] = { qty, borrowed };
-      grandTotal += qty + borrowed;
+      const lost = t.type === 'jama' ? (itemData.lost || 0) : 0;
+      const damaged = t.type === 'jama' ? (itemData.damaged || 0) : 0;
+      sizeData[i] = { qty, borrowed, lost, damaged };
+      grandTotal += qty + borrowed + lost + damaged;
 
-      totals.sizes[i] = (totals.sizes[i] || 0) + qty + borrowed;
-      totals.grandTotal += qty + borrowed;
+      totals.sizes[i] = (totals.sizes[i] || 0) + qty + borrowed + lost + damaged;
+      totals.grandTotal += qty + borrowed + lost + damaged;
 
       if (!sizes[i]) sizes[i] = { main: 0, borrowed: 0, total: 0 };
-      sizes[i].main += qty * multiplier;
+      sizes[i].main += (qty + lost + damaged) * multiplier;
       sizes[i].borrowed += borrowed * multiplier;
       sizes[i].total = sizes[i].main + sizes[i].borrowed;
     });
@@ -411,7 +413,7 @@ export default function ClientLedger() {
         challans.forEach(ch => {
           Object.entries(ch.items.items || {}).forEach(([sizeIdStr, itemData]: [string, any]) => {
             const i = parseInt(sizeIdStr);
-            const v = (itemData.qty || 0) + (itemData.borrowed || 0);
+            const v = (itemData.qty || 0) + (itemData.borrowed || 0) + (itemData.lost || 0) + (itemData.damaged || 0);
             t.sizes[i] = (t.sizes[i] || 0) + v;
             t.grandTotal += v;
           });

@@ -524,6 +524,7 @@ const ChallanDetailsStep: React.FC<ChallanDetailsStepProps> = ({
             hideColumns={hideExtraColumns}
             stockData={stockData}
             showAvailable={false}
+            showLost={true}
           />
         </div>
 
@@ -795,14 +796,15 @@ const JamaChallan: React.FC = () => {
           const itemDetail = transaction.items?.items?.[ps.id] || {};
           const qty = itemDetail.qty || 0;
           const borrowed = itemDetail.borrowed || 0;
-          const totalMain = qty;
+          const lost = itemDetail.lost || 0;
+          const damaged = itemDetail.damaged || 0;
 
 
           if (transaction.type === 'udhar') {
-            balances[ps.id] += totalMain;
+            balances[ps.id] += qty;
             borrowedBal[ps.id] += borrowed;
           } else {
-            balances[ps.id] -= totalMain;
+            balances[ps.id] -= qty + lost + damaged;
             borrowedBal[ps.id] -= borrowed;
           }
         });
@@ -908,12 +910,14 @@ const JamaChallan: React.FC = () => {
       const sizeId = ps.id;
       const qty = items.items?.[sizeId]?.qty || 0;
       const borrowed = items.items?.[sizeId]?.borrowed || 0;
+      const lost = items.items?.[sizeId]?.lost || 0;
+      const damaged = items.items?.[sizeId]?.damaged || 0;
 
       const currentBalance = outstandingBalances[sizeId] || 0;
       const currentBorrowedBalance = borrowedOutstanding[sizeId] || 0;
 
-      if (qty > 0 && qty > currentBalance) {
-        toast.error(`Cannot return more than available stock for Size ${ps.name}. Available: ${currentBalance}`);
+      if (qty + lost + damaged > 0 && qty + lost + damaged > currentBalance) {
+        toast.error(`${t('lostExceedsOutstanding')} - ${ps.name} (${t('outstanding')}: ${currentBalance})`);
         return;
       }
 
@@ -925,8 +929,10 @@ const JamaChallan: React.FC = () => {
 
     const hasQuantities = Object.values(items.items || {}).some(item => (item.qty || 0) > 0);
     const hasBorrowedItems = Object.values(items.items || {}).some(item => (item.borrowed || 0) > 0);
+    const hasLostItems = Object.values(items.items || {}).some(item => (item.lost || 0) > 0);
+    const hasDamagedItems = Object.values(items.items || {}).some(item => (item.damaged || 0) > 0);
 
-    if (!hasQuantities && !hasBorrowedItems) {
+    if (!hasQuantities && !hasBorrowedItems && !hasLostItems && !hasDamagedItems) {
       newErrors.items = 'At least one item quantity or borrowed quantity must be greater than 0';
       hasErrors = true;
     }
@@ -989,15 +995,21 @@ const JamaChallan: React.FC = () => {
       if (itemsError) throw itemsError;
 
       try {
+        const lostQuantities: { [key: number]: number } = {};
+        const damagedQuantities: { [key: number]: number } = {};
+
         for (const [sizeIdStr, detail] of Object.entries(items.items || {})) {
           const sizeId = parseInt(sizeIdStr);
           const onRentQty = detail.qty || 0;
           const borrowedQty = detail.borrowed || 0;
+          const lostQty = detail.lost || 0;
+          const damagedQty = detail.damaged || 0;
 
-          if (onRentQty > 0 || borrowedQty > 0) {
+          if (onRentQty > 0 || borrowedQty > 0 || lostQty > 0 || damagedQty > 0) {
+            // Lost/damaged plates leave "on rent" too; they land in their own buckets instead of available.
             const { error: stockError } = await supabase.rpc('decrement_stock', {
               p_size: sizeId,
-              p_on_rent_decrement: onRentQty,
+              p_on_rent_decrement: onRentQty + lostQty + damagedQty,
               p_borrowed_decrement: borrowedQty,
             });
 
@@ -1005,6 +1017,54 @@ const JamaChallan: React.FC = () => {
               console.error(`Error updating stock for size ${sizeId}:`, stockError);
               throw stockError;
             }
+
+            if (lostQty > 0) {
+              const { error: lostError } = await supabase.rpc('adjust_lost_stock', {
+                p_size: sizeId,
+                p_delta: lostQty,
+              });
+
+              if (lostError) {
+                console.error(`Error updating lost stock for size ${sizeId}:`, lostError);
+                throw lostError;
+              }
+
+              lostQuantities[sizeId] = lostQty;
+            }
+
+            if (damagedQty > 0) {
+              const { error: damagedError } = await supabase.rpc('adjust_damaged_stock', {
+                p_size: sizeId,
+                p_delta: damagedQty,
+              });
+
+              if (damagedError) {
+                console.error(`Error updating damaged stock for size ${sizeId}:`, damagedError);
+                throw damagedError;
+              }
+
+              damagedQuantities[sizeId] = damagedQty;
+            }
+          }
+        }
+
+        const historyRows = [
+          { type: 'lost', quantities: lostQuantities },
+          { type: 'damaged', quantities: damagedQuantities },
+        ].filter(r => Object.keys(r.quantities).length > 0);
+
+        for (const row of historyRows) {
+          const { error: historyError } = await supabase.from('stock_history').insert({
+            type: row.type,
+            party_name: selectedClient.client_nic_name || selectedClient.client_name,
+            note: `જમા ચલણ #${challanNumber}`,
+            amount: 0,
+            items: row.quantities,
+            date: new Date(date).toISOString(),
+          });
+
+          if (historyError) {
+            console.error(`Error logging ${row.type} stock history:`, historyError);
           }
         }
       } catch (error) {

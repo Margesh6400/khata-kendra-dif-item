@@ -34,16 +34,19 @@ export function buildRenderInput({ design, plateSizes, items, meta }: BuildParam
     .sort((a, b) => a.sort_order - b.sort_order);
 
   const toRow = (ps: PlateSize): ChallanRow => {
-    const it = items.items?.[ps.id] || { qty: 0, borrowed: 0, note: '' };
+    const it = items.items?.[ps.id] || { qty: 0, borrowed: 0, lost: 0, damaged: 0, note: '' };
     const qty = it.qty || 0;
     const borrowed = it.borrowed || 0;
-    return { name: ps.name, qty, borrowed, total: qty + borrowed, note: it.note || '' };
+    const lost = it.lost || 0;
+    const damaged = it.damaged || 0;
+    // total stays the physical returned count; lost/damaged print in their own columns
+    return { name: ps.name, qty, borrowed, lost, damaged, total: qty + borrowed, note: it.note || '' };
   };
 
   const preprinted = design.config.band.labels === 'preprinted';
   const rows: ChallanRow[] = preprinted
     ? categorySizes.map(toRow)
-    : categorySizes.map(toRow).filter((r) => r.qty > 0 || r.borrowed > 0 || !!r.note);
+    : categorySizes.map(toRow).filter((r) => r.qty > 0 || r.borrowed > 0 || (r.lost || 0) > 0 || (r.damaged || 0) > 0 || !!r.note);
 
   const grandTotal = rows.reduce((sum, r) => sum + r.total, 0);
 
