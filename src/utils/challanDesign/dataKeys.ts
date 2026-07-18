@@ -30,7 +30,7 @@ export const BAND_COLUMN_FIELDS: Array<{ field: BandColumnField; label: string; 
   { field: 'index', label: 'Row No.', labelGu: 'ક્રમ' },
   { field: 'name', label: 'Item / Size', labelGu: 'આઈટમ / સાઇઝ' },
   { field: 'qty', label: 'Quantity', labelGu: 'નંગ' },
-  { field: 'borrowed', label: 'Borrowed', labelGu: 'માર્કો' },
+  { field: 'borrowed', label: 'Marco (Borrowed)', labelGu: 'માર્કો' },
   { field: 'total', label: 'Total', labelGu: 'કુલ' },
   { field: 'note', label: 'Note', labelGu: 'નોંધ' },
 ];
@@ -38,6 +38,12 @@ export const BAND_COLUMN_FIELDS: Array<{ field: BandColumnField; label: string; 
 export function fieldKeyLabel(key: string, gu = false): string {
   const def = FIELD_KEYS.find((k) => k.key === key);
   if (!def) return key;
+  return gu ? def.labelGu : def.label;
+}
+
+export function bandFieldLabel(field: BandColumnField, gu = false): string {
+  const def = BAND_COLUMN_FIELDS.find((f) => f.field === field);
+  if (!def) return field;
   return gu ? def.labelGu : def.label;
 }
 

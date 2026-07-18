@@ -3,8 +3,8 @@
 
 import React from 'react';
 import { Stage, Layer, Image as KonvaImage, Text as KonvaText, Rect, Line } from 'react-konva';
-import { BandColumn, DesignConfig, PlacedField, RowBand } from '../../utils/challanDesign/types';
-import { fieldKeyLabel } from '../../utils/challanDesign/dataKeys';
+import { BandColumn, ChallanRenderInput, DesignConfig, PlacedField, RowBand } from '../../utils/challanDesign/types';
+import { bandFieldLabel, fieldKeyLabel, resolveCellText, resolveFieldText } from '../../utils/challanDesign/dataKeys';
 import { fontStyleString, useHtmlImage } from './DesignStage';
 
 export type Selection = { type: 'field' | 'column'; id: string } | null;
@@ -20,11 +20,17 @@ interface Props {
   onFieldMove: (id: string, x: number, y: number) => void;
   onBandChange: (patch: Partial<RowBand>) => void;
   onColumnMove: (id: string, x: number) => void;
+  /** When set, fields and band cells render resolved sample values instead of key labels. */
+  sampleInput?: ChallanRenderInput | null;
 }
 
 const clamp = (v: number, lo: number, hi: number) => Math.min(hi, Math.max(lo, v));
 
-function fieldSampleText(f: PlacedField): string {
+function fieldSampleText(f: PlacedField, sampleInput?: ChallanRenderInput | null): string {
+  if (sampleInput) {
+    const resolved = resolveFieldText(f.key, sampleInput, { pageNumber: 1, pageCount: 1 }, f.staticText);
+    if (resolved) return resolved;
+  }
   if (f.key === 'literal') return f.staticText || 'Text';
   return fieldKeyLabel(f.key);
 }
@@ -40,6 +46,7 @@ const DesignEditorCanvas: React.FC<Props> = ({
   onFieldMove,
   onBandChange,
   onColumnMove,
+  sampleInput,
 }) => {
   const img = useHtmlImage(backgroundUrl);
   const aspect = naturalWidth && naturalHeight ? naturalHeight / naturalWidth : 1.4142;
@@ -84,6 +91,34 @@ const DesignEditorCanvas: React.FC<Props> = ({
               />
             ))}
 
+            {/* Sample cell values (same placement math as DesignStage) */}
+            {sampleInput &&
+              band.columns.length > 0 &&
+              Array.from({ length: band.rowsPerPage }).map((_, i) => {
+                const row = sampleInput.rows[i];
+                if (!row) return null;
+                return band.columns.map((col) => {
+                  const text = resolveCellText(col.field, row, i + 1);
+                  if (!text) return null;
+                  return (
+                    <KonvaText
+                      key={`cell-${col.id}-${i}`}
+                      text={text}
+                      x={pxW(col.x)}
+                      y={pxH(band.firstRowY + i * band.rowHeight)}
+                      width={col.w ? pxW(col.w) : undefined}
+                      fontSize={pxH(col.style.fontSize)}
+                      fontFamily={col.style.fontFamily}
+                      fontStyle={fontStyleString(col.style)}
+                      fill={col.style.fill}
+                      align={col.style.align}
+                      opacity={0.85}
+                      listening={false}
+                    />
+                  );
+                });
+              })}
+
             {/* Column markers (draggable horizontally) */}
             {band.columns.map((col: BandColumn) => {
               const isSel = selection?.type === 'column' && selection.id === col.id;
@@ -96,6 +131,7 @@ const DesignEditorCanvas: React.FC<Props> = ({
                     hitStrokeWidth={14}
                     draggable
                     onMouseDown={() => onSelect({ type: 'column', id: col.id })}
+                    onTap={() => onSelect({ type: 'column', id: col.id })}
                     onDragMove={(e) => {
                       // keep it vertical: only x moves
                       e.target.y(0);
@@ -107,7 +143,7 @@ const DesignEditorCanvas: React.FC<Props> = ({
                     }}
                   />
                   <KonvaText
-                    text={col.field}
+                    text={bandFieldLabel(col.field)}
                     x={pxW(col.x) + 3}
                     y={pxH(band.firstRowY) - 16}
                     fontSize={12}
