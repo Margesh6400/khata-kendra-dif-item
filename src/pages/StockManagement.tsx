@@ -476,18 +476,17 @@ const StockManagement: React.FC = () => {
       >();
 
       const processItems = (items: any, multiplier: number, client: any) => {
-        const qtyKey = `size_${size}_qty`;
-        const borrowedKey = `size_${size}_borrowed`;
-        const noteKey = `size_${size}_note`;
+        const itemMap = items?.items || {};
+        const itemDetail = itemMap[size] || { qty: 0, borrowed: 0, lost: 0, damaged: 0, note: "" };
 
         let qty = 0;
         let note = "";
 
         if (type === "rent") {
-          qty = (items as any)[qtyKey] || 0;
+          qty = multiplier === 1 ? itemDetail.qty : (itemDetail.qty + (itemDetail.lost || 0) + (itemDetail.damaged || 0));
         } else {
-          qty = (items as any)[borrowedKey] || 0;
-          note = (items as any)[noteKey] || "";
+          qty = itemDetail.borrowed || 0;
+          note = itemDetail.note || "";
         }
 
         const amount = qty * multiplier;

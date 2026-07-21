@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useRef } from 'react';
 import {
   Users,
   UserPlus,
@@ -67,22 +67,23 @@ const ClientManagement: React.FC = () => {
   const [showSortMenu, setShowSortMenu] = useState(false);
   const [showHidden, setShowHidden] = useState(false);
   const ITEMS_PER_PAGE = 10;
+  const loadingMoreRef = useRef(false);
 
-  // Scroll handler for infinite loading
   const handleScroll = async (e: React.UIEvent<HTMLElement>) => {
     const target = e.currentTarget;
     const scrolledToBottom =
       target.scrollHeight - target.scrollTop <= target.clientHeight * 1.5;
 
-    if (!loadingMore && hasMore && scrolledToBottom) {
+    if (!loadingMoreRef.current && hasMore && scrolledToBottom) {
+      loadingMoreRef.current = true;
       setLoadingMore(true);
       try {
         const relevantClients = searchQuery
           ? allClients.filter(client => {
             const searchLower = searchQuery.toLowerCase();
-            return client.client_nic_name.toLowerCase().includes(searchLower) ||
-              client.client_name.toLowerCase().includes(searchLower) ||
-              client.site.toLowerCase().includes(searchLower);
+            return (client.client_nic_name || '').toLowerCase().includes(searchLower) ||
+              (client.client_name || '').toLowerCase().includes(searchLower) ||
+              (client.site || '').toLowerCase().includes(searchLower);
           })
           : allClients;
 
@@ -101,6 +102,7 @@ const ClientManagement: React.FC = () => {
         toast.error('Failed to load more clients');
       } finally {
         setLoadingMore(false);
+        loadingMoreRef.current = false;
       }
     }
   };
@@ -108,10 +110,6 @@ const ClientManagement: React.FC = () => {
   useEffect(() => {
     fetchClients();
   }, []);
-
-  useEffect(() => {
-    fetchClients();
-  }, [sortOption]);
 
   // Reset pagination when search query changes
   useEffect(() => {
@@ -169,8 +167,8 @@ const ClientManagement: React.FC = () => {
       // Sort the data using improved natural sort
       const sortedData = [...(data || [])].sort((a, b) => {
         const result = naturalSort(
-          a.client_nic_name.toString(),
-          b.client_nic_name.toString()
+          (a.client_nic_name || '').toString(),
+          (b.client_nic_name || '').toString()
         );
         return sortOption === 'nameAZ' ? result : -result;
       });
@@ -203,7 +201,7 @@ const ClientManagement: React.FC = () => {
           .from('clients')
           .select('id')
           .eq('client_nic_name', data.client_nic_name)
-          .single();
+          .maybeSingle();
 
         if (existingClient) {
           toast.dismiss(loadingToast);
@@ -245,7 +243,7 @@ const ClientManagement: React.FC = () => {
         .from('clients')
         .select('id')
         .eq('client_nic_name', data.client_nic_name)
-        .single();
+        .maybeSingle();
 
       if (existingClient) {
         toast.dismiss(loadingToast);
@@ -281,7 +279,6 @@ const ClientManagement: React.FC = () => {
   const handleEdit = (client: ClientFormData) => {
     setEditingClient(client);
     setShowForm(true);
-    window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
   // Show a toast-based confirmation with Cancel and Delete actions
@@ -375,7 +372,7 @@ const ClientManagement: React.FC = () => {
 
       // If searching for a number, try to match it against the numeric part of client_nic_name
       if (isSearchingNumber) {
-        const nicNameMatch = client.client_nic_name?.match(/^(\d+)/);
+        const nicNameMatch = (client.client_nic_name || '').match(/^(\d+)/);
         if (nicNameMatch) {
           const clientNum = parseInt(nicNameMatch[1]);
           if (clientNum === searchNum) return true;
@@ -627,7 +624,6 @@ const ClientManagement: React.FC = () => {
           onClick={() => {
             setShowForm(true);
             setEditingClient(undefined);
-            window.scrollTo({ top: 0, behavior: 'smooth' });
           }}
           className="fixed z-50 flex items-center justify-center transition-all shadow-lg lg:hidden bottom-6 right-4 w-14 h-14 bg-gradient-to-br from-blue-600 to-blue-700 rounded-2xl hover:shadow-2xl active:scale-90 touch-manipulation"
           aria-label="Add new client"

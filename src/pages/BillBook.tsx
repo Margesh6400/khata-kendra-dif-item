@@ -72,9 +72,7 @@ export default function BillBook() {
 
   useEffect(() => {
     loadBills();
-
-
-  }, []);
+  }, [enableCategorySeparation, activeCategory]);
 
   // Filter & Sort
   const filteredAndSortedBills = useMemo(() => {
@@ -197,7 +195,9 @@ export default function BillBook() {
         calcPay,
         10,
         bill.from_date,
-        plateSizes,
+        bill.category
+          ? plateSizes.filter((ps) => (ps.category || 'shuttering') === bill.category)
+          : plateSizes,
         jackRents,
         dateSortingMethod === 'jamaFirst'
       );

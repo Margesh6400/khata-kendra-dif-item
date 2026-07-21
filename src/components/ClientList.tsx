@@ -16,9 +16,7 @@ const ClientList: React.FC<ClientListProps> = ({ clients, onEdit, onDelete, onTo
   const navigate = useNavigate();
 
   const handleDelete = React.useCallback((id: string, name: string) => {
-    if (window.confirm(`Delete "${name}"?`)) {
-      onDelete(id);
-    }
+    onDelete(id);
   }, [onDelete]);
 
   const handleCreateUdhar = (client: ClientFormData) => {
@@ -82,7 +80,7 @@ const ClientList: React.FC<ClientListProps> = ({ clients, onEdit, onDelete, onTo
                     </td>
                     <td className="px-4 py-3 text-sm">{client.client_name}</td>
                     <td className="px-4 py-3 text-sm">{client.site}</td>
-                    <td className="px-4 py-3 text-sm">{client.primary_phone_number}</td>
+                    <td className="px-4 py-3 text-sm">{client.primary_phone_number || '-'}</td>
                     <td className="px-4 py-3">
                       <div className="flex gap-2">
                         <button
@@ -194,13 +192,20 @@ const ClientList: React.FC<ClientListProps> = ({ clients, onEdit, onDelete, onTo
                     <MapPin className="w-3 h-3 sm:w-3.5 sm:h-3.5 flex-shrink-0 text-gray-400" />
                     <span className="truncate">{client.site}</span>
                   </div>
-                  <a
-                    href={`tel:${client.primary_phone_number}`}
-                    className="flex items-center flex-shrink-0 gap-1 text-blue-600 hover:text-blue-700 touch-manipulation active:scale-95"
-                  >
-                    <Phone className="w-3 h-3 sm:w-3.5 sm:h-3.5" />
-                    <span className="font-medium">{client.primary_phone_number}</span>
-                  </a>
+                  {client.primary_phone_number ? (
+                    <a
+                      href={`tel:${client.primary_phone_number}`}
+                      className="flex items-center flex-shrink-0 gap-1 text-blue-600 hover:text-blue-700 touch-manipulation active:scale-95"
+                    >
+                      <Phone className="w-3 h-3 sm:w-3.5 sm:h-3.5" />
+                      <span className="font-medium">{client.primary_phone_number}</span>
+                    </a>
+                  ) : (
+                    <span className="flex items-center flex-shrink-0 gap-1 text-gray-400">
+                      <Phone className="w-3 h-3 sm:w-3.5 sm:h-3.5" />
+                      <span className="font-medium">-</span>
+                    </span>
+                  )}
                 </div>
               </div>
             ))}

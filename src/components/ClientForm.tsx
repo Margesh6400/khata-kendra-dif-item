@@ -64,18 +64,33 @@ const ClientForm: React.FC<ClientFormProps> = ({ initialData, onSubmit, onCancel
 
   const validate = (): boolean => {
     const newErrors: Partial<ClientFormData> = {};
+    const nicName = (formData.client_nic_name || '').trim();
+    const name = (formData.client_name || '').trim();
+    const site = (formData.site || '').trim();
+    const phone = (formData.primary_phone_number || '').trim();
 
-    if (!formData.client_nic_name || formData.client_nic_name.length < 2 || formData.client_nic_name.length > 50) {
-      newErrors.client_nic_name = t('requiredField');
+    if (!nicName) {
+      newErrors.client_nic_name = t('requiredField') || 'Required field';
+    } else if (nicName.length < 2 || nicName.length > 50) {
+      newErrors.client_nic_name = 'Must be between 2 and 50 characters';
     }
-    if (!formData.client_name || formData.client_name.length < 3 || formData.client_name.length > 100) {
-      newErrors.client_name = t('requiredField');
+
+    if (!name) {
+      newErrors.client_name = t('requiredField') || 'Required field';
+    } else if (name.length < 3 || name.length > 100) {
+      newErrors.client_name = 'Must be between 3 and 100 characters';
     }
-    if (!formData.site || formData.site.length < 2 || formData.site.length > 100) {
-      newErrors.site = t('requiredField');
+
+    if (!site) {
+      newErrors.site = t('requiredField') || 'Required field';
+    } else if (site.length < 2 || site.length > 100) {
+      newErrors.site = 'Must be between 2 and 100 characters';
     }
-    if (!formData.primary_phone_number || formData.primary_phone_number.length > 50) {
-      newErrors.primary_phone_number = t('requiredField');
+
+    if (!phone) {
+      newErrors.primary_phone_number = t('requiredField') || 'Required field';
+    } else if (phone.length > 50) {
+      newErrors.primary_phone_number = 'Must be under 50 characters';
     }
 
     setErrors(newErrors);
@@ -88,7 +103,14 @@ const ClientForm: React.FC<ClientFormProps> = ({ initialData, onSubmit, onCancel
 
     setIsSubmitting(true);
     try {
-      await onSubmit(formData);
+      const trimmedData = {
+        ...formData,
+        client_nic_name: formData.client_nic_name.trim(),
+        client_name: formData.client_name.trim(),
+        site: formData.site.trim(),
+        primary_phone_number: formData.primary_phone_number.trim(),
+      };
+      await onSubmit(trimmedData);
       setFormData({
         client_nic_name: '',
         client_name: '',
@@ -134,7 +156,10 @@ const ClientForm: React.FC<ClientFormProps> = ({ initialData, onSubmit, onCancel
             <input
               type="number"
               value={formData.daily_rent_price ?? 1}
-              onChange={(e) => setFormData({ ...formData, daily_rent_price: parseFloat(e.target.value) || 1 })}
+              onChange={(e) => {
+                const val = parseFloat(e.target.value);
+                setFormData({ ...formData, daily_rent_price: isNaN(val) ? 1 : val });
+              }}
               className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm"
               min={0}
               step="any"
@@ -227,7 +252,7 @@ const ClientForm: React.FC<ClientFormProps> = ({ initialData, onSubmit, onCancel
                           <input
                             type="number"
                             value={currentRent}
-                            placeholder={`${formData.daily_rent_price ?? 1.5} (${t('defaultWord')})`}
+                            placeholder={`${formData.daily_rent_price ?? 1} (${t('defaultWord') || 'Default'})`}
                             onChange={(e) => {
                               const val = parseFloat(e.target.value);
                               const nextRents = { ...(formData.jack_rents || {}) };

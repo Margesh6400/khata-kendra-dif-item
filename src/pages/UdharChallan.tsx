@@ -703,24 +703,29 @@ const UdharChallan: React.FC = () => {
 
       // Calculate rent stock dynamically
       const calculations = new Map<number, number>();
-      for (let i = 1; i <= 9; i++) {
-        calculations.set(i, 0);
-      }
 
       // Process Udhar
       allUdhar.forEach(challan => {
-        for (let i = 1; i <= 9; i++) {
-          const qty = (challan.items as any)[`size_${i}_qty`] || 0;
-          calculations.set(i, (calculations.get(i) || 0) + qty);
-        }
+        const itemMap = challan.items?.items || {};
+        Object.entries(itemMap).forEach(([sizeIdStr, item]: [string, any]) => {
+          const sizeId = parseInt(sizeIdStr);
+          const qty = item.qty || 0;
+          const borrowed = item.borrowed || 0;
+          calculations.set(sizeId, (calculations.get(sizeId) || 0) + qty + borrowed);
+        });
       });
 
       // Process Jama
       allJama.forEach(challan => {
-        for (let i = 1; i <= 9; i++) {
-          const qty = (challan.items as any)[`size_${i}_qty`] || 0;
-          calculations.set(i, (calculations.get(i) || 0) - qty);
-        }
+        const itemMap = challan.items?.items || {};
+        Object.entries(itemMap).forEach(([sizeIdStr, item]: [string, any]) => {
+          const sizeId = parseInt(sizeIdStr);
+          const qty = item.qty || 0;
+          const borrowed = item.borrowed || 0;
+          const lost = item.lost || 0;
+          const damaged = item.damaged || 0;
+          calculations.set(sizeId, (calculations.get(sizeId) || 0) - (qty + borrowed + lost + damaged));
+        });
       });
 
       const computed = (stockResponse.data || []).map((s: any) => {

@@ -3,6 +3,7 @@ import { X, Download } from 'lucide-react';
 import { useLanguage } from '../contexts/LanguageContext';
 import { format } from 'date-fns';
 import { usePlateSizes } from '../hooks/usePlateSizes';
+import { useSettings } from '../contexts/SettingsContext';
 
 interface ItemsData {
   [key: string]: any;
@@ -42,7 +43,15 @@ const ChallanDetailsModal: React.FC<ChallanDetailsModalProps> = ({
   onDownload,
 }) => {
   const { t } = useLanguage();
-  const { sizes: plateSizes } = usePlateSizes();
+  const { sizes: rawPlateSizes } = usePlateSizes();
+  const { enableCategorySeparation, activeCategory } = useSettings();
+
+  const plateSizes = React.useMemo(() => {
+    if (enableCategorySeparation && activeCategory) {
+      return rawPlateSizes.filter(size => (size.category || 'shuttering') === activeCategory);
+    }
+    return rawPlateSizes;
+  }, [rawPlateSizes, enableCategorySeparation, activeCategory]);
 
   React.useEffect(() => {
     if (isOpen && challan) {

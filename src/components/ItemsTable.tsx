@@ -455,53 +455,61 @@ const ItemsTable: React.FC<ItemsTableProps> = ({
           </thead>
           <tbody className="bg-white divide-y divide-gray-200">
             {/* Shuttering Plates Section */}
-            <tr
-              onClick={() => toggleSection('shuttering')}
-              className={`font-semibold border-y select-none transition-colors ${activeCategory && activeCategory !== 'shuttering'
-                  ? "bg-gray-100/60 text-gray-400 cursor-not-allowed opacity-60 border-gray-200"
-                  : "bg-blue-50/70 text-blue-800 hover:bg-blue-100/70 border-blue-100 cursor-pointer"
-                }`}
-            >
-              <td colSpan={10} className="px-4 py-2 text-xs sm:text-sm font-bold text-left">
-                <div className="flex items-center gap-2">
-                  {activeCategory && activeCategory !== 'shuttering' ? (
-                    <span className="text-[10px] bg-gray-200 text-gray-500 px-1.5 py-0.5 rounded font-medium">{t('locked')}</span>
-                  ) : collapsedSections.shuttering ? (
-                    <ChevronRight className="w-4 h-4 text-blue-600" />
-                  ) : (
-                    <ChevronDown className="w-4 h-4 text-blue-600" />
-                  )}
-                  <span>શટરિંગ પ્લેટો (Shuttering Plates)</span>
-                </div>
-              </td>
-            </tr>
-            {!collapsedSections.shuttering && plateSizes.filter(ps => (ps.category || 'shuttering') === 'shuttering').map(renderDesktopRow)}
+            {(!enableCategorySeparation || globalActiveCategory === 'shuttering') && (
+              <>
+                <tr
+                  onClick={() => toggleSection('shuttering')}
+                  className={`font-semibold border-y select-none transition-colors ${activeCategory && activeCategory !== 'shuttering'
+                      ? "bg-gray-100/60 text-gray-400 cursor-not-allowed opacity-60 border-gray-200"
+                      : "bg-blue-50/70 text-blue-800 hover:bg-blue-100/70 border-blue-100 cursor-pointer"
+                    }`}
+                >
+                  <td colSpan={10} className="px-4 py-2 text-xs sm:text-sm font-bold text-left">
+                    <div className="flex items-center gap-2">
+                      {activeCategory && activeCategory !== 'shuttering' ? (
+                        <span className="text-[10px] bg-gray-200 text-gray-500 px-1.5 py-0.5 rounded font-medium">{t('locked')}</span>
+                      ) : collapsedSections.shuttering ? (
+                        <ChevronRight className="w-4 h-4 text-blue-600" />
+                      ) : (
+                        <ChevronDown className="w-4 h-4 text-blue-600" />
+                      )}
+                      <span>શટરિંગ પ્લેટો (Shuttering Plates)</span>
+                    </div>
+                  </td>
+                </tr>
+                {!collapsedSections.shuttering && plateSizes.filter(ps => (ps.category || 'shuttering') === 'shuttering').map(renderDesktopRow)}
+              </>
+            )}
 
             {/* Jacks Section */}
-            <tr
-              onClick={() => toggleSection('jack')}
-              className={`font-semibold border-y select-none transition-colors ${activeCategory && activeCategory !== 'jack'
-                  ? "bg-gray-100/60 text-gray-400 cursor-not-allowed opacity-60 border-gray-200"
-                  : "bg-purple-50/70 text-purple-800 hover:bg-purple-100/70 border-purple-100 cursor-pointer"
-                }`}
-            >
-              <td colSpan={10} className="px-4 py-2 text-xs sm:text-sm font-bold text-left">
-                <div className="flex items-center gap-2">
-                  {activeCategory && activeCategory !== 'jack' ? (
-                    <span className="text-[10px] bg-gray-200 text-gray-500 px-1.5 py-0.5 rounded font-medium">{t('locked')}</span>
-                  ) : collapsedSections.jack ? (
-                    <ChevronRight className="w-4 h-4 text-purple-600" />
-                  ) : (
-                    <ChevronDown className="w-4 h-4 text-purple-600" />
-                  )}
-                  <span>લોખંડના જેક (Iron Jacks)</span>
-                </div>
-              </td>
-            </tr>
-            {!collapsedSections.jack && plateSizes.filter(ps => ps.category === 'jack').map(renderDesktopRow)}
+            {(!enableCategorySeparation || globalActiveCategory === 'jack') && (
+              <>
+                <tr
+                  onClick={() => toggleSection('jack')}
+                  className={`font-semibold border-y select-none transition-colors ${activeCategory && activeCategory !== 'jack'
+                      ? "bg-gray-100/60 text-gray-400 cursor-not-allowed opacity-60 border-gray-200"
+                      : "bg-purple-50/70 text-purple-800 hover:bg-purple-100/70 border-purple-100 cursor-pointer"
+                    }`}
+                >
+                  <td colSpan={10} className="px-4 py-2 text-xs sm:text-sm font-bold text-left">
+                    <div className="flex items-center gap-2">
+                      {activeCategory && activeCategory !== 'jack' ? (
+                        <span className="text-[10px] bg-gray-200 text-gray-500 px-1.5 py-0.5 rounded font-medium">{t('locked')}</span>
+                      ) : collapsedSections.jack ? (
+                        <ChevronRight className="w-4 h-4 text-purple-600" />
+                      ) : (
+                        <ChevronDown className="w-4 h-4 text-purple-600" />
+                      )}
+                      <span>લોખંડના જેક (Iron Jacks)</span>
+                    </div>
+                  </td>
+                </tr>
+                {!collapsedSections.jack && plateSizes.filter(ps => ps.category === 'jack').map(renderDesktopRow)}
+              </>
+            )}
 
             {/* Cuplock Section */}
-            {plateSizes.some(ps => ps.category === 'cuplock') && (
+            {(!enableCategorySeparation || globalActiveCategory === 'cuplock') && plateSizes.some(ps => ps.category === 'cuplock') && (
               <>
                 <tr
                   onClick={() => toggleSection('cuplock')}
@@ -528,7 +536,7 @@ const ItemsTable: React.FC<ItemsTableProps> = ({
             )}
 
             {/* Other Section */}
-            {plateSizes.some(ps => ps.category === 'other') && (
+            {(!enableCategorySeparation || globalActiveCategory === 'other') && plateSizes.some(ps => ps.category === 'other') && (
               <>
                 <tr
                   onClick={() => toggleSection('other')}
@@ -610,55 +618,63 @@ const ItemsTable: React.FC<ItemsTableProps> = ({
                 </thead>
                 <tbody className="bg-white divide-y divide-gray-200">
                   {/* Shuttering Plates Section */}
-                  <tr
-                    onClick={() => toggleSection('shuttering')}
-                    className={`font-semibold border-y select-none transition-colors ${activeCategory && activeCategory !== 'shuttering'
-                        ? "bg-gray-100/60 text-gray-400 cursor-not-allowed opacity-60 border-gray-200"
-                        : "bg-blue-50/70 text-blue-800 border-blue-100 cursor-pointer"
-                      }`}
-                  >
-                    <td colSpan={10} className={`px-2 py-1 text-[11px] sm:text-xs font-bold sticky left-0 z-10 text-left transition-colors ${activeCategory && activeCategory !== 'shuttering' ? "bg-gray-100/60" : "bg-blue-50/70"
-                      }`}>
-                      <div className="flex items-center gap-1.5">
-                        {activeCategory && activeCategory !== 'shuttering' ? (
-                          <span className="text-[9px] bg-gray-200 text-gray-500 px-1 py-0.5 rounded font-medium">{t('locked')}</span>
-                        ) : collapsedSections.shuttering ? (
-                          <ChevronRight className="w-3.5 h-3.5 text-blue-600" />
-                        ) : (
-                          <ChevronDown className="w-3.5 h-3.5 text-blue-600" />
-                        )}
-                        <span>શટરિંગ પ્લેટો (Shuttering Plates)</span>
-                      </div>
-                    </td>
-                  </tr>
-                  {!collapsedSections.shuttering && plateSizes.filter(ps => (ps.category || 'shuttering') === 'shuttering').map((ps, idx) => renderMobileRow(ps, idx))}
+                  {(!enableCategorySeparation || globalActiveCategory === 'shuttering') && (
+                    <>
+                      <tr
+                        onClick={() => toggleSection('shuttering')}
+                        className={`font-semibold border-y select-none transition-colors ${activeCategory && activeCategory !== 'shuttering'
+                            ? "bg-gray-100/60 text-gray-400 cursor-not-allowed opacity-60 border-gray-200"
+                            : "bg-blue-50/70 text-blue-800 border-blue-100 cursor-pointer"
+                          }`}
+                      >
+                        <td colSpan={10} className={`px-2 py-1 text-[11px] sm:text-xs font-bold sticky left-0 z-10 text-left transition-colors ${activeCategory && activeCategory !== 'shuttering' ? "bg-gray-100/60" : "bg-blue-50/70"
+                          }`}>
+                          <div className="flex items-center gap-1.5">
+                            {activeCategory && activeCategory !== 'shuttering' ? (
+                              <span className="text-[9px] bg-gray-200 text-gray-500 px-1 py-0.5 rounded font-medium">{t('locked')}</span>
+                            ) : collapsedSections.shuttering ? (
+                              <ChevronRight className="w-3.5 h-3.5 text-blue-600" />
+                            ) : (
+                              <ChevronDown className="w-3.5 h-3.5 text-blue-600" />
+                            )}
+                            <span>શટરિંગ પ્લેટો (Shuttering Plates)</span>
+                          </div>
+                        </td>
+                      </tr>
+                      {!collapsedSections.shuttering && plateSizes.filter(ps => (ps.category || 'shuttering') === 'shuttering').map((ps, idx) => renderMobileRow(ps, idx))}
+                    </>
+                  )}
 
                   {/* Jacks Section */}
-                  <tr
-                    onClick={() => toggleSection('jack')}
-                    className={`font-semibold border-y select-none transition-colors ${activeCategory && activeCategory !== 'jack'
-                        ? "bg-gray-100/60 text-gray-400 cursor-not-allowed opacity-60 border-gray-200"
-                        : "bg-purple-50/70 text-purple-800 border-purple-100 cursor-pointer"
-                      }`}
-                  >
-                    <td colSpan={10} className={`px-2 py-1 text-[11px] sm:text-xs font-bold sticky left-0 z-10 text-left transition-colors ${activeCategory && activeCategory !== 'jack' ? "bg-gray-100/60" : "bg-purple-50/70"
-                      }`}>
-                      <div className="flex items-center gap-1.5">
-                        {activeCategory && activeCategory !== 'jack' ? (
-                          <span className="text-[9px] bg-gray-200 text-gray-500 px-1 py-0.5 rounded font-medium">{t('locked')}</span>
-                        ) : collapsedSections.jack ? (
-                          <ChevronRight className="w-3.5 h-3.5 text-purple-600" />
-                        ) : (
-                          <ChevronDown className="w-3.5 h-3.5 text-purple-600" />
-                        )}
-                        <span>લોખંડના જેક (Iron Jacks)</span>
-                      </div>
-                    </td>
-                  </tr>
-                  {!collapsedSections.jack && plateSizes.filter(ps => ps.category === 'jack').map((ps, idx) => renderMobileRow(ps, idx))}
+                  {(!enableCategorySeparation || globalActiveCategory === 'jack') && (
+                    <>
+                      <tr
+                        onClick={() => toggleSection('jack')}
+                        className={`font-semibold border-y select-none transition-colors ${activeCategory && activeCategory !== 'jack'
+                            ? "bg-gray-100/60 text-gray-400 cursor-not-allowed opacity-60 border-gray-200"
+                            : "bg-purple-50/70 text-purple-800 border-purple-100 cursor-pointer"
+                          }`}
+                      >
+                        <td colSpan={10} className={`px-2 py-1 text-[11px] sm:text-xs font-bold sticky left-0 z-10 text-left transition-colors ${activeCategory && activeCategory !== 'jack' ? "bg-gray-100/60" : "bg-purple-50/70"
+                          }`}>
+                          <div className="flex items-center gap-1.5">
+                            {activeCategory && activeCategory !== 'jack' ? (
+                              <span className="text-[9px] bg-gray-200 text-gray-500 px-1 py-0.5 rounded font-medium">{t('locked')}</span>
+                            ) : collapsedSections.jack ? (
+                              <ChevronRight className="w-3.5 h-3.5 text-purple-600" />
+                            ) : (
+                              <ChevronDown className="w-3.5 h-3.5 text-purple-600" />
+                            )}
+                            <span>લોખંડના જેક (Iron Jacks)</span>
+                          </div>
+                        </td>
+                      </tr>
+                      {!collapsedSections.jack && plateSizes.filter(ps => ps.category === 'jack').map((ps, idx) => renderMobileRow(ps, idx))}
+                    </>
+                  )}
 
                   {/* Cuplock Section */}
-                  {plateSizes.some(ps => ps.category === 'cuplock') && (
+                  {(!enableCategorySeparation || globalActiveCategory === 'cuplock') && plateSizes.some(ps => ps.category === 'cuplock') && (
                     <>
                       <tr
                         onClick={() => toggleSection('cuplock')}
@@ -686,7 +702,7 @@ const ItemsTable: React.FC<ItemsTableProps> = ({
                   )}
 
                   {/* Other Section */}
-                  {plateSizes.some(ps => ps.category === 'other') && (
+                  {(!enableCategorySeparation || globalActiveCategory === 'other') && plateSizes.some(ps => ps.category === 'other') && (
                     <>
                       <tr
                         onClick={() => toggleSection('other')}

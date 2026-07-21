@@ -80,7 +80,7 @@ export default function Payments() {
 
     useEffect(() => {
         loadData();
-    }, []);
+    }, [enableCategorySeparation, activeCategory]);
 
     const filteredBills = bills.filter(bill => {
         if (activeTab === 'pending') return (bill.due_payment || 0) > 0;
@@ -140,7 +140,9 @@ export default function Payments() {
                 calcPay,
                 10,
                 bill.from_date,
-                plateSizes,
+                bill.category
+                  ? plateSizes.filter((ps) => (ps.category || 'shuttering') === bill.category)
+                  : plateSizes,
                 jackRents,
                 dateSortingMethod === 'jamaFirst'
             );

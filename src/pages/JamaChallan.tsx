@@ -29,7 +29,7 @@ import { generateJPEG } from '../utils/generateJPEG';
 import { tryExportChallanDesign } from '../utils/challanDesign/exportChallanDesign';
 import Navbar from '../components/Navbar';
 import toast, { Toaster } from 'react-hot-toast';
-import { fetchClientTransactions } from '../utils/challanFetching';
+import { fetchClientTransactions, fetchBulkClientTransactions } from '../utils/challanFetching';
 
 
 interface ClientFormData {
@@ -742,33 +742,33 @@ const JamaChallan: React.FC = () => {
   const fetchAllClientBalances = async (clientsList: ClientFormData[]) => {
     const balances: { [clientId: string]: number } = {};
 
-    // Fetch balances for each client
-    await Promise.all(
-      clientsList.map(async (client) => {
-        try {
-          const transactions = await fetchClientTransactions(client.id!);
+    try {
+      const clientIds = clientsList.map(c => c.id).filter((id): id is string => !!id);
+      const bulkTransactions = await fetchBulkClientTransactions(clientIds);
 
-          let grandTotal = 0;
-          transactions.forEach(transaction => {
-            for (let i = 1; i <= 9; i++) {
-              const qty = transaction.items[`size_${i}_qty`] || 0;
-              const borrowed = transaction.items[`size_${i}_borrowed`] || 0;
+      clientsList.forEach(client => {
+        const transactions = bulkTransactions.get(client.id!) || [];
+        let grandTotal = 0;
+        transactions.forEach(transaction => {
+          const itemMap = transaction.items?.items || {};
+          Object.values(itemMap).forEach((item: any) => {
+            const qty = item.qty || 0;
+            const borrowed = item.borrowed || 0;
+            const lost = item.lost || 0;
+            const damaged = item.damaged || 0;
 
-              if (transaction.type === 'udhar') {
-                grandTotal += qty + borrowed;
-              } else {
-                grandTotal -= qty + borrowed;
-              }
+            if (transaction.type === 'udhar') {
+              grandTotal += qty + borrowed;
+            } else {
+              grandTotal -= (qty + borrowed + lost + damaged);
             }
           });
-
-          balances[client.id!] = grandTotal;
-        } catch (error) {
-          console.error(`Error fetching balance for client ${client.id}:`, error);
-          balances[client.id!] = 0;
-        }
-      })
-    );
+        });
+        balances[client.id!] = grandTotal;
+      });
+    } catch (error) {
+      console.error('Error fetching all client balances:', error);
+    }
 
     setClientBalances(balances);
   };

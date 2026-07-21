@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { ArrowUpDown, Download } from 'lucide-react';
 import { Transaction, ClientBalance } from '../utils/ledgerCalculations';
 import { useLanguage } from '../contexts/LanguageContext';
@@ -7,6 +7,7 @@ import { generateJPEG } from '../utils/generateJPEG';
 import ReceiptTemplate from './ReceiptTemplate';
 import toast from 'react-hot-toast';
 import { usePlateSizes } from '../hooks/usePlateSizes';
+import { useSettings } from '../contexts/SettingsContext';
 
 interface TransactionTableProps {
   transactions?: Transaction[];
@@ -16,8 +17,6 @@ interface TransactionTableProps {
   clientSite: string;
   clientPhone: string;
 }
-
-
 
 export default function TransactionTable({
   transactions,
@@ -29,9 +28,20 @@ export default function TransactionTable({
 }: TransactionTableProps) {
   const { language } = useLanguage();
   const t = translations[language];
+  const { enableCategorySeparation, activeCategory } = useSettings();
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('asc');
-  const [selectedCategory, setSelectedCategory] = useState<'all' | 'shuttering' | 'jack' | 'other'>('all');
+  const [selectedCategory, setSelectedCategory] = useState<'all' | 'shuttering' | 'jack' | 'other'>(
+    enableCategorySeparation && activeCategory ? (activeCategory as any) : 'all'
+  );
   const { sizes: rawPlateSizes } = usePlateSizes();
+
+  useEffect(() => {
+    if (enableCategorySeparation && activeCategory) {
+      setSelectedCategory(activeCategory as any);
+    } else {
+      setSelectedCategory('all');
+    }
+  }, [enableCategorySeparation, activeCategory]);
 
   const plateSizes = useMemo(() => {
     return rawPlateSizes.filter(size => {
@@ -221,21 +231,23 @@ export default function TransactionTable({
   return (
     <div className="space-y-4">
       {/* Category Tabs */}
-      <div className="flex gap-2 bg-gray-100 p-1 rounded-lg w-fit">
-        {(['all', 'shuttering', 'jack', 'other'] as const).map(cat => (
-          <button
-            key={cat}
-            onClick={() => setSelectedCategory(cat)}
-            className={`px-3 py-1.5 text-xs font-semibold rounded-md transition-all ${
-              selectedCategory === cat
-                ? 'bg-white text-blue-600 shadow-sm'
-                : 'text-gray-600 hover:text-gray-900'
-            }`}
-          >
-            {cat === 'all' ? t.all || 'All' : t[cat] || cat}
-          </button>
-        ))}
-      </div>
+      {!enableCategorySeparation && (
+        <div className="flex gap-2 bg-gray-100 p-1 rounded-lg w-fit">
+          {(['all', 'shuttering', 'jack', 'other'] as const).map(cat => (
+            <button
+              key={cat}
+              onClick={() => setSelectedCategory(cat)}
+              className={`px-3 py-1.5 text-xs font-semibold rounded-md transition-all ${
+                selectedCategory === cat
+                  ? 'bg-white text-blue-600 shadow-sm'
+                  : 'text-gray-600 hover:text-gray-900'
+              }`}
+            >
+              {cat === 'all' ? t.all || 'All' : t[cat] || cat}
+            </button>
+          ))}
+        </div>
+      )}
 
       <div className="-mx-5 overflow-x-auto md:mx-0">
       <div className="inline-block min-w-full align-middle">

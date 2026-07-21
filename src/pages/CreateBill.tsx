@@ -132,13 +132,26 @@ export default function CreateBill() {
   const isEditMode = !!editBillNumber;
   const { t, language } = useLanguage();
   const { dateSortingMethod, enableCategorySeparation, activeCategory } = useSettings();
-  const { sizes: plateSizes } = usePlateSizes();
+  const { sizes: rawPlateSizes } = usePlateSizes();
+  const plateSizes = useMemo(() => {
+    if (enableCategorySeparation && activeCategory) {
+      return rawPlateSizes.filter(size => (size.category || 'shuttering') === activeCategory);
+    }
+    return rawPlateSizes;
+  }, [rawPlateSizes, enableCategorySeparation, activeCategory]);
 
   const [client, setClient] = useState<ClientFormData | null>(null);
   const [billResult, setBillResult] = useState<ReturnType<
     typeof periodCalculations.calculateBill
   > | null>(null);
   const [showCustomRents, setShowCustomRents] = useState(false);
+  const [selectedSizeIds, setSelectedSizeIds] = useState<Set<number>>(new Set());
+
+  useEffect(() => {
+    if (plateSizes && plateSizes.length > 0) {
+      setSelectedSizeIds(new Set(plateSizes.map(s => s.id)));
+    }
+  }, [plateSizes]);
 
   const groupedSizes = useMemo(() => {
     const groups: Record<string, typeof plateSizes> = {
@@ -229,12 +242,18 @@ export default function CreateBill() {
       const { data: payments } = await supabase.from('bill_payments').select('*').eq('bill_number', billNumber);
 
       // 4. Calculate Pending Amount (excluding current bill)
-      const { data: billsData } = await supabase
+      let prevBillsQuery = supabase
         .from("bills")
         .select("bill_number, due_payment, to_date")
         .eq("client_id", clientId)
         .neq('bill_number', billNumber) // Exclude current
-        .lt('to_date', bill.from_date || bill.billing_date) // Strictly before this bill starts
+        .lt('to_date', bill.from_date || bill.billing_date); // Strictly before this bill starts
+
+      if (enableCategorySeparation && activeCategory) {
+        prevBillsQuery = prevBillsQuery.eq("category", activeCategory);
+      }
+
+      const { data: billsData } = await prevBillsQuery
         .order("to_date", { ascending: true });
 
       let pending = 0;
@@ -319,15 +338,27 @@ export default function CreateBill() {
       const { client, udharChallans } = validation.data;
 
       // Generate bill number
-      const { data: lastBill, error: billError } = await supabase
+      let billSeqQuery = supabase
         .from("bills")
-        .select("bill_number")
+        .select("bill_number");
+
+      if (enableCategorySeparation && activeCategory) {
+        billSeqQuery = billSeqQuery.eq("category", activeCategory);
+      }
+
+      const { data: lastBill, error: billError } = await billSeqQuery
         .order("bill_number", { ascending: false })
         .limit(100); // Get more bills to ensure we find the right sequence
 
       if (!billError) {
         let sequence = 1;
-        const clientPrefix = client?.client_nic_name || clientId;
+        let clientPrefix = client?.client_nic_name || clientId;
+        if (enableCategorySeparation && activeCategory) {
+          const categorySuffix = activeCategory === 'shuttering' ? 'S' :
+                                 activeCategory === 'jack' ? 'J' :
+                                 activeCategory === 'cuplock' ? 'C' : 'O';
+          clientPrefix = `${clientPrefix}-${categorySuffix}`;
+        }
 
         // Find the last bill number for this client
         const clientBills =
@@ -349,10 +380,16 @@ export default function CreateBill() {
       }
 
       // Fetch pending amount and dates from previous bills
-      const { data: billsData, error: billsError } = await supabase
+      let previousBillsQuery = supabase
         .from("bills")
         .select("bill_number, due_payment, created_at, to_date")
-        .eq("client_id", clientId)
+        .eq("client_id", clientId);
+
+      if (enableCategorySeparation && activeCategory) {
+        previousBillsQuery = previousBillsQuery.eq("category", activeCategory);
+      }
+
+      const { data: billsData, error: billsError } = await previousBillsQuery
         .order("to_date", { ascending: true }); // Order by to_date to find the latest covered period
 
       let calculatedFromDate = udharChallans?.[0]?.udhar_date || "";
@@ -862,7 +899,7 @@ export default function CreateBill() {
           payments,
           10,
           billData.fromDate,
-          plateSizes,
+          plateSizes.filter((ps) => selectedSizeIds.has(ps.id)),
           client?.jack_rents || {},
           dateSortingMethod === 'jamaFirst'
         );
@@ -909,6 +946,7 @@ export default function CreateBill() {
           const row = Array.isArray(ch.items) ? ch.items[0] : ch.items;
           const itemsArr = Array.isArray(row?.items) ? row.items : [];
           itemsArr.forEach((it: any) => {
+            if (!selectedSizeIds.has(it.size_id)) return;
             if ((it.lost || 0) > 0) {
               lostBySize[it.size_id] = (lostBySize[it.size_id] || 0) + it.lost;
             }
@@ -1244,6 +1282,42 @@ export default function CreateBill() {
                   </div>
                 </div>
               </div>
+
+              {/* Select Items to Include Section */}
+              {!enableCategorySeparation && plateSizes && plateSizes.length > 0 && (
+                <div className="pt-2 border-t border-gray-150">
+                  <label className="block mb-1.5 text-xs font-semibold text-gray-700">
+                    {language === 'gu' ? 'બિલમાં સામેલ કરવા માટે સાઇઝ પસંદ કરો' : 'Select Sizes to Include in Bill'}
+                  </label>
+                  <div className="flex flex-wrap gap-1.5 p-2 bg-gray-50 border border-gray-200 rounded-lg max-h-[160px] overflow-y-auto">
+                    {plateSizes.map((size) => {
+                      const isChecked = selectedSizeIds.has(size.id);
+                      return (
+                        <button
+                          key={size.id}
+                          type="button"
+                          onClick={() => {
+                            const nextSelected = new Set(selectedSizeIds);
+                            if (nextSelected.has(size.id)) {
+                              nextSelected.delete(size.id);
+                            } else {
+                              nextSelected.add(size.id);
+                            }
+                            setSelectedSizeIds(nextSelected);
+                          }}
+                          className={`px-2 py-1 text-[10px] font-bold rounded-lg border transition-all ${
+                            isChecked
+                              ? 'bg-blue-50 border-blue-300 text-blue-700 shadow-sm'
+                              : 'bg-white border-gray-300 text-gray-500 opacity-60 hover:opacity-100 hover:bg-gray-50'
+                          }`}
+                        >
+                          {size.name}
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
 
               {/* Calculate Bill Button below */}
               <div className="pt-1">
