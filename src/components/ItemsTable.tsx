@@ -455,13 +455,12 @@ const ItemsTable: React.FC<ItemsTableProps> = ({
           </thead>
           <tbody className="bg-white divide-y divide-gray-200">
             {/* Shuttering Plates Section */}
-            <tr 
+            <tr
               onClick={() => toggleSection('shuttering')}
-              className={`font-semibold border-y select-none transition-colors ${
-                activeCategory && activeCategory !== 'shuttering'
+              className={`font-semibold border-y select-none transition-colors ${activeCategory && activeCategory !== 'shuttering'
                   ? "bg-gray-100/60 text-gray-400 cursor-not-allowed opacity-60 border-gray-200"
                   : "bg-blue-50/70 text-blue-800 hover:bg-blue-100/70 border-blue-100 cursor-pointer"
-              }`}
+                }`}
             >
               <td colSpan={10} className="px-4 py-2 text-xs sm:text-sm font-bold text-left">
                 <div className="flex items-center gap-2">
@@ -479,13 +478,12 @@ const ItemsTable: React.FC<ItemsTableProps> = ({
             {!collapsedSections.shuttering && plateSizes.filter(ps => (ps.category || 'shuttering') === 'shuttering').map(renderDesktopRow)}
 
             {/* Jacks Section */}
-            <tr 
+            <tr
               onClick={() => toggleSection('jack')}
-              className={`font-semibold border-y select-none transition-colors ${
-                activeCategory && activeCategory !== 'jack'
+              className={`font-semibold border-y select-none transition-colors ${activeCategory && activeCategory !== 'jack'
                   ? "bg-gray-100/60 text-gray-400 cursor-not-allowed opacity-60 border-gray-200"
                   : "bg-purple-50/70 text-purple-800 hover:bg-purple-100/70 border-purple-100 cursor-pointer"
-              }`}
+                }`}
             >
               <td colSpan={10} className="px-4 py-2 text-xs sm:text-sm font-bold text-left">
                 <div className="flex items-center gap-2">
@@ -505,13 +503,12 @@ const ItemsTable: React.FC<ItemsTableProps> = ({
             {/* Cuplock Section */}
             {plateSizes.some(ps => ps.category === 'cuplock') && (
               <>
-                <tr 
+                <tr
                   onClick={() => toggleSection('cuplock')}
-                  className={`font-semibold border-y select-none transition-colors ${
-                    activeCategory && activeCategory !== 'cuplock'
+                  className={`font-semibold border-y select-none transition-colors ${activeCategory && activeCategory !== 'cuplock'
                       ? "bg-gray-100/60 text-gray-400 cursor-not-allowed opacity-60 border-gray-200"
                       : "bg-orange-50/70 text-orange-800 hover:bg-orange-100/70 border-orange-100 cursor-pointer"
-                  }`}
+                    }`}
                 >
                   <td colSpan={10} className="px-4 py-2 text-xs sm:text-sm font-bold text-left">
                     <div className="flex items-center gap-2">
@@ -533,13 +530,12 @@ const ItemsTable: React.FC<ItemsTableProps> = ({
             {/* Other Section */}
             {plateSizes.some(ps => ps.category === 'other') && (
               <>
-                <tr 
+                <tr
                   onClick={() => toggleSection('other')}
-                  className={`font-semibold border-y select-none transition-colors ${
-                    activeCategory && activeCategory !== 'other'
+                  className={`font-semibold border-y select-none transition-colors ${activeCategory && activeCategory !== 'other'
                       ? "bg-gray-100/60 text-gray-400 cursor-not-allowed opacity-60 border-gray-200"
                       : "bg-green-50/70 text-green-800 hover:bg-green-100/70 border-green-100 cursor-pointer"
-                  }`}
+                    }`}
                 >
                   <td colSpan={10} className="px-4 py-2 text-xs sm:text-sm font-bold text-left">
                     <div className="flex items-center gap-2">
@@ -614,17 +610,15 @@ const ItemsTable: React.FC<ItemsTableProps> = ({
                 </thead>
                 <tbody className="bg-white divide-y divide-gray-200">
                   {/* Shuttering Plates Section */}
-                  <tr 
+                  <tr
                     onClick={() => toggleSection('shuttering')}
-                    className={`font-semibold border-y select-none transition-colors ${
-                      activeCategory && activeCategory !== 'shuttering'
+                    className={`font-semibold border-y select-none transition-colors ${activeCategory && activeCategory !== 'shuttering'
                         ? "bg-gray-100/60 text-gray-400 cursor-not-allowed opacity-60 border-gray-200"
                         : "bg-blue-50/70 text-blue-800 border-blue-100 cursor-pointer"
-                    }`}
+                      }`}
                   >
-                    <td colSpan={10} className={`px-2 py-1 text-[11px] sm:text-xs font-bold sticky left-0 z-10 text-left transition-colors ${
-                      activeCategory && activeCategory !== 'shuttering' ? "bg-gray-100/60" : "bg-blue-50/70"
-                    }`}>
+                    <td colSpan={10} className={`px-2 py-1 text-[11px] sm:text-xs font-bold sticky left-0 z-10 text-left transition-colors ${activeCategory && activeCategory !== 'shuttering' ? "bg-gray-100/60" : "bg-blue-50/70"
+                      }`}>
                       <div className="flex items-center gap-1.5">
                         {activeCategory && activeCategory !== 'shuttering' ? (
                           <span className="text-[9px] bg-gray-200 text-gray-500 px-1 py-0.5 rounded font-medium">{t('locked')}</span>
@@ -640,17 +634,15 @@ const ItemsTable: React.FC<ItemsTableProps> = ({
                   {!collapsedSections.shuttering && plateSizes.filter(ps => (ps.category || 'shuttering') === 'shuttering').map((ps, idx) => renderMobileRow(ps, idx))}
 
                   {/* Jacks Section */}
-                  <tr 
+                  <tr
                     onClick={() => toggleSection('jack')}
-                    className={`font-semibold border-y select-none transition-colors ${
-                      activeCategory && activeCategory !== 'jack'
+                    className={`font-semibold border-y select-none transition-colors ${activeCategory && activeCategory !== 'jack'
                         ? "bg-gray-100/60 text-gray-400 cursor-not-allowed opacity-60 border-gray-200"
                         : "bg-purple-50/70 text-purple-800 border-purple-100 cursor-pointer"
-                    }`}
+                      }`}
                   >
-                    <td colSpan={10} className={`px-2 py-1 text-[11px] sm:text-xs font-bold sticky left-0 z-10 text-left transition-colors ${
-                      activeCategory && activeCategory !== 'jack' ? "bg-gray-100/60" : "bg-purple-50/70"
-                    }`}>
+                    <td colSpan={10} className={`px-2 py-1 text-[11px] sm:text-xs font-bold sticky left-0 z-10 text-left transition-colors ${activeCategory && activeCategory !== 'jack' ? "bg-gray-100/60" : "bg-purple-50/70"
+                      }`}>
                       <div className="flex items-center gap-1.5">
                         {activeCategory && activeCategory !== 'jack' ? (
                           <span className="text-[9px] bg-gray-200 text-gray-500 px-1 py-0.5 rounded font-medium">{t('locked')}</span>
@@ -668,17 +660,15 @@ const ItemsTable: React.FC<ItemsTableProps> = ({
                   {/* Cuplock Section */}
                   {plateSizes.some(ps => ps.category === 'cuplock') && (
                     <>
-                      <tr 
+                      <tr
                         onClick={() => toggleSection('cuplock')}
-                        className={`font-semibold border-y select-none transition-colors ${
-                          activeCategory && activeCategory !== 'cuplock'
+                        className={`font-semibold border-y select-none transition-colors ${activeCategory && activeCategory !== 'cuplock'
                             ? "bg-gray-100/60 text-gray-400 cursor-not-allowed opacity-60 border-gray-200"
                             : "bg-orange-50/70 text-orange-800 border-orange-100 cursor-pointer"
-                        }`}
+                          }`}
                       >
-                        <td colSpan={10} className={`px-2 py-1 text-[11px] sm:text-xs font-bold sticky left-0 z-10 text-left transition-colors ${
-                          activeCategory && activeCategory !== 'cuplock' ? "bg-gray-100/60" : "bg-orange-50/70"
-                        }`}>
+                        <td colSpan={10} className={`px-2 py-1 text-[11px] sm:text-xs font-bold sticky left-0 z-10 text-left transition-colors ${activeCategory && activeCategory !== 'cuplock' ? "bg-gray-100/60" : "bg-orange-50/70"
+                          }`}>
                           <div className="flex items-center gap-1.5">
                             {activeCategory && activeCategory !== 'cuplock' ? (
                               <span className="text-[9px] bg-gray-200 text-gray-500 px-1 py-0.5 rounded font-medium">{t('locked')}</span>
@@ -698,17 +688,15 @@ const ItemsTable: React.FC<ItemsTableProps> = ({
                   {/* Other Section */}
                   {plateSizes.some(ps => ps.category === 'other') && (
                     <>
-                      <tr 
+                      <tr
                         onClick={() => toggleSection('other')}
-                        className={`font-semibold border-y select-none transition-colors ${
-                          activeCategory && activeCategory !== 'other'
+                        className={`font-semibold border-y select-none transition-colors ${activeCategory && activeCategory !== 'other'
                             ? "bg-gray-100/60 text-gray-400 cursor-not-allowed opacity-60 border-gray-200"
                             : "bg-green-50/70 text-green-800 border-green-100 cursor-pointer"
-                        }`}
+                          }`}
                       >
-                        <td colSpan={10} className={`px-2 py-1 text-[11px] sm:text-xs font-bold sticky left-0 z-10 text-left transition-colors ${
-                          activeCategory && activeCategory !== 'other' ? "bg-gray-100/60" : "bg-green-50/70"
-                        }`}>
+                        <td colSpan={10} className={`px-2 py-1 text-[11px] sm:text-xs font-bold sticky left-0 z-10 text-left transition-colors ${activeCategory && activeCategory !== 'other' ? "bg-gray-100/60" : "bg-green-50/70"
+                          }`}>
                           <div className="flex items-center gap-1.5">
                             {activeCategory && activeCategory !== 'other' ? (
                               <span className="text-[9px] bg-gray-200 text-gray-500 px-1 py-0.5 rounded font-medium">{t('locked')}</span>
@@ -767,7 +755,7 @@ const ItemsTable: React.FC<ItemsTableProps> = ({
                       <>
                         <td className="px-1 py-3 text-xs font-bold text-center border-r border-gray-200 sm:text-sm">
                           <div className="px-2 py-1 rounded-lg bg-orange-50">
-                            {Object.values(items.items || {}).reduce((sum, item) => sum + (item.borrowed || 0), 0)} માર્કો
+                            {Object.values(items.items || {}).reduce((sum, item) => sum + (item.borrowed || 0), 0)} બીજો ડેપો
                           </div>
                         </td>
                       </>

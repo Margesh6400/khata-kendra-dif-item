@@ -1,10 +1,24 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { useLanguage } from '../contexts/LanguageContext';
-import { Shield, Fingerprint, Delete, AlertTriangle, Lock, CheckCircle2 } from 'lucide-react';
+import { 
+  Shield, 
+  Fingerprint, 
+  Delete, 
+  AlertTriangle, 
+  Lock, 
+  CheckCircle2,
+  Layers,
+  Construction,
+  Boxes,
+  FolderOpen,
+  ChevronDown
+} from 'lucide-react';
 import toast from 'react-hot-toast';
 import { useSettings } from '../contexts/SettingsContext';
 import { useAuth } from '../contexts/AuthContext';
 import { supabase } from '../utils/supabase';
+import logo from '../assets/logo.png';
+import LanguageToggle from './LanguageToggle';
 
 interface LockScreenProps {
   children: React.ReactNode;
@@ -344,89 +358,225 @@ const LockScreen: React.FC<LockScreenProps> = ({ children }) => {
           position: 'fixed', inset: 0, zIndex: 9999,
           display: 'flex', flexDirection: 'column',
           alignItems: 'center', justifyContent: 'center',
-          background: 'linear-gradient(145deg, #0f172a 0%, #1e293b 100%)',
-          userSelect: 'none', overflow: 'hidden',
+          background: 'linear-gradient(145deg, #070b19 0%, #0f172a 60%, #050814 100%)',
+          userSelect: 'none', overflowY: 'auto',
           padding: '24px'
         }}
       >
+        {/* Background Glowing Blobs */}
+        <div style={{
+          position: 'absolute', width: 450, height: 450,
+          borderRadius: '50%', top: '-150px', left: '-100px',
+          background: 'radial-gradient(circle, rgba(59,130,246,0.1) 0%, transparent 70%)',
+          pointerEvents: 'none',
+        }} />
+        <div style={{
+          position: 'absolute', width: 400, height: 400,
+          borderRadius: '50%', bottom: '-150px', right: '-100px',
+          background: 'radial-gradient(circle, rgba(168,85,247,0.08) 0%, transparent 70%)',
+          pointerEvents: 'none',
+        }} />
+
+        {/* Absolute Language Toggle */}
+        <div className="lang-toggle-wrapper" style={{ position: 'absolute', top: 20, right: 20, zIndex: 10000 }}>
+          <LanguageToggle />
+        </div>
+
         <style>{`
           .cat-card:hover {
-            transform: translateY(-4px);
-            box-shadow: 0 12px 24px -10px rgba(59, 130, 246, 0.4);
-            border-color: rgba(59, 130, 246, 0.5) !important;
+            transform: translateY(-5px);
+            box-shadow: 0 16px 32px -10px var(--hover-shadow-color);
+          }
+          .cat-card:hover .icon-container {
+            transform: scale(1.1) rotate(4deg);
           }
           .cat-card:active {
-            transform: scale(0.98);
+            transform: scale(0.97);
+          }
+          .cat-card-shuttering:hover { border-color: rgba(239, 68, 68, 0.5) !important; --hover-shadow-color: rgba(239, 68, 68, 0.25); }
+          .cat-card-jack:hover { border-color: rgba(16, 185, 129, 0.5) !important; --hover-shadow-color: rgba(16, 185, 129, 0.25); }
+          .cat-card-cuplock:hover { border-color: rgba(168, 85, 247, 0.5) !important; --hover-shadow-color: rgba(168, 85, 247, 0.25); }
+          .cat-card-other:hover { border-color: rgba(59, 130, 246, 0.5) !important; --hover-shadow-color: rgba(59, 130, 246, 0.25); }
+          
+          @media (max-width: 640px) {
+            .category-selector-root {
+              justify-content: flex-start !important;
+              padding: 16px !important;
+            }
+            .category-card-container {
+              padding: 24px 16px !important;
+              border-radius: 20px !important;
+              margin-top: 56px !important; /* spacing below floating language selector */
+              margin-bottom: 24px !important;
+            }
+            .category-logo-badge {
+              width: 44px !important;
+              height: 44px !important;
+              margin-bottom: 12px !important;
+              border-radius: 12px !important;
+              padding: 6px !important;
+            }
+            .category-title {
+              font-size: 19px !important;
+              margin-bottom: 4px !important;
+            }
+            .category-subtitle {
+              font-size: 11px !important;
+              margin-bottom: 20px !important;
+            }
+            .category-grid {
+              gap: 12px !important;
+            }
+            .cat-card {
+              padding: 16px 10px !important;
+              border-radius: 16px !important;
+            }
+            .cat-card .icon-container {
+              width: 40px !important;
+              height: 40px !important;
+              margin-bottom: 10px !important;
+              border-radius: 12px !important;
+            }
+            .cat-card .icon-container svg {
+              width: 18px !important;
+              height: 18px !important;
+            }
+            .cat-card span:nth-of-type(1) {
+              font-size: 14px !important;
+            }
+            .cat-card span:nth-of-type(2) {
+              font-size: 10px !important;
+              line-height: 1.3 !important;
+            }
+            .lang-toggle-wrapper {
+              top: 14px !important;
+              right: 14px !important;
+            }
           }
         `}</style>
-        <div style={{ maxWidth: 480, width: '100%', textAlign: 'center' }}>
-          <h2 style={{ fontSize: 24, fontWeight: 800, color: '#f8fafc', marginBottom: 8 }}>
+
+        <div className="category-card-container" style={{
+          maxWidth: 500, width: '100%', 
+          background: 'rgba(15, 23, 42, 0.45)', 
+          backdropFilter: 'blur(20px)',
+          WebkitBackdropFilter: 'blur(20px)',
+          border: '1px solid rgba(255, 255, 255, 0.08)',
+          borderRadius: 28,
+          padding: '36px 28px',
+          boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.5), inset 0 1px 1px rgba(255, 255, 255, 0.05)',
+          textAlign: 'center',
+          position: 'relative',
+          zIndex: 10,
+        }}>
+          {/* Logo Badge */}
+          <div className="category-logo-badge" style={{
+            width: 60, height: 60,
+            borderRadius: '16px',
+            background: 'rgba(255, 255, 255, 0.03)',
+            border: '1.5px solid rgba(255, 255, 255, 0.08)',
+            margin: '0 auto 16px',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            boxShadow: '0 8px 32px rgba(0, 0, 0, 0.2)',
+            padding: 8
+          }}>
+            <img src={logo} alt="Logo" style={{ objectFit: 'contain', width: '100%', height: '100%' }} />
+          </div>
+
+          <h2 className="category-title" style={{ fontSize: 22, fontWeight: 800, color: '#f8fafc', marginBottom: 6 }}>
             {language === 'gu' ? 'વિભાગ પસંદ કરો' : 'Select Business Section'}
           </h2>
-          <p style={{ fontSize: 14, color: '#94a3b8', marginBottom: 32 }}>
+          <p className="category-subtitle" style={{ fontSize: 13, color: '#94a3b8', marginBottom: 28, lineHeight: 1.5 }}>
             {language === 'gu' 
               ? 'આગળ વધવા માટે શ્રેણી પસંદ કરો. તમારો ડેટા સંપૂર્ણપણે અલગ રાખવામાં આવશે.' 
               : 'Please select a section to proceed. Your data will be kept totally separate.'}
           </p>
 
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: 16 }}>
+          <div className="category-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: 16 }}>
             {[
               {
                 id: 'shuttering' as const,
                 label: language === 'gu' ? 'શટરિંગ' : 'Shuttering',
                 desc: language === 'gu' ? 'પ્લેટ અને એસેસરીઝ' : 'Plates & Accessories',
-                icon: '🥞',
-                color: 'linear-gradient(135deg, rgba(239, 68, 68, 0.15) 0%, rgba(220, 38, 38, 0.05) 100%)',
+                icon: Layers,
+                color: 'linear-gradient(135deg, rgba(239, 68, 68, 0.12) 0%, rgba(239, 68, 68, 0.02) 100%)',
                 borderColor: 'rgba(239, 68, 68, 0.2)',
+                iconBg: '#dc2626',
+                glowColor: 'rgba(239, 68, 68, 0.15)',
               },
               {
                 id: 'jack' as const,
                 label: language === 'gu' ? 'જેક' : 'Jack',
                 desc: language === 'gu' ? 'પાઇપ અને પ્રોપ્સ' : 'Pipes & Props',
-                icon: '🏗️',
-                color: 'linear-gradient(135deg, rgba(34, 197, 94, 0.15) 0%, rgba(22, 163, 74, 0.05) 100%)',
-                borderColor: 'rgba(34, 197, 94, 0.2)',
+                icon: Construction,
+                color: 'linear-gradient(135deg, rgba(16, 185, 129, 0.12) 0%, rgba(16, 185, 129, 0.02) 100%)',
+                borderColor: 'rgba(16, 185, 129, 0.2)',
+                iconBg: '#16a34a',
+                glowColor: 'rgba(16, 185, 129, 0.15)',
               },
               {
                 id: 'cuplock' as const,
                 label: language === 'gu' ? 'કપલોક' : 'Cuplock',
                 desc: language === 'gu' ? 'સ્કેફોલ્ડિંગ સિસ્ટમ' : 'Scaffolding System',
-                icon: '🧱',
-                color: 'linear-gradient(135deg, rgba(168, 85, 247, 0.15) 0%, rgba(147, 51, 234, 0.05) 100%)',
+                icon: Boxes,
+                color: 'linear-gradient(135deg, rgba(168, 85, 247, 0.12) 0%, rgba(168, 85, 247, 0.02) 100%)',
                 borderColor: 'rgba(168, 85, 247, 0.2)',
+                iconBg: '#8b5cf6',
+                glowColor: 'rgba(168, 85, 247, 0.15)',
               },
               {
                 id: 'other' as const,
                 label: language === 'gu' ? 'અન્ય' : 'Other',
                 desc: language === 'gu' ? 'વધારાની સામગ્રી' : 'Miscellaneous Items',
-                icon: '📁',
-                color: 'linear-gradient(135deg, rgba(100, 116, 139, 0.15) 0%, rgba(71, 85, 105, 0.05) 100%)',
-                borderColor: 'rgba(100, 116, 139, 0.2)',
+                icon: FolderOpen,
+                color: 'linear-gradient(135deg, rgba(59, 130, 246, 0.12) 0%, rgba(59, 130, 246, 0.02) 100%)',
+                borderColor: 'rgba(59, 130, 246, 0.2)',
+                iconBg: '#2563eb',
+                glowColor: 'rgba(59, 130, 246, 0.15)',
               }
-            ].map(cat => (
-              <button
-                key={cat.id}
-                className="cat-card"
-                onClick={() => setActiveCategory(cat.id)}
-                style={{
-                  background: cat.color,
-                  border: `1.5px solid ${cat.borderColor}`,
-                  borderRadius: 16,
-                  padding: '24px 16px',
-                  display: 'flex',
-                  flexDirection: 'column',
-                  alignItems: 'center',
-                  cursor: 'pointer',
-                  transition: 'all 0.2s ease',
-                  textAlign: 'center',
-                  outline: 'none',
-                }}
-              >
-                <span style={{ fontSize: 32, marginBottom: 12 }}>{cat.icon}</span>
-                <span style={{ fontSize: 16, fontWeight: 700, color: '#f8fafc', marginBottom: 4 }}>{cat.label}</span>
-                <span style={{ fontSize: 11, color: '#64748b' }}>{cat.desc}</span>
-              </button>
-            ))}
+            ].map(cat => {
+              const IconComponent = cat.icon;
+              return (
+                <button
+                  key={cat.id}
+                  className={`cat-card cat-card-${cat.id}`}
+                  onClick={() => setActiveCategory(cat.id)}
+                  style={{
+                    background: cat.color,
+                    border: `1.5px solid ${cat.borderColor}`,
+                    borderRadius: 20,
+                    padding: '24px 16px',
+                    display: 'flex',
+                    flexDirection: 'column',
+                    alignItems: 'center',
+                    cursor: 'pointer',
+                    transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
+                    textAlign: 'center',
+                    outline: 'none',
+                    position: 'relative',
+                    overflow: 'hidden',
+                  }}
+                >
+                  <div className="icon-container" style={{
+                    width: 48, height: 48,
+                    borderRadius: '14px',
+                    background: cat.iconBg,
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    marginBottom: 14,
+                    boxShadow: `0 6px 16px ${cat.glowColor}`,
+                    color: '#fff',
+                    transition: 'transform 0.3s ease',
+                  }}>
+                    <IconComponent size={22} strokeWidth={2.2} />
+                  </div>
+                  <span style={{ fontSize: 16, fontWeight: 700, color: '#f8fafc', marginBottom: 4 }}>{cat.label}</span>
+                  <span style={{ fontSize: 11, color: '#94a3b8', lineHeight: 1.4 }}>{cat.desc}</span>
+                </button>
+              );
+            })}
           </div>
         </div>
       </div>

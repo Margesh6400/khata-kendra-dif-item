@@ -252,6 +252,8 @@ interface ChallanDetailsStepProps {
   setDriverPhone: (val: string) => void;
   vehicleNumber: string;
   setVehicleNumber: (val: string) => void;
+  showLostAndDamaged: boolean;
+  setShowLostAndDamaged: (value: boolean) => void;
 }
 
 
@@ -282,9 +284,11 @@ const ChallanDetailsStep: React.FC<ChallanDetailsStepProps> = ({
   driverPhone,
   setDriverPhone,
   vehicleNumber,
-  setVehicleNumber
+  setVehicleNumber,
+  showLostAndDamaged,
+  setShowLostAndDamaged
 }) => {
-  const { t } = useLanguage();
+  const { t, language } = useLanguage();
   const { showDriverDetails } = useSettings();
   const navigate = useNavigate();
 
@@ -367,34 +371,38 @@ const ChallanDetailsStep: React.FC<ChallanDetailsStepProps> = ({
                 <FileText className="w-3 h-3 sm:w-3.5 sm:h-3.5" />
                 {t('challanNumber')} <span className="text-red-500">*</span>
               </label>
-              <div className="flex items-center gap-2">
+              <div className="flex items-center gap-1.5 sm:gap-2">
                 <input
                   type="text"
                   value={challanNumber}
                   onChange={(e) => setChallanNumber(e.target.value)}
                   placeholder="Challan #"
-                  className={`flex-1 px-2.5 py-2 sm:px-3 sm:py-2.5 border rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent text-sm sm:text-sm ${errors.challanNumber ? 'border-red-500' : 'border-gray-300'
+                  className={`flex-1 min-w-[80px] px-2 py-2 sm:px-3 sm:py-2.5 border rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent text-sm ${errors.challanNumber ? 'border-red-500' : 'border-gray-300'
                     }`}
                 />
                 <button
+                  type="button"
                   onClick={() => setHideExtraColumns(!hideExtraColumns)}
-                  className="inline-flex items-center gap-1 sm:gap-1.5 px-2 py-2 sm:px-3 text-xs sm:text-xs font-medium text-green-600 transition-colors rounded-md sm:rounded-lg bg-green-50 hover:bg-green-100 touch-manipulation active:scale-95 border border-green-100 whitespace-nowrap"
+                  className="inline-flex items-center gap-1 px-1.5 py-1.5 sm:px-3 sm:py-2.5 text-xs font-medium text-green-600 transition-colors rounded-md sm:rounded-lg bg-green-50 hover:bg-green-100 touch-manipulation active:scale-95 border border-green-100 whitespace-nowrap"
+                  title={t('columns2')}
                 >
                   {hideExtraColumns ? <EyeOff className="w-3.5 h-3.5" /> : <Eye className="w-3.5 h-3.5" />}
                   <span>
-                    {t('columns2')}
+                    <span className="sm:hidden">{language === 'gu' ? 'ડેપો ૨' : 'Depo 2'}</span>
+                    <span className="hidden sm:inline">{t('columns2')}</span>
                   </span>
                 </button>
                 <button
-                  onClick={onAllReturn}
-                  className={`inline-flex items-center gap-1 sm:gap-1.5 px-2 py-2 sm:px-3 text-xs font-medium rounded-md sm:rounded-lg transition-colors touch-manipulation active:scale-95 border whitespace-nowrap ${
-                    isAllReturn
-                      ? 'bg-green-600 text-white border-green-600'
-                      : 'text-green-600 bg-green-50 hover:bg-green-100 border-green-100'
-                  }`}
+                  type="button"
+                  onClick={() => setShowLostAndDamaged(!showLostAndDamaged)}
+                  className="inline-flex items-center gap-1 px-1.5 py-1.5 sm:px-3 sm:py-2.5 text-xs font-medium text-amber-600 transition-colors rounded-md sm:rounded-lg bg-amber-50 hover:bg-amber-100 touch-manipulation active:scale-95 border border-amber-100 whitespace-nowrap"
+                  title={t('lostDamaged')}
                 >
-                  <CheckCircle className="w-3.5 h-3.5" />
-                  <span>All Return</span>
+                  {!showLostAndDamaged ? <EyeOff className="w-3.5 h-3.5 text-amber-500" /> : <Eye className="w-3.5 h-3.5 text-amber-600" />}
+                  <span>
+                    <span className="sm:hidden">{language === 'gu' ? 'ગુમ/નુકસાન' : 'L/D'}</span>
+                    <span className="hidden sm:inline">{t('lostDamaged')}</span>
+                  </span>
                 </button>
               </div>
               {errors.challanNumber && (
@@ -524,7 +532,7 @@ const ChallanDetailsStep: React.FC<ChallanDetailsStepProps> = ({
             hideColumns={hideExtraColumns}
             stockData={stockData}
             showAvailable={false}
-            showLost={true}
+            showLost={showLostAndDamaged}
           />
         </div>
 
@@ -635,6 +643,7 @@ const JamaChallan: React.FC = () => {
     }
   };
   const [hideExtraColumns, setHideExtraColumns] = useState(true);
+  const [showLostAndDamaged, setShowLostAndDamaged] = useState(false);
 
 
   const [items, setItems] = useState<ItemsData>({ items: {}, main_note: '' });
@@ -815,6 +824,7 @@ const JamaChallan: React.FC = () => {
       setOutstandingBalances(balances);
       setBorrowedOutstanding(borrowedBal);
       setIsAllReturn(false);
+      setShowLostAndDamaged(false);
 
       // Auto-show borrowed column if there are borrowed items
       const hasBorrowedItems = Object.values(borrowedBal).some(val => val > 0);
@@ -1207,6 +1217,8 @@ const JamaChallan: React.FC = () => {
                 setDriverPhone={setDriverPhone}
                 vehicleNumber={vehicleNumber}
                 setVehicleNumber={setVehicleNumber}
+                showLostAndDamaged={showLostAndDamaged}
+                setShowLostAndDamaged={setShowLostAndDamaged}
               />
             )
           )}

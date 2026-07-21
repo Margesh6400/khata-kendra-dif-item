@@ -30,7 +30,7 @@ export const BAND_COLUMN_FIELDS: Array<{ field: BandColumnField; label: string; 
   { field: 'index', label: 'Row No.', labelGu: 'ક્રમ' },
   { field: 'name', label: 'Item / Size', labelGu: 'આઈટમ / સાઇઝ' },
   { field: 'qty', label: 'Quantity', labelGu: 'નંગ' },
-  { field: 'borrowed', label: 'Marco (Borrowed)', labelGu: 'માર્કો' },
+  { field: 'borrowed', label: 'Marco (Borrowed)', labelGu: 'બીજો ડેપો' },
   { field: 'lost', label: 'Lost', labelGu: 'ગુમ' },
   { field: 'damaged', label: 'Damaged', labelGu: 'નુકસાન' },
   { field: 'total', label: 'Total', labelGu: 'કુલ' },
