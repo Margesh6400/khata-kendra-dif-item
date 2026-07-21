@@ -4,6 +4,7 @@ import { supabase } from '../utils/supabase';
 export type DateSortingMethod = 'standard' | 'jamaFirst';
 export type LedgerDownloadFormat = 'detailed' | 'simple' | 'split';
 export type ShareBillMode = 'image' | 'text';
+export type BusinessCategory = 'shuttering' | 'jack' | 'cuplock' | 'other';
 
 const MIN_FONT_SIZE = 12;
 const MAX_FONT_SIZE = 22;
@@ -23,6 +24,12 @@ interface SettingsContextType {
   setShowDriverDetails: (show: boolean) => void;
   shareBillMode: ShareBillMode;
   setShareBillMode: (mode: ShareBillMode) => void;
+  requireLoginPassword: boolean;
+  setRequireLoginPassword: (val: boolean) => void;
+  enableCategorySeparation: boolean;
+  setEnableCategorySeparation: (val: boolean) => void;
+  activeCategory: BusinessCategory | null;
+  setActiveCategory: (category: BusinessCategory | null) => void;
 }
 
 const SettingsContext = createContext<SettingsContextType | undefined>(undefined);
@@ -54,6 +61,21 @@ export const SettingsProvider: React.FC<{ children: ReactNode }> = ({ children }
     return (saved === 'text' || saved === 'image') ? saved : 'image';
   });
 
+  const [requireLoginPassword, setRequireLoginPasswordState] = useState<boolean>(() => {
+    const saved = localStorage.getItem('requireLoginPassword');
+    return saved === 'true';
+  });
+
+  const [enableCategorySeparation, setEnableCategorySeparationState] = useState<boolean>(() => {
+    const saved = localStorage.getItem('enableCategorySeparation');
+    return saved === 'true';
+  });
+
+  const [activeCategory, setActiveCategoryState] = useState<BusinessCategory | null>(() => {
+    const saved = sessionStorage.getItem('activeCategory');
+    return (saved === 'shuttering' || saved === 'jack' || saved === 'cuplock' || saved === 'other') ? saved : null;
+  });
+
   useEffect(() => {
     localStorage.setItem('dateSortingMethod', dateSortingMethod);
   }, [dateSortingMethod]);
@@ -75,6 +97,26 @@ export const SettingsProvider: React.FC<{ children: ReactNode }> = ({ children }
   useEffect(() => {
     localStorage.setItem('shareBillMode', shareBillMode);
   }, [shareBillMode]);
+
+  useEffect(() => {
+    localStorage.setItem('requireLoginPassword', String(requireLoginPassword));
+  }, [requireLoginPassword]);
+
+  useEffect(() => {
+    localStorage.setItem('enableCategorySeparation', String(enableCategorySeparation));
+    if (!enableCategorySeparation) {
+      setActiveCategoryState(null);
+      sessionStorage.removeItem('activeCategory');
+    }
+  }, [enableCategorySeparation]);
+
+  useEffect(() => {
+    if (activeCategory) {
+      sessionStorage.setItem('activeCategory', activeCategory);
+    } else {
+      sessionStorage.removeItem('activeCategory');
+    }
+  }, [activeCategory]);
 
   const setDateSortingMethod = (method: DateSortingMethod) => {
     setDateSortingMethodState(method);
@@ -116,6 +158,18 @@ export const SettingsProvider: React.FC<{ children: ReactNode }> = ({ children }
     setShareBillModeState(mode);
   };
 
+  const setRequireLoginPassword = (val: boolean) => {
+    setRequireLoginPasswordState(val);
+  };
+
+  const setEnableCategorySeparation = (val: boolean) => {
+    setEnableCategorySeparationState(val);
+  };
+
+  const setActiveCategory = (category: BusinessCategory | null) => {
+    setActiveCategoryState(category);
+  };
+
   return (
     <SettingsContext.Provider value={{
       dateSortingMethod,
@@ -131,6 +185,12 @@ export const SettingsProvider: React.FC<{ children: ReactNode }> = ({ children }
       setShowDriverDetails,
       shareBillMode,
       setShareBillMode,
+      requireLoginPassword,
+      setRequireLoginPassword,
+      enableCategorySeparation,
+      setEnableCategorySeparation,
+      activeCategory,
+      setActiveCategory,
     }}>
       {children}
     </SettingsContext.Provider>

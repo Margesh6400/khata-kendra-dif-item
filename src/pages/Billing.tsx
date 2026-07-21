@@ -2,6 +2,7 @@ import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { Search, MapPin, Phone, User, ChevronRight, FileStack, Loader2, X, CheckSquare, Square } from "lucide-react";
 import { useLanguage } from "../contexts/LanguageContext";
+import { useSettings } from "../contexts/SettingsContext";
 import { supabase } from "../utils/supabase";
 import Navbar from "../components/Navbar";
 import toast, { Toaster } from "react-hot-toast";
@@ -60,6 +61,7 @@ const ClientCard: React.FC<ClientCardProps> = ({ client, balance, onClick }) => 
 export default function Billing() {
   const navigate = useNavigate();
   const { t } = useLanguage();
+  const { enableCategorySeparation, activeCategory } = useSettings();
   const [clients, setClients] = useState<ClientFormData[]>([]);
   const [clientBalances, setClientBalances] = useState<Record<string, number>>({});
   const [searchQuery, setSearchQuery] = useState("");
@@ -126,23 +128,34 @@ export default function Billing() {
 
   const fetchClients = async () => {
     try {
-      const { data: clientsData, error } = await supabase
-        .from("clients")
-        .select("*")
+      let clientsQuery = supabase.from("clients").select("*");
+      let billsQuery = supabase.from("bills").select("client_id, due_payment, to_date, created_at");
+
+      if (enableCategorySeparation && activeCategory) {
+        billsQuery = billsQuery.eq('category', activeCategory);
+      }
+
+      const { data: clientsData, error } = await clientsQuery
         .order("client_nic_name", { ascending: true });
 
       if (error) throw error;
       setClients(clientsData || []);
 
       // Fetch latest balances from generated bills only
-      const { data: bills, error: billsError } = await supabase
-        .from('bills')
-        .select('client_id, due_payment, to_date, created_at')
+      const { data: bills, error: billsError } = await billsQuery
         .order('to_date', { ascending: false })
         .order('created_at', { ascending: false });
 
       if (!billsError && bills) {
         const balanceMap: Record<string, number> = {};
+        
+        // Initialize balanceMap with each client's previous_pending_amount
+        if (clientsData) {
+          clientsData.forEach(client => {
+            balanceMap[client.id] = client.previous_pending_amount || 0;
+          });
+        }
+
         const seenClients = new Set<string>();
 
         // Get the latest bill's due_payment for each client

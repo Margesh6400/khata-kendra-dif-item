@@ -2,6 +2,7 @@ import React from "react";
 import { useLanguage } from "../contexts/LanguageContext";
 import { usePlateSizes } from "../hooks/usePlateSizes";
 import { ChevronDown, ChevronRight } from "lucide-react";
+import { useSettings } from "../contexts/SettingsContext";
 
 export interface PlateSize {
   id: number;
@@ -71,7 +72,12 @@ const ItemsTable: React.FC<ItemsTableProps> = ({
 }) => {
   const { t } = useLanguage();
   const { sizes: hookPlateSizes } = usePlateSizes();
-  const plateSizes = propPlateSizes || hookPlateSizes || [];
+  const { activeCategory: globalActiveCategory, enableCategorySeparation } = useSettings();
+  const plateSizes = React.useMemo(() => {
+    const rawSizes = propPlateSizes || hookPlateSizes || [];
+    if (!enableCategorySeparation || !globalActiveCategory) return rawSizes;
+    return rawSizes.filter(ps => (ps.category || 'shuttering') === globalActiveCategory);
+  }, [propPlateSizes, hookPlateSizes, enableCategorySeparation, globalActiveCategory]);
 
   const [collapsedSections, setCollapsedSections] = React.useState<Record<string, boolean>>({
     shuttering: false,

@@ -6,6 +6,7 @@ CREATE TABLE IF NOT EXISTS clients (
   client_name text NOT NULL,
   site text NOT NULL,
   primary_phone_number text NOT NULL,
+  previous_pending_amount numeric DEFAULT 0 NOT NULL,
   is_hidden boolean DEFAULT false,
   created_at timestamptz DEFAULT now(),
   updated_at timestamptz DEFAULT now()

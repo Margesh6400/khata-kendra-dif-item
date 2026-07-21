@@ -22,6 +22,10 @@ const Settings: React.FC = () => {
     setShowDriverDetails,
     shareBillMode,
     setShareBillMode,
+    requireLoginPassword,
+    setRequireLoginPassword,
+    enableCategorySeparation,
+    setEnableCategorySeparation,
   } = useSettings();
 
   const [securityEnabled, setSecurityEnabled] = React.useState(() => localStorage.getItem('security_lock_enabled') === 'true');
@@ -746,6 +750,52 @@ const Settings: React.FC = () => {
                   <div className={`relative inline-flex h-7 w-12 flex-shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-300 ease-in-out shadow-inner ${securityEnabled ? 'bg-blue-600' : 'bg-gray-300'}`}>
                     <span
                       className={`pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow-md ring-0 transition duration-300 ease-in-out ${securityEnabled ? 'translate-x-5' : 'translate-x-0'}`}
+                    />
+                  </div>
+                </button>
+
+                {/* Require Login Password Switch */}
+                <button
+                  onClick={() => setRequireLoginPassword(!requireLoginPassword)}
+                  className={`w-full flex items-center justify-between p-4 rounded-xl border text-left transition-all ${requireLoginPassword
+                      ? 'border-blue-600 bg-blue-50/40 ring-1 ring-blue-500'
+                      : 'border-gray-200 hover:border-gray-300 bg-white'
+                    }`}
+                >
+                  <div className="pr-4">
+                    <span className="font-bold text-sm sm:text-base text-gray-900 block mb-1">
+                      {language === 'gu' ? 'લોગિન પાસવર્ડ જરૂરી કરો' : 'Require Login Password'}
+                    </span>
+                    <p className="text-xs text-gray-500 leading-relaxed">
+                      {language === 'gu' ? 'એપ્લિકેશન ખોલતી વખતે મુખ્ય એકાઉન્ટ પાસવર્ડ પૂછશે.' : 'Require account login password every time app is opened.'}
+                    </p>
+                  </div>
+                  <div className={`relative inline-flex h-7 w-12 flex-shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-300 ease-in-out shadow-inner ${requireLoginPassword ? 'bg-blue-600' : 'bg-gray-300'}`}>
+                    <span
+                      className={`pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow-md ring-0 transition duration-300 ease-in-out ${requireLoginPassword ? 'translate-x-5' : 'translate-x-0'}`}
+                    />
+                  </div>
+                </button>
+
+                {/* Separate Categories Switch */}
+                <button
+                  onClick={() => setEnableCategorySeparation(!enableCategorySeparation)}
+                  className={`w-full flex items-center justify-between p-4 rounded-xl border text-left transition-all ${enableCategorySeparation
+                      ? 'border-blue-600 bg-blue-50/40 ring-1 ring-blue-500'
+                      : 'border-gray-200 hover:border-gray-300 bg-white'
+                    }`}
+                >
+                  <div className="pr-4">
+                    <span className="font-bold text-sm sm:text-base text-gray-900 block mb-1">
+                      {language === 'gu' ? 'વ્યવસાય શ્રેણીઓ અલગ કરો' : 'Separate Business Categories'}
+                    </span>
+                    <p className="text-xs text-gray-500 leading-relaxed">
+                      {language === 'gu' ? 'શટરિંગ, જેક, કપલોક અને અન્ય માટે ક્લાયન્ટ અને વ્યવહારો સંપૂર્ણપણે અલગ કરો.' : 'Separate clients, challans, and bills for Shuttering, Jack, Cuplock, and Other.'}
+                    </p>
+                  </div>
+                  <div className={`relative inline-flex h-7 w-12 flex-shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-300 ease-in-out shadow-inner ${enableCategorySeparation ? 'bg-blue-600' : 'bg-gray-300'}`}>
+                    <span
+                      className={`pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow-md ring-0 transition duration-300 ease-in-out ${enableCategorySeparation ? 'translate-x-5' : 'translate-x-0'}`}
                     />
                   </div>
                 </button>

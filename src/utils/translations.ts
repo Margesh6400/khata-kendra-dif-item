@@ -161,6 +161,8 @@ export const translations = {
     clientName: 'ગ્રાહક પૂરું નામ',
     site: 'સાઇટ',
     primaryPhone: 'મુખ્ય ફોન નંબર',
+    previousPendingAmount: 'અગાઉની બાકી રકમ',
+    startingBalance: 'શરૂઆતની બાકી',
 
     challanNumber: 'ચલણ નંબર',
     date: 'તારીખ',
@@ -644,6 +646,8 @@ export const translations = {
     clientName: 'Client Full Name',
     site: 'Site',
     primaryPhone: 'Primary Phone Number',
+    previousPendingAmount: 'Previous Pending Amount',
+    startingBalance: 'Starting Balance',
 
     challanNumber: 'Challan Number',
     date: 'Date',

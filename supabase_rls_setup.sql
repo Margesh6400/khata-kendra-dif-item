@@ -30,6 +30,7 @@ CREATE TABLE IF NOT EXISTS clients (
   primary_phone_number text NOT NULL,
   daily_rent_price numeric DEFAULT 1.5 NOT NULL,
   jack_rents jsonb DEFAULT '{}'::jsonb NOT NULL,
+  previous_pending_amount numeric DEFAULT 0 NOT NULL,
   is_hidden boolean DEFAULT false NOT NULL,
   created_at timestamptz DEFAULT now(),
   updated_at timestamptz DEFAULT now()

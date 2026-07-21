@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
+import { useSettings } from '../contexts/SettingsContext';
 import { format } from 'date-fns';
 import {
   Search,
@@ -29,7 +30,6 @@ import { tryExportChallanDesign } from '../utils/challanDesign/exportChallanDesi
 import Navbar from '../components/Navbar';
 import toast, { Toaster } from 'react-hot-toast';
 import { fetchClientTransactions } from '../utils/challanFetching';
-import { useSettings } from '../contexts/SettingsContext';
 
 
 interface ClientFormData {
@@ -574,6 +574,7 @@ const JamaChallan: React.FC = () => {
   const location = useLocation();
   const { t } = useLanguage();
   const { sizes: plateSizes } = usePlateSizes();
+  const { enableCategorySeparation, activeCategory } = useSettings();
 
 
   // Step management
@@ -967,17 +968,20 @@ const JamaChallan: React.FC = () => {
       }
 
 
-      const { error } = await supabase.from('jama_challans').insert([
-        {
-          jama_challan_number: challanNumber,
-          client_id: selectedClient.id,
-          jama_date: date,
-          driver_name: driverName,
-          driver_mobile: driverPhone || null,
-          vehicle_number: vehicleNumber || null,
-          is_all_return: isAllReturn,
-        },
-      ]);
+      const insertPayload: any = {
+        jama_challan_number: challanNumber,
+        client_id: selectedClient.id,
+        jama_date: date,
+        driver_name: driverName,
+        driver_mobile: driverPhone || null,
+        vehicle_number: vehicleNumber || null,
+        is_all_return: isAllReturn,
+      };
+      if (enableCategorySeparation) {
+        insertPayload.category = activeCategory || 'shuttering';
+      }
+
+      const { error } = await supabase.from('jama_challans').insert([insertPayload]);
 
 
       if (error) throw error;

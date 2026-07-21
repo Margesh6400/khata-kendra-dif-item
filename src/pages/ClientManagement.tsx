@@ -1,5 +1,4 @@
 import React, { useState, useEffect, useMemo } from 'react';
-import { useNavigate } from 'react-router-dom';
 import {
   Users,
   UserPlus,
@@ -213,17 +212,20 @@ const ClientManagement: React.FC = () => {
         }
       }
 
+      const updatePayload: any = {
+        client_nic_name: data.client_nic_name,
+        client_name: data.client_name,
+        site: data.site,
+        primary_phone_number: data.primary_phone_number,
+        daily_rent_price: data.daily_rent_price ?? 1,
+        jack_rents: data.jack_rents ?? {},
+        previous_pending_amount: data.previous_pending_amount ?? 0,
+        updated_at: new Date().toISOString(),
+      };
+
       const { error } = await supabase
         .from('clients')
-        .update({
-          client_nic_name: data.client_nic_name,
-          client_name: data.client_name,
-          site: data.site,
-          primary_phone_number: data.primary_phone_number,
-          daily_rent_price: data.daily_rent_price ?? 1,
-          jack_rents: data.jack_rents ?? {},
-          updated_at: new Date().toISOString(),
-        })
+        .update(updatePayload)
         .eq('id', editingClient.id);
 
       toast.dismiss(loadingToast);
@@ -260,6 +262,7 @@ const ClientManagement: React.FC = () => {
           primary_phone_number: data.primary_phone_number,
           daily_rent_price: data.daily_rent_price ?? 1,
           jack_rents: data.jack_rents ?? {},
+          previous_pending_amount: data.previous_pending_amount ?? 0,
         });
 
       toast.dismiss(loadingToast);

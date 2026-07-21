@@ -17,7 +17,7 @@ type SortOption = 'dateNewOld' | 'dateOldNew' | 'amountHighLow' | 'amountLowHigh
 
 export default function BillBook() {
   const { t } = useLanguage();
-  const { dateSortingMethod, shareBillMode } = useSettings();
+  const { dateSortingMethod, shareBillMode, enableCategorySeparation, activeCategory } = useSettings();
   const navigate = useNavigate();
   const { sizes: plateSizes } = usePlateSizes();
 
@@ -40,7 +40,7 @@ export default function BillBook() {
     else setLoading(true);
 
     try {
-      const { data, error } = await supabase
+      let query = supabase
         .from("bills")
         .select(`
           *,
@@ -50,8 +50,13 @@ export default function BillBook() {
             site,
             primary_phone_number
           )
-        `)
-        .order("created_at", { ascending: false });
+        `);
+
+      if (enableCategorySeparation && activeCategory) {
+        query = query.eq('category', activeCategory);
+      }
+
+      const { data, error } = await query.order("created_at", { ascending: false });
 
       if (error) throw error;
       setBills(data || []);
@@ -165,10 +170,10 @@ export default function BillBook() {
         .eq('client_id', bill.client_id)
         .order('jama_date', { ascending: true });
 
-      // Fetch client jack rents
+      // Fetch client details
       const { data: clientData } = await supabase
         .from('clients')
-        .select('jack_rents')
+        .select('jack_rents, previous_pending_amount')
         .eq('id', bill.client_id)
         .single();
       const jackRents = clientData?.jack_rents || {};
@@ -216,6 +221,14 @@ export default function BillBook() {
           previousBillData = {
             billNumber: prev.bill_number,
             amount: prev.due_payment
+          };
+        }
+      } else {
+        const clientPrevPending = clientData?.previous_pending_amount || 0;
+        if (clientPrevPending > 0) {
+          previousBillData = {
+            billNumber: t('startingBalance') || "Starting Balance",
+            amount: clientPrevPending
           };
         }
       }

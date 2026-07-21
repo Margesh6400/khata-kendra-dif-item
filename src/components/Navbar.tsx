@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
+import { useSettings } from '../contexts/SettingsContext';
 import {
   UserPlus,
   FileText,
@@ -24,6 +25,7 @@ const Navbar: React.FC = () => {
   const location = useLocation();
   const { t } = useLanguage();
   const { logout } = useAuth();
+  const { enableCategorySeparation, activeCategory, setActiveCategory } = useSettings();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
   // Add padding to main content when using mobile header
@@ -146,6 +148,16 @@ const Navbar: React.FC = () => {
           <div>
             <h1 className="text-lg font-bold text-white">{t('appName')}</h1>
             <p className="text-xs" style={{ color: '#9ca3af' }}>{t('Rental_Management')}</p>
+            {enableCategorySeparation && activeCategory && (
+              <button
+                onClick={() => setActiveCategory(null)}
+                className="mt-1 flex items-center gap-1 px-1.5 py-0.5 text-[9px] font-bold text-blue-200 bg-blue-900/60 hover:bg-blue-800 border border-blue-700/80 rounded transition-colors"
+                title="Click to switch category"
+              >
+                <span>🌐 {activeCategory.toUpperCase()}</span>
+                <span className="text-[7px] text-blue-400 font-semibold">(SWITCH)</span>
+              </button>
+            )}
           </div>
         </div>
       </div>
@@ -221,7 +233,7 @@ const Navbar: React.FC = () => {
 
       {/* Mobile Header - Slightly lower position with rounded corners */}
       <div
-        className="fixed left-0 right-0 z-50 flex items-center px-4 bg-white border-b shadow-sm lg:hidden"
+        className="fixed left-0 right-0 z-50 flex items-center justify-between px-4 bg-white border-b shadow-sm lg:hidden"
         style={{
           height: '56px',
           borderColor: '#e5e7eb',
@@ -232,14 +244,25 @@ const Navbar: React.FC = () => {
       >
         <button
           onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-          className="p-2 -ml-2 rounded-lg focus:outline-none focus:ring-2 focus:ring-inset focus:ring-blue-500"
+          className="p-2 -ml-2 rounded-lg focus:outline-none focus:ring-2 focus:ring-inset focus:ring-blue-500 shrink-0"
           style={{ color: '#2563eb' }}
         >
           {mobileMenuOpen ? <X size={24} /> : <Menu size={24} />}
         </button>
-        <h1 className="mx-auto font-bold" style={{ fontSize: '16px', color: '#1f2937' }}>
+        <h1 className="font-bold text-center truncate px-2" style={{ fontSize: '16px', color: '#1f2937' }}>
           {getCurrentPageName()}
         </h1>
+        {enableCategorySeparation && activeCategory ? (
+          <button
+            onClick={() => setActiveCategory(null)}
+            className="flex items-center gap-0.5 px-2 py-1 text-[10px] font-bold text-blue-700 bg-blue-50 border border-blue-200 rounded shrink-0 transition-colors"
+            title="Click to switch category"
+          >
+            <span>{activeCategory.toUpperCase()}</span>
+          </button>
+        ) : (
+          <div className="w-8 shrink-0" />
+        )}
       </div>
 
       {/* Mobile Menu */}

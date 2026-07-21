@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useLanguage } from '../contexts/LanguageContext';
 import { usePlateSizes } from '../hooks/usePlateSizes';
+import { useSettings } from '../contexts/SettingsContext';
 
 export interface ClientFormData {
   id?: string;
@@ -9,8 +10,10 @@ export interface ClientFormData {
   site: string;
   primary_phone_number: string;
   daily_rent_price?: number;
+  previous_pending_amount?: number;
   is_hidden?: boolean;
   jack_rents?: Record<string, number>;
+  category?: string;
 }
 
 interface ClientFormProps {
@@ -23,6 +26,7 @@ interface ClientFormProps {
 const ClientForm: React.FC<ClientFormProps> = ({ initialData, onSubmit, onCancel, isQuickAdd = false }) => {
   const { t } = useLanguage();
   const { sizes: plateSizes } = usePlateSizes();
+  const { activeCategory } = useSettings();
 
   // Group plateSizes by category
   const groupedSizes = React.useMemo(() => {
@@ -44,8 +48,10 @@ const ClientForm: React.FC<ClientFormProps> = ({ initialData, onSubmit, onCancel
     site: '',
     primary_phone_number: '',
     daily_rent_price: 1,
+    previous_pending_amount: 0,
     is_hidden: false,
     jack_rents: {},
+    category: activeCategory || 'shuttering',
   });
   const [errors, setErrors] = useState<Partial<ClientFormData>>({});
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -89,8 +95,10 @@ const ClientForm: React.FC<ClientFormProps> = ({ initialData, onSubmit, onCancel
         site: '',
         primary_phone_number: '',
         daily_rent_price: 1,
+        previous_pending_amount: 0,
         is_hidden: false,
         jack_rents: {},
+        category: activeCategory || 'shuttering',
       });
       setErrors({});
     } finally {
@@ -178,6 +186,20 @@ const ClientForm: React.FC<ClientFormProps> = ({ initialData, onSubmit, onCancel
           {errors.primary_phone_number && <p className="mt-1 text-sm text-red-600">{errors.primary_phone_number}</p>}
         </div>
 
+        <div>
+          <label className="block mb-1 text-sm font-medium text-gray-700">
+            {t('previousPendingAmount')}
+          </label>
+          <input
+            type="number"
+            value={formData.previous_pending_amount ?? 0}
+            onChange={(e) => setFormData({ ...formData, previous_pending_amount: parseFloat(e.target.value) || 0 })}
+            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm"
+            min={0}
+            step="any"
+          />
+        </div>
+
         {plateSizes.length > 0 && (
           <div className="pt-3 border-t border-gray-200 space-y-4">
             <h4 className="block text-sm font-bold text-gray-800">
@@ -187,7 +209,7 @@ const ClientForm: React.FC<ClientFormProps> = ({ initialData, onSubmit, onCancel
             {Object.entries(groupedSizes).map(([category, sizes]) => {
               if (sizes.length === 0) return null;
               
-              const categoryLabel = t(category) || category.charAt(0).toUpperCase() + category.slice(1);
+              const categoryLabel = t(category as any) || category.charAt(0).toUpperCase() + category.slice(1);
               
               return (
                 <div key={category} className="space-y-2">

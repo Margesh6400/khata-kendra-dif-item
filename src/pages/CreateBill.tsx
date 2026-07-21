@@ -131,7 +131,7 @@ export default function CreateBill() {
   const editBillNumber = searchParams.get("edit");
   const isEditMode = !!editBillNumber;
   const { t, language } = useLanguage();
-  const { dateSortingMethod } = useSettings();
+  const { dateSortingMethod, enableCategorySeparation, activeCategory } = useSettings();
   const { sizes: plateSizes } = usePlateSizes();
 
   const [client, setClient] = useState<ClientFormData | null>(null);
@@ -248,6 +248,8 @@ export default function CreateBill() {
         if (unpaidBills.length > 0) {
           lastUnpaid = unpaidBills[unpaidBills.length - 1].bill_number;
         }
+      } else {
+        pending = validation.data.client?.previous_pending_amount || 0;
       }
       setPendingAmount(pending);
       setLastUnpaidBillNumber(lastUnpaid);
@@ -387,7 +389,10 @@ export default function CreateBill() {
       } else if (billsError) {
         console.error("Error fetching pending amount:", billsError);
       } else {
-        // No bills found, use default (first udhar date)
+        // No bills found, use client's previous pending amount
+        const initialPending = client?.previous_pending_amount || 0;
+        setPendingAmount(initialPending);
+
         if (udharChallans?.[0]) {
           // already set above
         }
@@ -563,8 +568,7 @@ export default function CreateBill() {
 
       if (isEditMode) {
         // UPDATE EXISTING BILL
-
-        const { error: billUpdateError } = await supabase.from("bills").update({
+        const updatePayload: any = {
           billing_date: billData.billDate,
           from_date: billData.fromDate,
           to_date: billData.toDate,
@@ -574,7 +578,12 @@ export default function CreateBill() {
           total_discount: fullSummary.discounts,
           total_payment: fullSummary.totalPaid,
           due_payment: Math.round(fullSummary.duePayment),
-        }).eq('bill_number', billData.billNumber);
+        };
+        if (enableCategorySeparation && activeCategory) {
+          updatePayload.category = activeCategory;
+        }
+
+        const { error: billUpdateError } = await supabase.from("bills").update(updatePayload).eq('bill_number', billData.billNumber);
 
         if (billUpdateError) throw billUpdateError;
 
@@ -626,7 +635,7 @@ export default function CreateBill() {
 
       } else {
         // CREATE NEW BILL (Existing Logic)
-        const { error } = await supabase.from("bills").insert({
+        const insertPayload: any = {
           bill_number: billData.billNumber,
           billing_date: billData.billDate,
           from_date: billData.fromDate,
@@ -638,7 +647,12 @@ export default function CreateBill() {
           total_discount: fullSummary.discounts,
           total_payment: fullSummary.totalPaid,
           due_payment: Math.round(fullSummary.duePayment),
-        });
+        };
+        if (enableCategorySeparation) {
+          insertPayload.category = activeCategory || 'shuttering';
+        }
+
+        const { error } = await supabase.from("bills").insert(insertPayload);
 
         if (error) throw error;
 

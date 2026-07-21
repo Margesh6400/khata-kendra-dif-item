@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
+import { useSettings } from '../contexts/SettingsContext';
 import {
   Eye, Trash2, Edit as EditIcon, Download, Search, RefreshCw,
   FileText, Package, Calendar, ChevronLeft, ChevronRight, MapPin, Filter
@@ -83,6 +84,8 @@ async function fetchChallansPage(
   page: number,
   search: string,
   sort: SortOption,
+  enableCategorySeparation: boolean,
+  activeCategory: string | null,
 ): Promise<{ data: ChallanData[]; count: number }> {
   const isUdhar = tab === 'udhar';
   const table = isUdhar ? 'udhar_challans' : 'jama_challans';
@@ -106,8 +109,13 @@ async function fetchChallansPage(
        client:${clientRel} ( id, client_nic_name, client_name, site, primary_phone_number ),
        items:${itemsRel} ( ${ITEMS_SELECT} )`,
       { count: 'exact' },
-    )
-    .range(start, end);
+    );
+
+  if (enableCategorySeparation && activeCategory) {
+    query = query.eq('category', activeCategory);
+  }
+
+  query = query.range(start, end);
 
   // Sort
   switch (sort) {
@@ -161,6 +169,7 @@ async function fetchChallansPage(
 const ChallanBook: React.FC = () => {
   const { sizes: plateSizes } = usePlateSizes();
   const { t } = useLanguage();
+  const { enableCategorySeparation, activeCategory } = useSettings();
 
   const [activeTab, setActiveTab] = useState<TabType>('udhar');
   const [challans, setChallans] = useState<ChallanData[]>([]);
@@ -203,14 +212,17 @@ const ChallanBook: React.FC = () => {
   // ── Fetch tab badge counts once on mount ────────────────────────────────────
 
   useEffect(() => {
-    Promise.all([
-      supabase.from('udhar_challans').select('*', { count: 'exact', head: true }),
-      supabase.from('jama_challans').select('*', { count: 'exact', head: true }),
-    ]).then(([u, j]) => {
+    let uQuery = supabase.from('udhar_challans').select('*', { count: 'exact', head: true });
+    let jQuery = supabase.from('jama_challans').select('*', { count: 'exact', head: true });
+    if (enableCategorySeparation && activeCategory) {
+      uQuery = uQuery.eq('category', activeCategory);
+      jQuery = jQuery.eq('category', activeCategory);
+    }
+    Promise.all([uQuery, jQuery]).then(([u, j]) => {
       setUdharTabCount(u.count ?? 0);
       setJamaTabCount(j.count ?? 0);
     });
-  }, []);
+  }, [enableCategorySeparation, activeCategory, refreshKey]);
 
   // ── Main data fetch ─────────────────────────────────────────────────────────
 
@@ -220,7 +232,7 @@ const ChallanBook: React.FC = () => {
     (async () => {
       setLoading(true);
       try {
-        const result = await fetchChallansPage(activeTab, currentPage, debouncedSearch, sortOption);
+        const result = await fetchChallansPage(activeTab, currentPage, debouncedSearch, sortOption, enableCategorySeparation, activeCategory);
         if (!cancelled) {
           setChallans(result.data);
           setTotalCount(result.count);
@@ -234,14 +246,14 @@ const ChallanBook: React.FC = () => {
     })();
 
     return () => { cancelled = true; };
-  }, [activeTab, currentPage, debouncedSearch, sortOption, refreshKey]);
+  }, [activeTab, currentPage, debouncedSearch, sortOption, refreshKey, enableCategorySeparation, activeCategory]);
 
   // ── Handlers ────────────────────────────────────────────────────────────────
 
   const handleRefresh = async () => {
     setRefreshing(true);
     try {
-      const result = await fetchChallansPage(activeTab, currentPage, debouncedSearch, sortOption);
+      const result = await fetchChallansPage(activeTab, currentPage, debouncedSearch, sortOption, enableCategorySeparation, activeCategory);
       setChallans(result.data);
       setTotalCount(result.count);
       toast.success('Challans refreshed successfully');

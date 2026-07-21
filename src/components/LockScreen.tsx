@@ -2,6 +2,9 @@ import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { useLanguage } from '../contexts/LanguageContext';
 import { Shield, Fingerprint, Delete, AlertTriangle, Lock, CheckCircle2 } from 'lucide-react';
 import toast from 'react-hot-toast';
+import { useSettings } from '../contexts/SettingsContext';
+import { useAuth } from '../contexts/AuthContext';
+import { supabase } from '../utils/supabase';
 
 interface LockScreenProps {
   children: React.ReactNode;
@@ -12,6 +15,17 @@ const LOCKOUT_DURATION_MS = 30 * 1000; // 30 seconds lockout
 
 const LockScreen: React.FC<LockScreenProps> = ({ children }) => {
   const { language } = useLanguage();
+  const { requireLoginPassword, enableCategorySeparation, activeCategory, setActiveCategory } = useSettings();
+  const { user, isAuthenticated } = useAuth();
+
+  const [passwordVerified, setPasswordVerified] = useState<boolean>(() => {
+    return sessionStorage.getItem('startup_password_verified') === 'true';
+  });
+
+  const [password, setPassword] = useState('');
+  const [passwordLoading, setPasswordLoading] = useState(false);
+  const [showPasswordText, setShowPasswordText] = useState(false);
+
   const [isLocked, setIsLocked] = useState<boolean>(() => {
     return localStorage.getItem('security_lock_enabled') === 'true';
   });
@@ -175,7 +189,251 @@ const LockScreen: React.FC<LockScreenProps> = ({ children }) => {
     }
   }, [biometricLoading, isLockedOut]);
 
-  if (!isLocked) return <>{children}</>;
+  const showPasswordLock = requireLoginPassword && isAuthenticated && !passwordVerified;
+  const showPinLock = isLocked && !showPasswordLock;
+  const showCategorySelector = enableCategorySeparation && !activeCategory && !showPasswordLock && !showPinLock;
+
+  const handlePasswordSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!password.trim() || !user?.email) return;
+
+    setPasswordLoading(true);
+    try {
+      const { error } = await supabase.auth.signInWithPassword({
+        email: user.email,
+        password: password,
+      });
+
+      if (error) {
+        toast.error(language === 'gu' ? 'ખોટો પાસવર્ડ!' : 'Incorrect Password!');
+        setPassword('');
+      } else {
+        sessionStorage.setItem('startup_password_verified', 'true');
+        setPasswordVerified(true);
+        toast.success(language === 'gu' ? 'પ્રમાણીકરણ સફળ' : 'Authentication Successful');
+      }
+    } catch (err) {
+      toast.error('An error occurred during verification');
+    } finally {
+      setPasswordLoading(false);
+    }
+  };
+
+  if (showPasswordLock) {
+    return (
+      <div
+        className="lock-screen-root"
+        style={{
+          position: 'fixed', inset: 0, zIndex: 9999,
+          display: 'flex', flexDirection: 'column',
+          alignItems: 'center', justifyContent: 'center',
+          background: 'linear-gradient(145deg, #0a0f1e 0%, #0d1424 50%, #0a1228 100%)',
+          userSelect: 'none', overflow: 'hidden',
+        }}
+      >
+        <div style={{ width: '100%', maxWidth: 340, padding: '0 24px', display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+          <div style={{
+            marginBottom: 20,
+            width: 72, height: 72,
+            borderRadius: '50%',
+            background: 'linear-gradient(135deg, #2563eb, #3b82f6)',
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            boxShadow: '0 8px 32px rgba(59, 130, 246, 0.3)',
+          }}>
+            <Lock style={{ width: 36, height: 36, color: '#fff' }} />
+          </div>
+
+          <h1 style={{ fontSize: 20, fontWeight: 700, color: '#f1f5f9', margin: '0 0 4px', textAlign: 'center' }}>
+            {t('ખાતા કેન્દ્ર', 'Khata Kendra')}
+          </h1>
+          <p style={{ fontSize: 13, color: '#64748b', margin: '0 0 28px', textAlign: 'center', lineHeight: 1.5 }}>
+            {language === 'gu' ? 'ચાલુ રાખવા માટે પાસવર્ડ દાખલ કરો' : 'Enter your password to continue'}
+          </p>
+
+          <form onSubmit={handlePasswordSubmit} style={{ width: '100%', display: 'flex', flexDirection: 'column', gap: 16 }}>
+            <div style={{ position: 'relative', width: '100%' }}>
+              <input
+                type={showPasswordText ? 'text' : 'password'}
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                placeholder={language === 'gu' ? 'પાસવર્ડ' : 'Password'}
+                disabled={passwordLoading}
+                style={{
+                  width: '100%',
+                  padding: '12px 48px 12px 16px',
+                  borderRadius: 12,
+                  background: 'rgba(255, 255, 255, 0.05)',
+                  border: '1.5px solid rgba(255, 255, 255, 0.1)',
+                  color: '#fff',
+                  fontSize: 16,
+                  outline: 'none',
+                  transition: 'border-color 0.2s',
+                }}
+                onFocus={(e) => e.target.style.borderColor = '#3b82f6'}
+                onBlur={(e) => e.target.style.borderColor = 'rgba(255, 255, 255, 0.1)'}
+              />
+              <button
+                type="button"
+                onClick={() => setShowPasswordText(!showPasswordText)}
+                style={{
+                  position: 'absolute',
+                  right: 12,
+                  top: '50%',
+                  transform: 'translateY(-50%)',
+                  background: 'none',
+                  border: 'none',
+                  cursor: 'pointer',
+                  color: '#64748b',
+                  display: 'flex',
+                  alignItems: 'center',
+                }}
+              >
+                {showPasswordText ? <CheckCircle2 style={{ width: 20, height: 20, color: '#10b981' }} /> : <Lock style={{ width: 20, height: 20 }} />}
+              </button>
+            </div>
+
+            <button
+              type="submit"
+              disabled={passwordLoading || !password.trim()}
+              style={{
+                width: '100%',
+                padding: '12px',
+                borderRadius: 12,
+                background: 'linear-gradient(135deg, #2563eb, #1d4ed8)',
+                color: '#fff',
+                fontWeight: 600,
+                fontSize: 16,
+                border: 'none',
+                cursor: 'pointer',
+                transition: 'opacity 0.2s',
+                opacity: passwordLoading || !password.trim() ? 0.6 : 1,
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                gap: 8,
+              }}
+            >
+              {passwordLoading ? (
+                <div style={{
+                  width: 20, height: 20, borderRadius: '50%',
+                  border: '2px solid rgba(255, 255, 255, 0.3)',
+                  borderTopColor: '#fff',
+                  animation: 'ls-spin-slow 0.8s linear infinite',
+                }} />
+              ) : (
+                <span>{language === 'gu' ? 'ચકાસણી કરો' : 'Verify Password'}</span>
+              )}
+            </button>
+          </form>
+
+          {user?.email && (
+            <p style={{ fontSize: 11, color: '#475569', marginTop: 16, textAlign: 'center' }}>
+              {language === 'gu' ? 'લોગ ઇન યુઝર:' : 'Logged in as:'} {user.email}
+            </p>
+          )}
+        </div>
+      </div>
+    );
+  }
+
+  if (showCategorySelector) {
+    return (
+      <div
+        className="category-selector-root"
+        style={{
+          position: 'fixed', inset: 0, zIndex: 9999,
+          display: 'flex', flexDirection: 'column',
+          alignItems: 'center', justifyContent: 'center',
+          background: 'linear-gradient(145deg, #0f172a 0%, #1e293b 100%)',
+          userSelect: 'none', overflow: 'hidden',
+          padding: '24px'
+        }}
+      >
+        <style>{`
+          .cat-card:hover {
+            transform: translateY(-4px);
+            box-shadow: 0 12px 24px -10px rgba(59, 130, 246, 0.4);
+            border-color: rgba(59, 130, 246, 0.5) !important;
+          }
+          .cat-card:active {
+            transform: scale(0.98);
+          }
+        `}</style>
+        <div style={{ maxWidth: 480, width: '100%', textAlign: 'center' }}>
+          <h2 style={{ fontSize: 24, fontWeight: 800, color: '#f8fafc', marginBottom: 8 }}>
+            {language === 'gu' ? 'વિભાગ પસંદ કરો' : 'Select Business Section'}
+          </h2>
+          <p style={{ fontSize: 14, color: '#94a3b8', marginBottom: 32 }}>
+            {language === 'gu' 
+              ? 'આગળ વધવા માટે શ્રેણી પસંદ કરો. તમારો ડેટા સંપૂર્ણપણે અલગ રાખવામાં આવશે.' 
+              : 'Please select a section to proceed. Your data will be kept totally separate.'}
+          </p>
+
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: 16 }}>
+            {[
+              {
+                id: 'shuttering' as const,
+                label: language === 'gu' ? 'શટરિંગ' : 'Shuttering',
+                desc: language === 'gu' ? 'પ્લેટ અને એસેસરીઝ' : 'Plates & Accessories',
+                icon: '🥞',
+                color: 'linear-gradient(135deg, rgba(239, 68, 68, 0.15) 0%, rgba(220, 38, 38, 0.05) 100%)',
+                borderColor: 'rgba(239, 68, 68, 0.2)',
+              },
+              {
+                id: 'jack' as const,
+                label: language === 'gu' ? 'જેક' : 'Jack',
+                desc: language === 'gu' ? 'પાઇપ અને પ્રોપ્સ' : 'Pipes & Props',
+                icon: '🏗️',
+                color: 'linear-gradient(135deg, rgba(34, 197, 94, 0.15) 0%, rgba(22, 163, 74, 0.05) 100%)',
+                borderColor: 'rgba(34, 197, 94, 0.2)',
+              },
+              {
+                id: 'cuplock' as const,
+                label: language === 'gu' ? 'કપલોક' : 'Cuplock',
+                desc: language === 'gu' ? 'સ્કેફોલ્ડિંગ સિસ્ટમ' : 'Scaffolding System',
+                icon: '🧱',
+                color: 'linear-gradient(135deg, rgba(168, 85, 247, 0.15) 0%, rgba(147, 51, 234, 0.05) 100%)',
+                borderColor: 'rgba(168, 85, 247, 0.2)',
+              },
+              {
+                id: 'other' as const,
+                label: language === 'gu' ? 'અન્ય' : 'Other',
+                desc: language === 'gu' ? 'વધારાની સામગ્રી' : 'Miscellaneous Items',
+                icon: '📁',
+                color: 'linear-gradient(135deg, rgba(100, 116, 139, 0.15) 0%, rgba(71, 85, 105, 0.05) 100%)',
+                borderColor: 'rgba(100, 116, 139, 0.2)',
+              }
+            ].map(cat => (
+              <button
+                key={cat.id}
+                className="cat-card"
+                onClick={() => setActiveCategory(cat.id)}
+                style={{
+                  background: cat.color,
+                  border: `1.5px solid ${cat.borderColor}`,
+                  borderRadius: 16,
+                  padding: '24px 16px',
+                  display: 'flex',
+                  flexDirection: 'column',
+                  alignItems: 'center',
+                  cursor: 'pointer',
+                  transition: 'all 0.2s ease',
+                  textAlign: 'center',
+                  outline: 'none',
+                }}
+              >
+                <span style={{ fontSize: 32, marginBottom: 12 }}>{cat.icon}</span>
+                <span style={{ fontSize: 16, fontWeight: 700, color: '#f8fafc', marginBottom: 4 }}>{cat.label}</span>
+                <span style={{ fontSize: 11, color: '#64748b' }}>{cat.desc}</span>
+              </button>
+            ))}
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  if (!showPinLock) return <>{children}</>;
 
   const attemptsLeft = MAX_ATTEMPTS - attempts;
   const pinHasDefaultWarning = !localStorage.getItem('security_lock_pin');

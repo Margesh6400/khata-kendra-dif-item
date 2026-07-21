@@ -33,6 +33,8 @@ interface ClientRow {
   client_nic_name: string;
   daily_rent_price: number | null;
   jack_rents: Record<number, number> | null;
+  previous_pending_amount: number | null;
+  category: string | null;
 }
 
 // PostgrestError is a plain object, not an Error instance — String() gives "[object Object]"
@@ -125,7 +127,9 @@ async function processClient(
     );
 
     const totalRent = result.billingPeriods.totalRent;
-    const pending = lastBill?.due_payment || 0;
+    const pending = lastBill
+      ? (lastBill.due_payment || 0)
+      : (client.previous_pending_amount || 0);
 
     // Next bill number in the NICNAME/N sequence
     const sequence =
@@ -149,6 +153,7 @@ async function processClient(
       due_payment: Math.round(totalRent + pending),
       status: 'draft',
       generated_by: trigger,
+      category: client.category || 'shuttering',
     });
     if (insertError) throw insertError;
 
@@ -285,7 +290,7 @@ Deno.serve(async (req: Request) => {
 
     let clientsQuery = supabase
       .from('clients')
-      .select('id, client_nic_name, daily_rent_price, jack_rents')
+      .select('id, client_nic_name, daily_rent_price, jack_rents, previous_pending_amount, category')
       .order('client_nic_name', { ascending: true });
     if (clientIds) clientsQuery = clientsQuery.in('id', clientIds);
     const { data: clients, error: clientsError } = await clientsQuery;

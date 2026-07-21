@@ -38,6 +38,9 @@ const emptyItems: ItemsData = {
 };
 
 export const fetchUdharChallansForClient = async (clientId?: string) => {
+  const enableCategorySeparation = localStorage.getItem('enableCategorySeparation') === 'true';
+  const activeCategory = sessionStorage.getItem('activeCategory');
+
   let query = supabase
     .from('udhar_challans')
     .select(`
@@ -59,6 +62,10 @@ export const fetchUdharChallansForClient = async (clientId?: string) => {
       items:udhar_items!udhar_items_udhar_challan_number_fkey(items, main_note)
     `)
     .order('udhar_date', { ascending: true });
+
+  if (enableCategorySeparation && activeCategory) {
+    query = query.eq('category', activeCategory);
+  }
 
   if (clientId) {
     query = query.eq('client_id', clientId);
@@ -96,6 +103,9 @@ export const fetchUdharChallansForClient = async (clientId?: string) => {
 };
 
 export const fetchJamaChallansForClient = async (clientId?: string) => {
+  const enableCategorySeparation = localStorage.getItem('enableCategorySeparation') === 'true';
+  const activeCategory = sessionStorage.getItem('activeCategory');
+
   let query = supabase
     .from('jama_challans')
     .select(`
@@ -117,6 +127,10 @@ export const fetchJamaChallansForClient = async (clientId?: string) => {
       items:jama_items!jama_items_jama_challan_number_fkey(items, main_note)
     `)
     .order('jama_date', { ascending: true });
+
+  if (enableCategorySeparation && activeCategory) {
+    query = query.eq('category', activeCategory);
+  }
 
   if (clientId) {
     query = query.eq('client_id', clientId);
@@ -155,65 +169,76 @@ export const fetchJamaChallansForClient = async (clientId?: string) => {
 
 export const fetchDailyChallans = async (date: Date) => {
   const dateStr = date.toISOString().split('T')[0];
+  const enableCategorySeparation = localStorage.getItem('enableCategorySeparation') === 'true';
+  const activeCategory = sessionStorage.getItem('activeCategory');
+
+  let udharQuery = supabase
+    .from('udhar_challans')
+    .select(`
+      udhar_challan_number,
+      udhar_date,
+      driver_name,
+      alternative_site,
+      secondary_phone_number,
+      client_id,
+      client:clients!udhar_challans_client_id_fkey (
+        id,
+        client_nic_name,
+        client_name,
+        site,
+        primary_phone_number
+      ),
+      items:udhar_items!udhar_items_udhar_challan_number_fkey(items, main_note)
+    `)
+    .eq('udhar_date', dateStr);
+
+  let jamaQuery = supabase
+    .from('jama_challans')
+    .select(`
+      jama_challan_number,
+      jama_date,
+      driver_name,
+      alternative_site,
+      secondary_phone_number,
+      client_id,
+      client:clients!jama_challans_client_id_fkey (
+        id,
+        client_nic_name,
+        client_name,
+        site,
+        primary_phone_number
+      ),
+      items:jama_items!jama_items_jama_challan_number_fkey(items, main_note)
+    `)
+    .eq('jama_date', dateStr);
+
+  let billsQuery = supabase
+    .from('bills')
+    .select(`
+      bill_number,
+      billing_date,
+      total_rent_amount,
+      total_extra_cost,
+      client_id,
+      client:clients (
+        client_nic_name,
+        client_name,
+        site,
+        primary_phone_number
+      )
+    `)
+    .eq('billing_date', dateStr);
+
+  if (enableCategorySeparation && activeCategory) {
+    udharQuery = udharQuery.eq('category', activeCategory);
+    jamaQuery = jamaQuery.eq('category', activeCategory);
+    billsQuery = billsQuery.eq('category', activeCategory);
+  }
 
   const [udharChallans, jamaChallans, bills] = await Promise.all([
-    supabase
-      .from('udhar_challans')
-      .select(`
-        udhar_challan_number,
-        udhar_date,
-        driver_name,
-        alternative_site,
-        secondary_phone_number,
-        client_id,
-        client:clients!udhar_challans_client_id_fkey (
-          id,
-          client_nic_name,
-          client_name,
-          site,
-          primary_phone_number
-        ),
-        items:udhar_items!udhar_items_udhar_challan_number_fkey(items, main_note)
-      `)
-      .eq('udhar_date', dateStr)
-      .order('udhar_challan_number', { ascending: false }),
-    supabase
-      .from('jama_challans')
-      .select(`
-        jama_challan_number,
-        jama_date,
-        driver_name,
-        alternative_site,
-        secondary_phone_number,
-        client_id,
-        client:clients!jama_challans_client_id_fkey (
-          id,
-          client_nic_name,
-          client_name,
-          site,
-          primary_phone_number
-        ),
-        items:jama_items!jama_items_jama_challan_number_fkey(items, main_note)
-      `)
-      .eq('jama_date', dateStr)
-      .order('jama_challan_number', { ascending: false }),
-    supabase
-      .from('bills')
-      .select(`
-        bill_number,
-        billing_date,
-        total_rent_amount,
-        total_extra_cost,
-        client_id,
-        client:clients (
-          client_nic_name,
-          client_name,
-          site,
-          primary_phone_number
-        )
-      `)
-      .eq('billing_date', dateStr)
-      .order('created_at', { ascending: false })
+    udharQuery.order('udhar_challan_number', { ascending: false }),
+    jamaQuery.order('jama_challan_number', { ascending: false }),
+    billsQuery.order('created_at', { ascending: false })
   ]);
 
   const mapChallan = (challan: any, type: 'udhar' | 'jama') => {
@@ -291,38 +316,46 @@ export const fetchClientTransactions = async (clientId: string) => {
 
 export const clearTransactionCache = () => transactionCache.clear();
 
-// Fetch transactions for multiple clients in 2 queries instead of 2×N queries.
-// Returns a Map<clientId, transaction[]> sorted by date ascending per client.
 export const fetchBulkClientTransactions = async (clientIds: string[]): Promise<Map<string, any[]>> => {
   if (clientIds.length === 0) return new Map();
 
+  const enableCategorySeparation = localStorage.getItem('enableCategorySeparation') === 'true';
+  const activeCategory = sessionStorage.getItem('activeCategory');
+
+  let udharQuery = supabase
+    .from('udhar_challans')
+    .select(`
+      udhar_challan_number,
+      udhar_date,
+      driver_name,
+      alternative_site,
+      secondary_phone_number,
+      client_id,
+      items:udhar_items!udhar_items_udhar_challan_number_fkey(items, main_note)
+    `)
+    .in('client_id', clientIds);
+
+  let jamaQuery = supabase
+    .from('jama_challans')
+    .select(`
+      jama_challan_number,
+      jama_date,
+      driver_name,
+      alternative_site,
+      secondary_phone_number,
+      client_id,
+      items:jama_items!jama_items_jama_challan_number_fkey(items, main_note)
+    `)
+    .in('client_id', clientIds);
+
+  if (enableCategorySeparation && activeCategory) {
+    udharQuery = udharQuery.eq('category', activeCategory);
+    jamaQuery = jamaQuery.eq('category', activeCategory);
+  }
+
   const [udharResult, jamaResult] = await Promise.all([
-    supabase
-      .from('udhar_challans')
-      .select(`
-        udhar_challan_number,
-        udhar_date,
-        driver_name,
-        alternative_site,
-        secondary_phone_number,
-        client_id,
-        items:udhar_items!udhar_items_udhar_challan_number_fkey(items, main_note)
-      `)
-      .in('client_id', clientIds)
-      .order('udhar_date', { ascending: true }),
-    supabase
-      .from('jama_challans')
-      .select(`
-        jama_challan_number,
-        jama_date,
-        driver_name,
-        alternative_site,
-        secondary_phone_number,
-        client_id,
-        items:jama_items!jama_items_jama_challan_number_fkey(items, main_note)
-      `)
-      .in('client_id', clientIds)
-      .order('jama_date', { ascending: true }),
+    udharQuery.order('udhar_date', { ascending: true }),
+    jamaQuery.order('jama_date', { ascending: true }),
   ]);
 
   const byClient = new Map<string, any[]>();

@@ -4,6 +4,7 @@ import { useLanguage } from "../contexts/LanguageContext";
 import { supabase } from "../utils/supabase";
 import { PlateSize } from "../components/ItemsTable";
 import { usePlateSizes } from "../hooks/usePlateSizes";
+import { useSettings } from "../contexts/SettingsContext";
 import {
   Package,
   AlertCircle,
@@ -51,15 +52,27 @@ type SortOrder = "asc" | "desc";
 
 const StockManagement: React.FC = () => {
   const { sizes: plateSizes, addSize: addNewSize, updateSizesOrder, deleteSize } = usePlateSizes();
+  const { enableCategorySeparation, activeCategory } = useSettings();
   const [newSizeName, setNewSizeName] = useState('');
   const [isAddingSize, setIsAddingSize] = useState(false);
   const [isReordering, setIsReordering] = useState(false);
   const [tempSizes, setTempSizes] = useState<PlateSize[]>([]);
-  const [selectedCategory, setSelectedCategory] = useState<'shuttering' | 'jack' | 'cuplock' | 'other'>('shuttering');
-  const [newSizeCategory, setNewSizeCategory] = useState<'shuttering' | 'jack' | 'cuplock' | 'other'>('shuttering');
+  const [selectedCategory, setSelectedCategory] = useState<'shuttering' | 'jack' | 'cuplock' | 'other'>(
+    (enableCategorySeparation && activeCategory) ? (activeCategory as any) : 'shuttering'
+  );
+  const [newSizeCategory, setNewSizeCategory] = useState<'shuttering' | 'jack' | 'cuplock' | 'other'>(
+    (enableCategorySeparation && activeCategory) ? (activeCategory as any) : 'shuttering'
+  );
   const [editingId, setEditingId] = useState<number | null>(null);
   const [editName, setEditName] = useState('');
   const [draggedIndex, setDraggedIndex] = useState<number | null>(null);
+
+  useEffect(() => {
+    if (enableCategorySeparation && activeCategory) {
+      setSelectedCategory(activeCategory as any);
+      setNewSizeCategory(activeCategory as any);
+    }
+  }, [enableCategorySeparation, activeCategory]);
 
   const handleDragStart = (e: React.DragEvent, index: number) => {
     setDraggedIndex(index);
@@ -728,7 +741,9 @@ const StockManagement: React.FC = () => {
                     { key: 'jack', label: t('jack'), color: 'amber' },
                     { key: 'cuplock', label: language === 'gu' ? 'કપલોક' : 'Cuplock', color: 'indigo' },
                     { key: 'other', label: t('other'), color: 'gray' },
-                  ] as const).map(({ key, label, color }) => {
+                  ] as const)
+                  .filter(({ key }) => !enableCategorySeparation || key === activeCategory)
+                  .map(({ key, label, color }) => {
                     const isActive = selectedCategory === key;
                     const activeStyles: Record<string, string> = {
                       blue: 'bg-blue-600 text-white shadow-md shadow-blue-200',
@@ -1566,57 +1581,59 @@ const StockManagement: React.FC = () => {
                 />
               </div>
 
-              <div>
-                <label className="block text-xs font-semibold text-gray-700 mb-1">
-                  {t('category')} <span className="text-red-500">*</span>
-                </label>
-                <div className="flex gap-4">
-                  <label className="flex items-center gap-1.5 text-sm font-medium text-gray-700 cursor-pointer">
-                    <input
-                      type="radio"
-                      name="newSizeCategory"
-                      value="shuttering"
-                      checked={newSizeCategory === 'shuttering'}
-                      onChange={() => setNewSizeCategory('shuttering')}
-                      className="text-blue-600 focus:ring-blue-500"
-                    />
-                    {t('shuttering')}
+              {!enableCategorySeparation && (
+                <div>
+                  <label className="block text-xs font-semibold text-gray-700 mb-1">
+                    {t('category')} <span className="text-red-500">*</span>
                   </label>
-                  <label className="flex items-center gap-1.5 text-sm font-medium text-gray-700 cursor-pointer">
-                    <input
-                      type="radio"
-                      name="newSizeCategory"
-                      value="jack"
-                      checked={newSizeCategory === 'jack'}
-                      onChange={() => setNewSizeCategory('jack')}
-                      className="text-blue-600 focus:ring-blue-500"
-                    />
-                    {t('jack')}
-                  </label>
-                  <label className="flex items-center gap-1.5 text-sm font-medium text-gray-700 cursor-pointer">
-                    <input
-                      type="radio"
-                      name="newSizeCategory"
-                      value="cuplock"
-                      checked={newSizeCategory === 'cuplock'}
-                      onChange={() => setNewSizeCategory('cuplock')}
-                      className="text-blue-600 focus:ring-blue-500"
-                    />
-                    કપલોક (Cuplock)
-                  </label>
-                  <label className="flex items-center gap-1.5 text-sm font-medium text-gray-700 cursor-pointer">
-                    <input
-                      type="radio"
-                      name="newSizeCategory"
-                      value="other"
-                      checked={newSizeCategory === 'other'}
-                      onChange={() => setNewSizeCategory('other')}
-                      className="text-blue-600 focus:ring-blue-500"
-                    />
-                    {t('other')}
-                  </label>
+                  <div className="flex gap-4">
+                    <label className="flex items-center gap-1.5 text-sm font-medium text-gray-700 cursor-pointer">
+                      <input
+                        type="radio"
+                        name="newSizeCategory"
+                        value="shuttering"
+                        checked={newSizeCategory === 'shuttering'}
+                        onChange={() => setNewSizeCategory('shuttering')}
+                        className="text-blue-600 focus:ring-blue-500"
+                      />
+                      {t('shuttering')}
+                    </label>
+                    <label className="flex items-center gap-1.5 text-sm font-medium text-gray-700 cursor-pointer">
+                      <input
+                        type="radio"
+                        name="newSizeCategory"
+                        value="jack"
+                        checked={newSizeCategory === 'jack'}
+                        onChange={() => setNewSizeCategory('jack')}
+                        className="text-blue-600 focus:ring-blue-500"
+                      />
+                      {t('jack')}
+                    </label>
+                    <label className="flex items-center gap-1.5 text-sm font-medium text-gray-700 cursor-pointer">
+                      <input
+                        type="radio"
+                        name="newSizeCategory"
+                        value="cuplock"
+                        checked={newSizeCategory === 'cuplock'}
+                        onChange={() => setNewSizeCategory('cuplock')}
+                        className="text-blue-600 focus:ring-blue-500"
+                      />
+                      કપલોક (Cuplock)
+                    </label>
+                    <label className="flex items-center gap-1.5 text-sm font-medium text-gray-700 cursor-pointer">
+                      <input
+                        type="radio"
+                        name="newSizeCategory"
+                        value="other"
+                        checked={newSizeCategory === 'other'}
+                        onChange={() => setNewSizeCategory('other')}
+                        className="text-blue-600 focus:ring-blue-500"
+                      />
+                      {t('other')}
+                    </label>
+                  </div>
                 </div>
-              </div>
+              )}
 
               <div className="pt-4 border-t border-gray-100">
                 <button

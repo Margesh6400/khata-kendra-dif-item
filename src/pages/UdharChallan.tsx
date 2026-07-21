@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
+import { useSettings } from '../contexts/SettingsContext';
 import { format } from 'date-fns';
 import {
   Search,
@@ -36,7 +37,6 @@ interface StockData {
   updated_at: string;
 }
 import { useLanguage } from '../contexts/LanguageContext';
-import { useSettings } from '../contexts/SettingsContext';
 import { supabase } from '../utils/supabase';
 import { generateJPEG } from '../utils/generateJPEG';
 import { tryExportChallanDesign } from '../utils/challanDesign/exportChallanDesign';
@@ -605,6 +605,7 @@ const UdharChallan: React.FC = () => {
   const location = useLocation();
   const { t } = useLanguage();
   const { sizes: plateSizes } = usePlateSizes();
+  const { enableCategorySeparation, activeCategory } = useSettings();
 
   // Step management
   const [currentStep, setCurrentStep] = useState<Step>('client-selection');
@@ -869,18 +870,23 @@ const UdharChallan: React.FC = () => {
 
     const loadingToast = toast.loading(t('creatingChallan'));
 
+    const insertPayload: any = {
+      udhar_challan_number: challanNumber,
+      client_id: selectedClientId,
+      alternative_site: alternativeSite || null,
+      secondary_phone_number: secondaryPhone || null,
+      udhar_date: date,
+      driver_name: driverName || null,
+      driver_mobile: driverPhone || null,
+      vehicle_number: vehicleNumber || null,
+    };
+    if (enableCategorySeparation) {
+      insertPayload.category = activeCategory || 'shuttering';
+    }
+
     const { error: challanError } = await supabase
       .from('udhar_challans')
-      .insert({
-        udhar_challan_number: challanNumber,
-        client_id: selectedClientId,
-        alternative_site: alternativeSite || null,
-        secondary_phone_number: secondaryPhone || null,
-        udhar_date: date,
-        driver_name: driverName || null,
-        driver_mobile: driverPhone || null,
-        vehicle_number: vehicleNumber || null,
-      });
+      .insert(insertPayload);
 
     if (challanError) {
       toast.dismiss(loadingToast);
