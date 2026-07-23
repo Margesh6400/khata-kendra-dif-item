@@ -176,8 +176,6 @@ const ChallanDesigner: React.FC = () => {
   const [showSample, setShowSample] = useState(false);
   const [helpOpen, setHelpOpen] = useState(false);
   const [confirmState, setConfirmState] = useState<ConfirmState>(null);
-  const [isLocked, setIsLocked] = useState(true);
-  const [passwordInput, setPasswordInput] = useState('');
 
   const canvasWrapRef = useRef<HTMLDivElement>(null);
   const [canvasWidth, setCanvasWidth] = useState(600);
@@ -535,61 +533,6 @@ const ChallanDesigner: React.FC = () => {
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
   });
-
-  const handleUnlock = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (passwordInput === 'Margesh6400KhataKendra') {
-      setIsLocked(false);
-      toast.success(gt('અનલોક સફળ રહ્યું', 'Unlocked successfully'));
-    } else {
-      toast.error(gt('ખોટો પાસવર્ડ', 'Incorrect password'));
-    }
-  };
-
-  if (isLocked) {
-    return (
-      <div className="min-h-screen bg-slate-900 flex flex-col items-center justify-center p-4 text-white">
-        <Toaster position="top-right" />
-        <div className="w-full max-w-md bg-slate-800/80 backdrop-blur-xl border border-slate-700/50 p-8 rounded-2xl shadow-2xl flex flex-col items-center gap-6">
-          <div className="w-16 h-16 bg-amber-500/10 rounded-full flex items-center justify-center border border-amber-500/20 text-amber-400">
-            <svg className="w-8 h-8" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
-            </svg>
-          </div>
-          <div className="text-center">
-            <h2 className="text-xl font-bold text-slate-100">{gt('ચલણ ડિઝાઇન સ્ટુડિયો લૉક છે', 'Challan Design Studio is Locked')}</h2>
-            <p className="text-sm text-slate-400 mt-1">{gt('આગળ વધવા માટે પાસવર્ડ દાખલ કરો', 'Enter the password to access the studio')}</p>
-            <p className="text-xs text-amber-400 font-semibold mt-2.5 bg-amber-500/10 border border-amber-500/20 px-3 py-1.5 rounded-lg inline-block">
-              {gt('તમે સબ્સ્ક્રાઇબ કરશો એટલે આ ઓપન થશે.', 'It will open when you subscribe.')}
-            </p>
-          </div>
-          <form onSubmit={handleUnlock} className="w-full space-y-4">
-            <input
-              type="password"
-              placeholder={gt('પાસવર્ડ દાખલ કરો', 'Enter password')}
-              value={passwordInput}
-              onChange={(e) => setPasswordInput(e.target.value)}
-              className="w-full px-4 py-3 bg-slate-950 border border-slate-700 rounded-xl focus:ring-2 focus:ring-amber-500 focus:border-transparent outline-none text-slate-100 placeholder-slate-500 text-center text-lg font-mono"
-              autoFocus
-            />
-            <button
-              type="submit"
-              className="w-full py-3 bg-gradient-to-r from-amber-500 to-amber-600 text-slate-950 font-bold rounded-xl hover:from-amber-400 hover:to-amber-500 transition-all shadow-lg shadow-amber-500/20 active:scale-95"
-            >
-              {gt('અનલોક કરો', 'Unlock')}
-            </button>
-          </form>
-          <button
-            onClick={() => navigate('/')}
-            className="flex items-center gap-2 text-sm text-slate-400 hover:text-slate-200 transition-colors"
-          >
-            <ArrowLeft className="w-4 h-4" />
-            {gt('પાછા જાઓ', 'Go back')}
-          </button>
-        </div>
-      </div>
-    );
-  }
 
   const previewPages = mode === 'preview' ? paginate(draft.config, sampleInput(draft)) : [];
   const safePreviewPage = Math.min(previewPage, Math.max(0, previewPages.length - 1));
