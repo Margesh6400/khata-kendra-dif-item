@@ -9,9 +9,11 @@ import {
   ClipboardList,
   Receipt,
   Files,
-  Activity
+  Activity,
+  Settings as SettingsIcon
 } from 'lucide-react';
 import { useLanguage } from '../contexts/LanguageContext';
+import { useSettings } from '../contexts/SettingsContext';
 import Navbar from '../components/Navbar';
 import { Toaster } from 'react-hot-toast';
 import { format } from 'date-fns';
@@ -21,7 +23,8 @@ import JournalSection from '../components/JournalSection';
 
 const Dashboard: React.FC = () => {
   const navigate = useNavigate();
-  const { t } = useLanguage();
+  const { t, language } = useLanguage();
+  const { quickActionsSortMethod, visibleQuickActions } = useSettings();
   const [greeting, setGreeting] = useState('');
 
   useEffect(() => {
@@ -92,8 +95,36 @@ const Dashboard: React.FC = () => {
       path: '/bill-book',
       gradient: 'from-cyan-500 to-cyan-700',
       hoverGradient: 'hover:from-cyan-600 hover:to-cyan-800'
+    },
+    {
+      title: t('settings'),
+      description: language === 'gu' ? 'એપ્લિકેશન સેટિંગ્સ બદલો' : 'Change app settings',
+      icon: SettingsIcon,
+      path: '/settings',
+      gradient: 'from-slate-600 to-slate-800',
+      hoverGradient: 'hover:from-slate-700 hover:to-slate-900'
     }
   ];
+
+  const handleActionClick = (path: string) => {
+    const clicks = parseInt(localStorage.getItem(`quick_action_click_${path}`) || '0', 10);
+    localStorage.setItem(`quick_action_click_${path}`, String(clicks + 1));
+    navigate(path);
+  };
+
+  const sortedQuickActions = React.useMemo(() => {
+    const actions = quickActions.filter(action => visibleQuickActions.includes(action.path));
+    if (quickActionsSortMethod === 'alphabetical') {
+      return actions.sort((a, b) => a.title.localeCompare(b.title));
+    } else if (quickActionsSortMethod === 'mostUsed') {
+      return actions.sort((a, b) => {
+        const countA = parseInt(localStorage.getItem(`quick_action_click_${a.path}`) || '0', 10);
+        const countB = parseInt(localStorage.getItem(`quick_action_click_${b.path}`) || '0', 10);
+        return countB - countA;
+      });
+    }
+    return actions;
+  }, [quickActions, quickActionsSortMethod, visibleQuickActions]);
 
   // Get dates for calendar pages
   const today = new Date();
@@ -309,9 +340,27 @@ const Dashboard: React.FC = () => {
       <Navbar />
 
       <main className="flex-1 w-full ml-0 overflow-auto lg:ml-64 pt-[56px] lg:pt-0">
-        <div className="w-full px-3 py-3 mx-auto sm:px-4 sm:py-5 lg:px-8 lg:py-8 max-w-7xl">
+        <div className="w-full px-3 pt-1 pb-3 mx-auto sm:px-4 sm:py-5 lg:px-8 lg:pt-1 lg:pb-8 max-w-7xl">
           {/* Welcome Section - Compact Mobile */}
           <div className="relative p-3 mb-3 overflow-hidden text-white rounded-lg shadow-lg sm:p-5 sm:mb-5 lg:p-8 lg:mb-8 bg-gradient-to-r from-blue-600 to-indigo-700 sm:rounded-xl lg:rounded-2xl">
+            <img
+              src="/greenting_bg.png"
+              alt=""
+              aria-hidden="true"
+              style={{
+                position: 'absolute',
+                right: '0%',
+                bottom: '4%',
+                height: '170%',
+                width: 'auto',
+                maxWidth: '75%',
+                objectFit: 'contain',
+                objectPosition: 'right bottom',
+                mixBlendMode: 'multiply',
+                opacity: 0.3,
+                pointerEvents: 'none',
+              }}
+            />
             <div className="absolute top-0 right-0 w-24 h-24 -mt-12 -mr-12 bg-white rounded-full sm:w-40 sm:h-40 lg:w-64 lg:h-64 sm:-mt-20 sm:-mr-20 lg:-mt-32 lg:-mr-32 opacity-5"></div>
             <div className="absolute bottom-0 left-0 w-20 h-20 -mb-10 -ml-10 bg-white rounded-full sm:w-32 sm:h-32 lg:w-48 lg:h-48 sm:-mb-16 sm:-ml-16 lg:-mb-24 lg:-ml-24 opacity-5"></div>
             <div className="relative">
@@ -415,10 +464,10 @@ const Dashboard: React.FC = () => {
               <h2 className="text-base font-bold text-gray-900 sm:text-lg lg:text-2xl">{t('Quick_Actions')}</h2>
             </div>
             <div className="grid grid-cols-2 gap-2 sm:gap-3 lg:grid-cols-3 lg:gap-5">
-              {quickActions.map((action) => (
+              {sortedQuickActions.map((action) => (
                 <button
                   key={action.path}
-                  onClick={() => navigate(action.path)}
+                  onClick={() => handleActionClick(action.path)}
                   className={`group relative overflow-hidden bg-gradient-to-br ${action.gradient} ${action.hoverGradient} rounded-lg sm:rounded-xl shadow-md sm:shadow-lg p-3 sm:p-4 lg:p-5 text-white transition-all transform active:scale-[0.97] sm:hover:scale-105 hover:shadow-2xl touch-manipulation`}
                 >
                   <div className="absolute top-0 right-0 w-20 h-20 transition-transform bg-white rounded-bl-full sm:w-24 sm:h-24 lg:w-28 lg:h-28 opacity-10 group-hover:scale-110"></div>

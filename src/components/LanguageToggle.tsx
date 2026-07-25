@@ -1,42 +1,49 @@
 import React from 'react';
 import { useLanguage } from '../contexts/LanguageContext';
 import { motion } from 'framer-motion';
-import { Globe } from 'lucide-react';
 
 const LanguageToggle: React.FC = () => {
   const { language, setLanguage } = useLanguage();
 
   return (
-    <motion.button
-      onClick={() => setLanguage(language === 'gu' ? 'en' : 'gu')}
-      className="relative group flex items-center gap-1.5 md:gap-2 px-2 md:px-3 py-1.5 text-sm font-medium text-blue-400 rounded-lg transition-all hover:text-blue-300 bg-blue-500/10 hover:bg-blue-500/20"
-      whileTap={{ scale: 0.95 }}
-    >
-      <Globe className="w-4 h-4 text-blue-400 group-hover:text-blue-300 transition-colors" />
-      <span className="relative">
-        {/* Desktop View */}
-        <span className="hidden md:block">
-          <span className={`transition-opacity duration-200 ${language === 'gu' ? 'opacity-100' : 'opacity-0 absolute inset-0'}`}>
-            English
-          </span>
-          <span className={`transition-opacity duration-200 ${language === 'en' ? 'opacity-100' : 'opacity-0 absolute inset-0'}`}>
-            ગુજરાતી
-          </span>
-        </span>
-        {/* Mobile View */}
-        <span className="block md:hidden">
-          <span className={`transition-opacity duration-200 ${language === 'gu' ? 'opacity-100' : 'opacity-0 absolute inset-0'}`}>
-            EN
-          </span>
-          <span className={`transition-opacity duration-200 ${language === 'en' ? 'opacity-100' : 'opacity-0 absolute inset-0'}`}>
-            ગુ
-          </span>
-        </span>
-      </span>
-      
-      {/* Background Glow Effect */}
-      <div className="absolute inset-0 -z-10 bg-gradient-to-r from-orange-500/0 via-orange-500/5 to-red-500/0 opacity-0 group-hover:opacity-100 transition-opacity rounded-lg blur-sm" />
-    </motion.button>
+    <div className="relative inline-flex items-center p-0.5 bg-slate-900/80 backdrop-blur-md border border-slate-700/80 rounded-lg shadow-md select-none w-full max-w-[150px]">
+      <div className="relative flex items-center bg-slate-950/60 p-0.5 rounded-md border border-slate-800/80 w-full overflow-hidden">
+        {/* Sliding Background Pill */}
+        <motion.div
+          className="absolute top-0.5 bottom-0.5 bg-blue-600 rounded shadow-sm shadow-blue-600/30"
+          initial={false}
+          animate={{
+            left: language === 'gu' ? '2px' : 'calc(50% + 2px)',
+            width: 'calc(50% - 4px)'
+          }}
+          transition={{ type: 'spring', stiffness: 500, damping: 30 }}
+        />
+
+        <button
+          type="button"
+          onClick={() => setLanguage('gu')}
+          className={`relative z-10 flex-1 py-1 text-[10px] font-bold transition-colors duration-200 flex items-center justify-center ${
+            language === 'gu'
+              ? 'text-white'
+              : 'text-slate-400 hover:text-slate-200'
+          }`}
+        >
+          ગુજરાતી
+        </button>
+
+        <button
+          type="button"
+          onClick={() => setLanguage('en')}
+          className={`relative z-10 flex-1 py-1 text-[10px] font-bold transition-colors duration-200 flex items-center justify-center ${
+            language === 'en'
+              ? 'text-white'
+              : 'text-slate-400 hover:text-slate-200'
+          }`}
+        >
+          English
+        </button>
+      </div>
+    </div>
   );
 };
 

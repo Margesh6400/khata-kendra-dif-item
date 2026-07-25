@@ -147,7 +147,7 @@ export const translations = {
     // Existing Translations
     appName: 'ખાતા કેન્દ્ર',
     greeting: 'નમસ્તે',
-    dashboard: 'રોજમેળ',
+    dashboard: 'ડેશબોર્ડ',
     addClient: 'ગ્રાહકો',
     // udharChallan: 'ઉધાર ચલણ',
     jamaChallan: 'જમા ચલણ',
@@ -553,6 +553,7 @@ export const translations = {
     rentDesc: "Competitive Rates",
     allSizes: "All Sizes",
     sizesDesc: "Various Sizes Available",
+    Manage_your: 'Customer trust is our greatest success.',
 
     // Footer
     quickLinks: "Quick Links",
@@ -654,6 +655,7 @@ export const translations = {
     driverName: 'Driver Name',
     alternativeSite: 'Alternative Site',
     secondaryPhone: 'Secondary Phone Number',
+    Rental_Management: 'Rental Management',
 
     size: 'Size',
     quantity: 'Quantity',

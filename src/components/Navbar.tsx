@@ -92,6 +92,31 @@ const Navbar: React.FC = () => {
     };
   }, []);
 
+  // Prevent background scroll when mobile menu is open (locking html, body, and main)
+  useEffect(() => {
+    const mainElement = document.querySelector('main');
+    if (mobileMenuOpen) {
+      document.body.style.overflow = 'hidden';
+      document.documentElement.style.overflow = 'hidden';
+      if (mainElement) {
+        mainElement.style.overflow = 'hidden';
+      }
+    } else {
+      document.body.style.overflow = '';
+      document.documentElement.style.overflow = '';
+      if (mainElement) {
+        mainElement.style.overflow = '';
+      }
+    }
+    return () => {
+      document.body.style.overflow = '';
+      document.documentElement.style.overflow = '';
+      if (mainElement) {
+        mainElement.style.overflow = '';
+      }
+    };
+  }, [mobileMenuOpen]);
+
   const handleLogout = () => {
     logout();
     navigate('/');
@@ -183,9 +208,9 @@ const Navbar: React.FC = () => {
 
   const renderSidebarContent = () => (
     <>
-      <div className="p-4 relative" style={{ borderBottom: '1px solid rgba(255,255,255,0.1)' }}>
+      <div className="p-4 relative border-b border-slate-800/80">
         <div className="flex items-center gap-3 mb-4">
-          <div className="flex items-center justify-center p-1 overflow-hidden transition-colors w-12 h-12 rounded-xl bg-white/10 hover:bg-white/20 shrink-0">
+          <div className="flex items-center justify-center p-1.5 overflow-hidden transition-all w-11 h-11 rounded-2xl bg-gradient-to-br from-blue-500/20 to-indigo-500/20 border border-white/10 hover:bg-white/20 shrink-0 shadow-inner">
             <img
               src={logo}
               alt="Company Logo"
@@ -194,7 +219,7 @@ const Navbar: React.FC = () => {
           </div>
           <div className="truncate">
             <h1 className="text-base font-bold text-white leading-tight truncate">{t('appName')}</h1>
-            <p className="text-[11px] truncate" style={{ color: '#9ca3af' }}>{t('Rental_Management')}</p>
+            <p className="text-[11px] truncate text-slate-400 font-medium">{t('Rental_Management')}</p>
           </div>
         </div>
 
@@ -203,7 +228,7 @@ const Navbar: React.FC = () => {
           <div className="relative">
             <button
               onClick={() => setDropdownOpen(!dropdownOpen)}
-              className="flex items-center justify-between w-full px-3 py-2 text-xs font-semibold text-white rounded-lg border border-slate-700/80 bg-slate-800/40 hover:bg-slate-800/80 transition-all select-none"
+              className="flex items-center justify-between w-full px-3 py-2.5 text-xs font-semibold text-white rounded-xl border border-slate-700/80 bg-slate-800/50 hover:bg-slate-800/90 transition-all select-none shadow-sm"
               style={{ outline: 'none' }}
             >
               {(() => {
@@ -211,22 +236,22 @@ const Navbar: React.FC = () => {
                 if (currentCat) {
                   const Icon = currentCat.icon;
                   return (
-                    <div className="flex items-center gap-2 text-left truncate">
+                    <div className="flex items-center gap-2.5 text-left truncate">
                       <div 
-                        className="flex items-center justify-center w-5 h-5 rounded-md text-white shrink-0"
+                        className="flex items-center justify-center w-6 h-6 rounded-lg text-white shrink-0 shadow-sm"
                         style={{ backgroundColor: currentCat.iconColor }}
                       >
-                        <Icon size={12} strokeWidth={2.5} />
+                        <Icon size={13} strokeWidth={2.5} />
                       </div>
                       <div className="truncate">
-                        <p className="text-white text-[11px] font-bold leading-none truncate">{currentCat.label}</p>
-                        <p className="text-[9px] leading-none mt-0.5 truncate" style={{ color: '#94a3b8' }}>{currentCat.desc}</p>
+                        <p className="text-white text-[12px] font-bold leading-none truncate">{currentCat.label}</p>
+                        <p className="text-[9px] leading-none mt-1 truncate text-slate-400">{currentCat.desc}</p>
                       </div>
                     </div>
                   );
                 }
                 return (
-                  <span style={{ color: '#9ca3af' }}>Select Section</span>
+                  <span className="text-slate-400">Select Section</span>
                 );
               })()}
               <ChevronDown 
@@ -244,13 +269,13 @@ const Navbar: React.FC = () => {
                 />
                 
                 <div 
-                  className="absolute left-0 right-0 mt-2 z-50 p-1.5 rounded-xl border border-slate-700 bg-slate-900/95 shadow-xl backdrop-blur-md"
+                  className="absolute left-0 right-0 mt-2 z-50 p-2 rounded-2xl border border-slate-700/80 bg-slate-900/95 shadow-2xl backdrop-blur-xl"
                   style={{
                     maxHeight: '260px',
                     overflowY: 'auto'
                   }}
                 >
-                  <div className="text-[10px] font-bold text-slate-500 px-2 py-1.5 uppercase tracking-wider">
+                  <div className="text-[10px] font-bold text-slate-400 px-2 py-1.5 uppercase tracking-wider">
                     {language === 'gu' ? 'વિભાગ બદલો' : 'Switch Section'}
                   </div>
                   {categoriesList.map((cat) => {
@@ -263,26 +288,26 @@ const Navbar: React.FC = () => {
                           setActiveCategory(cat.id);
                           setDropdownOpen(false);
                         }}
-                        className="flex items-center justify-between w-full px-2 py-2 rounded-lg text-left transition-all mb-0.5 last:mb-0 animate-fadeIn"
+                        className="flex items-center justify-between w-full px-2.5 py-2 rounded-xl text-left transition-all mb-1 last:mb-0 animate-fadeIn"
                         style={{
                           backgroundColor: isSelected ? cat.activeBg : 'transparent',
                           border: isSelected ? `1px solid ${cat.borderColor}` : '1px solid transparent'
                         }}
                       >
-                        <div className="flex items-center gap-2 truncate">
+                        <div className="flex items-center gap-2.5 truncate">
                           <div 
-                            className="flex items-center justify-center w-6 h-6 rounded-md text-white shrink-0"
+                            className="flex items-center justify-center w-6 h-6 rounded-lg text-white shrink-0 shadow-sm"
                             style={{ backgroundColor: cat.iconColor }}
                           >
                             <Icon size={13} strokeWidth={2.5} />
                           </div>
                           <div className="truncate text-left">
                             <span className="block text-white text-[12px] font-semibold leading-tight truncate">{cat.label}</span>
-                            <span className="block text-[9px] leading-tight truncate" style={{ color: '#94a3b8' }}>{cat.desc}</span>
+                            <span className="block text-[9px] leading-tight truncate text-slate-400">{cat.desc}</span>
                           </div>
                         </div>
                         {isSelected && (
-                          <div className="w-1.5 h-1.5 rounded-full shrink-0" style={{ backgroundColor: cat.iconColor }} />
+                          <div className="w-2 h-2 rounded-full shrink-0" style={{ backgroundColor: cat.iconColor }} />
                         )}
                       </button>
                     );
@@ -294,7 +319,7 @@ const Navbar: React.FC = () => {
                         setActiveCategory(null);
                         setDropdownOpen(false);
                       }}
-                      className="flex items-center gap-2 w-full px-2 py-1.5 rounded-lg text-left text-xs font-bold text-blue-400 hover:bg-blue-500/10 transition-all"
+                      className="flex items-center gap-2 w-full px-2.5 py-2 rounded-xl text-left text-xs font-bold text-blue-400 hover:bg-blue-500/10 transition-all"
                     >
                       <Globe size={14} />
                       <span>{language === 'gu' ? 'મુખ્ય મેનુ (બધા વિભાગ)' : 'Main Category Menu'}</span>
@@ -307,7 +332,7 @@ const Navbar: React.FC = () => {
         )}
       </div>
 
-      <div className="flex-1 p-4 overflow-y-auto">
+      <div className="flex-1 p-3 overflow-y-auto">
         <div className="space-y-1">
           {navItems.map(({ path, label, icon: Icon, colorClass }) => {
             const isActive = location.pathname === path;
@@ -320,13 +345,10 @@ const Navbar: React.FC = () => {
                   navigate(path);
                   setMobileMenuOpen(false);
                 }}
-                className="flex items-center w-full gap-3 px-5 py-3 font-medium transition-all"
+                className="flex items-center w-full gap-3 px-3.5 py-2.5 text-sm font-medium transition-all group relative rounded-xl"
                 style={{
-                  fontSize: '16px',
                   color: isActive ? '#60a5fa' : '#9ca3af',
-                  backgroundColor: isActive ? 'rgba(37, 99, 235, 0.1)' : 'transparent',
-                  borderLeft: isActive ? `4px solid ${activeColor}` : '4px solid transparent',
-                  borderRadius: '0'
+                  backgroundColor: isActive ? 'rgba(37, 99, 235, 0.14)' : 'transparent',
                 }}
                 onMouseEnter={(e) => {
                   if (!isActive) {
@@ -341,29 +363,36 @@ const Navbar: React.FC = () => {
                   }
                 }}
               >
-                <Icon size={20} />
-                <span className="flex-1 text-left">{label}</span>
+                {/* Active Pill Indicator */}
+                {isActive && (
+                  <span
+                    className="absolute left-1 top-1/2 -translate-y-1/2 w-1.5 h-5 rounded-full transition-all"
+                    style={{ backgroundColor: activeColor }}
+                  />
+                )}
+                <Icon size={19} className={`shrink-0 ${isActive ? 'text-blue-400' : 'group-hover:text-white transition-colors'}`} />
+                <span className="flex-1 text-left font-semibold truncate">{label}</span>
               </button>
             );
           })}
         </div>
       </div>
 
-      <div className="p-4 space-y-3" style={{ borderTop: '1px solid rgba(255,255,255,0.1)' }}>
+      <div className="p-4 space-y-3 border-t border-slate-800/80">
         <div className="flex justify-center">
           <LanguageToggle />
         </div>
 
         <button
           onClick={handleLogout}
-          className="flex items-center justify-center w-full gap-2 px-4 py-2 transition-colors duration-150 rounded-lg bg-red-500/10 hover:bg-red-500/20"
+          className="flex items-center justify-center w-full gap-2 px-4 py-2.5 transition-all duration-150 rounded-xl bg-red-500/10 hover:bg-red-500/20 border border-red-500/20 active:scale-[0.98]"
           style={{
             minHeight: '44px',
             color: '#f87171'
           }}
         >
-          <LogOut size={20} />
-          <span className="font-medium">{t('logout')}</span>
+          <LogOut size={18} />
+          <span className="font-semibold text-sm">{t('logout')}</span>
         </button>
       </div>
     </>
@@ -372,36 +401,34 @@ const Navbar: React.FC = () => {
   return (
     <>
       {/* Desktop Sidebar */}
-      <nav className="fixed top-0 left-0 z-50 flex-col hidden h-screen lg:flex" style={{ width: '250px', backgroundColor: '#1f2937' }}>
+      <nav className="fixed top-0 left-0 z-50 flex-col hidden h-screen lg:flex border-r border-slate-800/80 shadow-2xl shadow-black/30" style={{ width: '250px', backgroundColor: '#0f172a', borderRadius: '0 24px 24px 0' }}>
         {renderSidebarContent()}
       </nav>
 
-      {/* Mobile Header - Slightly lower position with rounded corners */}
+      {/* Mobile Header - Sleek floating bar with smooth 16px rounded corners */}
       <div
-        className="fixed left-0 right-0 z-50 flex items-center justify-between px-4 bg-white border-b shadow-sm lg:hidden"
+        className="fixed left-0 right-0 z-50 flex items-center justify-between px-3.5 bg-white/95 backdrop-blur-md border border-slate-200/80 shadow-md shadow-slate-200/50 lg:hidden"
         style={{
           height: '56px',
-          borderColor: '#e5e7eb',
-          top: '8px',
-          margin: '0 8px',
-          borderRadius: '8px'
+          top: '10px',
+          margin: '0 12px',
+          borderRadius: '16px'
         }}
       >
         <button
           onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-          className="p-2 -ml-2 rounded-lg focus:outline-none focus:ring-2 focus:ring-inset focus:ring-blue-500 shrink-0"
-          style={{ color: '#2563eb' }}
+          className="p-2 rounded-xl bg-slate-100/80 hover:bg-slate-200/80 text-blue-600 focus:outline-none transition-all active:scale-95 shrink-0"
         >
-          {mobileMenuOpen ? <X size={24} /> : <Menu size={24} />}
+          {mobileMenuOpen ? <X size={20} /> : <Menu size={20} />}
         </button>
-        <h1 className="font-bold text-center truncate px-2" style={{ fontSize: '16px', color: '#1f2937' }}>
+        <h1 className="font-bold text-center truncate px-2 text-slate-800 text-sm sm:text-base">
           {getCurrentPageName()}
         </h1>
         {enableCategorySeparation && activeCategory ? (
           <div className="relative shrink-0">
             <button
               onClick={() => setMobileDropdownOpen(!mobileDropdownOpen)}
-              className="flex items-center gap-1 px-2.5 py-1 text-[11px] font-bold text-white rounded-full transition-all shadow-sm active:scale-95 animate-fadeIn"
+              className="flex items-center gap-1 px-3 py-1.5 text-[11px] font-bold text-white rounded-full transition-all shadow-sm active:scale-95"
               style={{
                 backgroundColor: (() => {
                   const colors = { shuttering: '#dc2626', jack: '#16a34a', cuplock: '#8b5cf6', other: '#2563eb' };
@@ -425,14 +452,14 @@ const Navbar: React.FC = () => {
             {mobileDropdownOpen && (
               <>
                 <div 
-                  className="fixed inset-0 z-40 bg-black/10" 
+                  className="fixed inset-0 z-40 bg-black/20 backdrop-blur-xs" 
                   onClick={() => setMobileDropdownOpen(false)}
                 />
                 <div 
-                  className="absolute right-0 mt-1.5 z-50 w-44 p-1 rounded-xl border border-gray-100 bg-white shadow-xl"
+                  className="absolute right-0 mt-2 z-50 w-48 p-1.5 rounded-2xl border border-gray-100 bg-white shadow-2xl animate-fadeIn"
                   style={{ top: '100%' }}
                 >
-                  <div className="text-[9px] font-bold text-gray-450 px-2 py-1 uppercase tracking-wider">
+                  <div className="text-[9px] font-bold text-gray-400 px-2.5 py-1 uppercase tracking-wider">
                     {language === 'gu' ? 'વિભાગ બદલો' : 'Switch Section'}
                   </div>
                   {categoriesList.map((cat) => {
@@ -445,14 +472,14 @@ const Navbar: React.FC = () => {
                           setActiveCategory(cat.id);
                           setMobileDropdownOpen(false);
                         }}
-                        className="flex items-center justify-between w-full px-2 py-1.5 rounded-lg text-left transition-all mb-0.5 last:mb-0"
+                        className="flex items-center justify-between w-full px-2.5 py-1.5 rounded-xl text-left transition-all mb-0.5 last:mb-0"
                         style={{
-                          backgroundColor: isSelected ? 'rgba(37, 99, 235, 0.05)' : 'transparent',
+                          backgroundColor: isSelected ? 'rgba(37, 99, 235, 0.08)' : 'transparent',
                         }}
                       >
-                        <div className="flex items-center gap-1.5 truncate">
+                        <div className="flex items-center gap-2 truncate">
                           <div 
-                            className="flex items-center justify-center w-5 h-5 rounded-md text-white shrink-0"
+                            className="flex items-center justify-center w-5 h-5 rounded-lg text-white shrink-0 shadow-sm"
                             style={{ backgroundColor: cat.iconColor }}
                           >
                             <Icon size={11} strokeWidth={2.5} />
@@ -465,15 +492,15 @@ const Navbar: React.FC = () => {
                       </button>
                     );
                   })}
-                  <div className="border-t border-gray-150 my-1 pt-1">
+                  <div className="border-t border-gray-100 my-1 pt-1">
                     <button
                       onClick={() => {
                         setActiveCategory(null);
                         setMobileDropdownOpen(false);
                       }}
-                      className="flex items-center gap-1.5 w-full px-2 py-1.5 rounded-lg text-left text-[11px] font-bold text-blue-600 hover:bg-blue-50 transition-all"
+                      className="flex items-center gap-2 w-full px-2.5 py-1.5 rounded-xl text-left text-[11px] font-bold text-blue-600 hover:bg-blue-50 transition-all"
                     >
-                      <Globe size={12} />
+                      <Globe size={13} />
                       <span>{language === 'gu' ? 'મુખ્ય મેનુ' : 'Main Menu'}</span>
                     </button>
                   </div>
@@ -486,21 +513,20 @@ const Navbar: React.FC = () => {
         )}
       </div>
 
-      {/* Mobile Menu */}
+      {/* Mobile Navigation Drawer */}
       {mobileMenuOpen && (
         <>
           <div
-            className="fixed inset-0 z-40 lg:hidden"
-            style={{ backgroundColor: 'rgba(0,0,0,0.5)' }}
+            className="fixed inset-0 z-[100] lg:hidden bg-slate-900/60 backdrop-blur-xs transition-opacity"
             onClick={() => setMobileMenuOpen(false)}
           />
 
           <nav
-            className="fixed top-0 left-0 z-50 flex flex-col h-screen overflow-y-auto lg:hidden"
+            className="fixed top-0 left-0 z-[110] flex flex-col h-screen overflow-y-auto lg:hidden shadow-2xl shadow-black/50"
             style={{
               width: '280px',
-              backgroundColor: '#1f2937',
-              boxShadow: '4px 0 6px rgba(0,0,0,0.1)',
+              backgroundColor: '#0f172a',
+              borderRadius: '0 24px 24px 0',
               transition: 'transform 0.3s ease'
             }}
           >

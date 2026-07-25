@@ -5,6 +5,7 @@ export type DateSortingMethod = 'standard' | 'jamaFirst';
 export type LedgerDownloadFormat = 'detailed' | 'simple' | 'split';
 export type ShareBillMode = 'image' | 'text';
 export type BusinessCategory = 'shuttering' | 'jack' | 'cuplock' | 'other';
+export type QuickActionsSortMethod = 'default' | 'alphabetical' | 'mostUsed';
 
 const MIN_FONT_SIZE = 12;
 const MAX_FONT_SIZE = 22;
@@ -30,6 +31,10 @@ interface SettingsContextType {
   setEnableCategorySeparation: (val: boolean) => void;
   activeCategory: BusinessCategory | null;
   setActiveCategory: (category: BusinessCategory | null) => void;
+  quickActionsSortMethod: QuickActionsSortMethod;
+  setQuickActionsSortMethod: (method: QuickActionsSortMethod) => void;
+  visibleQuickActions: string[];
+  setVisibleQuickActions: (actions: string[]) => void;
 }
 
 const SettingsContext = createContext<SettingsContextType | undefined>(undefined);
@@ -76,6 +81,24 @@ export const SettingsProvider: React.FC<{ children: ReactNode }> = ({ children }
     return (saved === 'shuttering' || saved === 'jack' || saved === 'cuplock' || saved === 'other') ? saved : null;
   });
 
+  const [quickActionsSortMethod, setQuickActionsSortMethodState] = useState<QuickActionsSortMethod>(() => {
+    const saved = localStorage.getItem('quickActionsSortMethod');
+    return (saved === 'default' || saved === 'alphabetical' || saved === 'mostUsed') ? saved : 'default';
+  });
+
+  const [visibleQuickActions, setVisibleQuickActionsState] = useState<string[]>(() => {
+    const saved = localStorage.getItem('visibleQuickActions');
+    try {
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        if (Array.isArray(parsed)) return parsed;
+      }
+    } catch (e) {
+      console.warn('Failed to parse visibleQuickActions:', e);
+    }
+    return ['/udhar-challan', '/jama-challan', '/client-ledger', '/stock', '/clients', '/challan-book', '/billing', '/bill-book', '/settings'];
+  });
+
   useEffect(() => {
     localStorage.setItem('dateSortingMethod', dateSortingMethod);
   }, [dateSortingMethod]);
@@ -117,6 +140,14 @@ export const SettingsProvider: React.FC<{ children: ReactNode }> = ({ children }
       sessionStorage.removeItem('activeCategory');
     }
   }, [activeCategory]);
+
+  useEffect(() => {
+    localStorage.setItem('quickActionsSortMethod', quickActionsSortMethod);
+  }, [quickActionsSortMethod]);
+
+  useEffect(() => {
+    localStorage.setItem('visibleQuickActions', JSON.stringify(visibleQuickActions));
+  }, [visibleQuickActions]);
 
   const setDateSortingMethod = (method: DateSortingMethod) => {
     setDateSortingMethodState(method);
@@ -170,6 +201,14 @@ export const SettingsProvider: React.FC<{ children: ReactNode }> = ({ children }
     setActiveCategoryState(category);
   };
 
+  const setQuickActionsSortMethod = (method: QuickActionsSortMethod) => {
+    setQuickActionsSortMethodState(method);
+  };
+
+  const setVisibleQuickActions = (actions: string[]) => {
+    setVisibleQuickActionsState(actions);
+  };
+
   return (
     <SettingsContext.Provider value={{
       dateSortingMethod,
@@ -191,6 +230,10 @@ export const SettingsProvider: React.FC<{ children: ReactNode }> = ({ children }
       setEnableCategorySeparation,
       activeCategory,
       setActiveCategory,
+      quickActionsSortMethod,
+      setQuickActionsSortMethod,
+      visibleQuickActions,
+      setVisibleQuickActions,
     }}>
       {children}
     </SettingsContext.Provider>

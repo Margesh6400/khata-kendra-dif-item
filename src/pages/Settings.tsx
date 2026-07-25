@@ -26,6 +26,10 @@ const Settings: React.FC = () => {
     setRequireLoginPassword,
     enableCategorySeparation,
     setEnableCategorySeparation,
+    quickActionsSortMethod,
+    setQuickActionsSortMethod,
+    visibleQuickActions,
+    setVisibleQuickActions,
   } = useSettings();
 
   const [securityEnabled, setSecurityEnabled] = React.useState(() => localStorage.getItem('security_lock_enabled') === 'true');
@@ -40,6 +44,30 @@ const Settings: React.FC = () => {
   // Monthly bill cron on/off — stored in app_settings so the server-side
   // cron job can check it. null while loading from DB.
   const [cronEnabled, setCronEnabled] = React.useState<boolean | null>(null);
+
+  const availableActions = [
+    { id: '/udhar-challan', label: language === 'gu' ? 'ઉધાર ચલણ' : 'Udhar Challan' },
+    { id: '/jama-challan', label: language === 'gu' ? 'જમા ચલણ' : 'Jama Challan' },
+    { id: '/client-ledger', label: language === 'gu' ? 'ગ્રાહક ખાતાવહી' : 'Client Ledger' },
+    { id: '/stock', label: language === 'gu' ? 'સ્ટોક મેનેજમેન્ટ' : 'Stock Management' },
+    { id: '/clients', label: language === 'gu' ? 'ગ્રાહકો ઉમેરો' : 'Add Client' },
+    { id: '/challan-book', label: language === 'gu' ? 'ચલણ બુક' : 'Challan Book' },
+    { id: '/billing', label: language === 'gu' ? 'બિલ બનાવો' : 'Create Bill' },
+    { id: '/bill-book', label: language === 'gu' ? 'બિલ બુક' : 'Bill Book' },
+    { id: '/settings', label: language === 'gu' ? 'સેટિંગ્સ' : 'Settings' },
+  ];
+
+  const toggleQuickActionVisibility = (id: string) => {
+    if (visibleQuickActions.includes(id)) {
+      if (visibleQuickActions.length <= 1) {
+        toast.error(language === 'gu' ? 'ઓછામાં ઓછી એક એક્શન સક્રિય હોવી જોઈએ!' : 'At least one quick action must remain active!');
+        return;
+      }
+      setVisibleQuickActions(visibleQuickActions.filter(x => x !== id));
+    } else {
+      setVisibleQuickActions([...visibleQuickActions, id]);
+    }
+  };
 
   React.useEffect(() => {
     supabase
@@ -868,6 +896,134 @@ const Settings: React.FC = () => {
                     )}
                   </div>
                 )}
+
+              </div>
+            </div>
+
+            {/* Dashboard Quick Actions Settings Card */}
+            <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
+              <div className="p-4 sm:p-6 border-b border-gray-100 bg-gray-50/50 flex items-center gap-3">
+                <LayoutGrid className="w-5 h-5 text-blue-600" />
+                <h3 className="font-bold text-gray-900 text-base sm:text-lg">
+                  {language === 'gu' ? 'ડેશબોર્ડ સેટિંગ્સ' : 'Dashboard Settings'}
+                </h3>
+              </div>
+              <div className="p-4 sm:p-6 space-y-6">
+                <div>
+                  <label className="block text-sm font-semibold text-gray-700 mb-3">
+                    {language === 'gu' ? 'ક્વિક એક્શન સૉર્ટ કરવાની પદ્ધતિ' : 'Quick Actions Sorting Method'}
+                  </label>
+                  <p className="text-xs text-gray-500 mb-4 leading-relaxed">
+                    {language === 'gu' 
+                      ? 'પસંદ કરો કે ડેશબોર્ડ પર ક્વિક એક્શન બટનો કઈ રીતે ગોઠવવા.' 
+                      : 'Choose how to sort the quick action buttons on the main dashboard.'}
+                  </p>
+                  <div className="grid gap-4 sm:grid-cols-3">
+                    {/* Default */}
+                    <button
+                      onClick={() => setQuickActionsSortMethod('default')}
+                      className={`relative p-4 rounded-xl border text-left transition-all ${quickActionsSortMethod === 'default'
+                          ? 'border-blue-600 bg-blue-50/40 ring-1 ring-blue-500'
+                          : 'border-gray-200 hover:border-gray-300 bg-white'
+                        }`}
+                    >
+                      <div className="flex justify-between items-start mb-2">
+                        <span className="font-bold text-sm sm:text-base text-gray-900">
+                          {language === 'gu' ? 'મૂળભૂત' : 'Default'}
+                        </span>
+                        {quickActionsSortMethod === 'default' && (
+                          <CheckCircle className="w-5 h-5 text-blue-600 shadow-sm" />
+                        )}
+                      </div>
+                      <p className="text-[11px] text-gray-500 leading-normal">
+                        {language === 'gu' ? 'મૂળભૂત ક્રમમાં બતાવો' : 'Standard pre-defined order'}
+                      </p>
+                    </button>
+
+                    {/* Alphabetical */}
+                    <button
+                      onClick={() => setQuickActionsSortMethod('alphabetical')}
+                      className={`relative p-4 rounded-xl border text-left transition-all ${quickActionsSortMethod === 'alphabetical'
+                          ? 'border-blue-600 bg-blue-50/40 ring-1 ring-blue-500'
+                          : 'border-gray-200 hover:border-gray-300 bg-white'
+                        }`}
+                    >
+                      <div className="flex justify-between items-start mb-2">
+                        <span className="font-bold text-sm sm:text-base text-gray-900">
+                          {language === 'gu' ? 'અકારાદિ ક્રમ' : 'Alphabetical'}
+                        </span>
+                        {quickActionsSortMethod === 'alphabetical' && (
+                          <CheckCircle className="w-5 h-5 text-blue-600 shadow-sm" />
+                        )}
+                      </div>
+                      <p className="text-[11px] text-gray-500 leading-normal">
+                        {language === 'gu' ? 'નામ પ્રમાણે સૉર્ટ કરો (A-Z)' : 'Sort by action title (A-Z)'}
+                      </p>
+                    </button>
+
+                    {/* Most Used */}
+                    <button
+                      onClick={() => setQuickActionsSortMethod('mostUsed')}
+                      className={`relative p-4 rounded-xl border text-left transition-all ${quickActionsSortMethod === 'mostUsed'
+                          ? 'border-blue-600 bg-blue-50/40 ring-1 ring-blue-500'
+                          : 'border-gray-200 hover:border-gray-300 bg-white'
+                        }`}
+                    >
+                      <div className="flex justify-between items-start mb-2">
+                        <span className="font-bold text-sm sm:text-base text-gray-900">
+                          {language === 'gu' ? 'વધુ વપરાતા' : 'Most Used'}
+                        </span>
+                        {quickActionsSortMethod === 'mostUsed' && (
+                          <CheckCircle className="w-5 h-5 text-blue-600 shadow-sm" />
+                        )}
+                      </div>
+                      <p className="text-[11px] text-gray-500 leading-normal">
+                        {language === 'gu' ? 'વધુ ક્લિક કરેલ પ્રથમ બતાવો' : 'Most frequently clicked first'}
+                      </p>
+                    </button>
+                  </div>
+                </div>
+
+                {/* Visible Actions Selector */}
+                <div className="pt-6 border-t border-gray-100">
+                  <label className="block text-sm font-semibold text-gray-700 mb-3">
+                    {language === 'gu' ? 'દર્શાવવા માટે ક્વિક એક્શન પસંદ કરો' : 'Select Visible Quick Actions'}
+                  </label>
+                  <p className="text-xs text-gray-500 mb-4 leading-relaxed">
+                    {language === 'gu' 
+                      ? 'ડેશબોર્ડ પર કયા ક્વિક એક્શન બટનો બતાવવા તે પસંદ કરો.' 
+                      : 'Choose which quick action buttons you want to see on the dashboard.'}
+                  </p>
+                  <div className="grid gap-3 grid-cols-2 sm:grid-cols-2 lg:grid-cols-4">
+                    {availableActions.map((act) => {
+                      const isVisible = visibleQuickActions.includes(act.id);
+                      return (
+                        <button
+                          key={act.id}
+                          onClick={() => toggleQuickActionVisibility(act.id)}
+                          className={`flex items-center justify-between p-3.5 rounded-xl border text-left transition-all ${
+                            isVisible
+                              ? 'border-blue-600 bg-blue-50/40 ring-1 ring-blue-500 font-bold text-blue-700'
+                              : 'border-gray-200 hover:border-gray-300 bg-white text-gray-700'
+                          }`}
+                        >
+                          <span className="text-xs sm:text-sm">{act.label}</span>
+                          <div className={`w-5 h-5 rounded-md border flex items-center justify-center transition-all ${
+                            isVisible
+                              ? 'bg-blue-600 border-blue-600 text-white'
+                              : 'border-gray-300 bg-white'
+                          }`}>
+                            {isVisible && (
+                              <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="4">
+                                <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+                              </svg>
+                            )}
+                          </div>
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
 
               </div>
             </div>
