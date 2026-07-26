@@ -647,7 +647,7 @@ const JamaChallan: React.FC = () => {
   const location = useLocation();
   const { t } = useLanguage();
   const { sizes: plateSizes } = usePlateSizes();
-  const { enableCategorySeparation, activeCategory } = useSettings();
+  const { enableCategorySeparation, enableCategoryClientSeparation, activeCategory } = useSettings();
 
 
   // Step management
@@ -798,12 +798,16 @@ const JamaChallan: React.FC = () => {
       return;
     }
 
+    let clientList = data || [];
+    if (enableCategoryClientSeparation && activeCategory) {
+      clientList = clientList.filter((c: any) => !c.category || c.category === activeCategory);
+    }
 
-    setClients(data || []);
+    setClients(clientList);
 
     // Fetch balances for all clients
-    if (data && data.length > 0) {
-      await fetchAllClientBalances(data);
+    if (clientList.length > 0) {
+      await fetchAllClientBalances(clientList);
     }
   };
 

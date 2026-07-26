@@ -20,6 +20,7 @@ const Billing = lazy(() => import('./pages/Billing'));
 const CreateBill = lazy(() => import('./pages/CreateBill'));
 const BillBook = lazy(() => import('./pages/BillBook'));
 const Payments = lazy(() => import('./pages/Payments'));
+const QuickPayments = lazy(() => import('./pages/QuickPayments'));
 const Settings = lazy(() => import('./pages/Settings'));
 const ChallanDesigner = lazy(() => import('./pages/ChallanDesigner'));
 
@@ -55,6 +56,10 @@ function App() {
                   <Route
                     path="/dashboard"
                     element={<ProtectedRoute><Dashboard /></ProtectedRoute>}
+                  />
+                  <Route
+                    path="/quick-payments"
+                    element={<ProtectedRoute><QuickPayments /></ProtectedRoute>}
                   />
                   <Route
                     path="/bill-book"

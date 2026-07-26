@@ -61,7 +61,7 @@ const ClientCard: React.FC<ClientCardProps> = ({ client, balance, onClick }) => 
 export default function Billing() {
   const navigate = useNavigate();
   const { t } = useLanguage();
-  const { enableCategorySeparation, activeCategory } = useSettings();
+  const { enableCategorySeparation, enableCategoryClientSeparation, activeCategory } = useSettings();
   const [clients, setClients] = useState<ClientFormData[]>([]);
   const [clientBalances, setClientBalances] = useState<Record<string, number>>({});
   const [searchQuery, setSearchQuery] = useState("");
@@ -71,7 +71,7 @@ export default function Billing() {
 
   useEffect(() => {
     fetchClients();
-  }, []);
+  }, [enableCategorySeparation, enableCategoryClientSeparation, activeCategory]);
 
   // Step 1: open the picker with every client pre-selected
   const openClientPicker = () => {
@@ -139,7 +139,11 @@ export default function Billing() {
         .order("client_nic_name", { ascending: true });
 
       if (error) throw error;
-      setClients(clientsData || []);
+      let clientList = clientsData || [];
+      if (enableCategoryClientSeparation && activeCategory) {
+        clientList = clientList.filter((c: any) => !c.category || c.category === activeCategory);
+      }
+      setClients(clientList);
 
       // Fetch latest balances from generated bills only
       const { data: bills, error: billsError } = await billsQuery

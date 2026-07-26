@@ -10,6 +10,7 @@ import {
   Receipt,
   Files,
   Activity,
+  CreditCard,
   Settings as SettingsIcon
 } from 'lucide-react';
 import { useLanguage } from '../contexts/LanguageContext';
@@ -32,6 +33,14 @@ const Dashboard: React.FC = () => {
   }, [t]);
 
   const quickActions = [
+    {
+      title: language === 'gu' ? 'ચૂકવણી કલેક્શન' : 'Quick Payments',
+      description: language === 'gu' ? 'ઝડપી ચૂકવણી જમા કરો' : 'Fast Payment Entry',
+      icon: CreditCard,
+      path: '/quick-payments',
+      gradient: 'from-emerald-500 to-emerald-700',
+      hoverGradient: 'hover:from-emerald-600 hover:to-emerald-800',
+    },
     {
       title: t('udharChallan'),
       description: t('create_rental'),

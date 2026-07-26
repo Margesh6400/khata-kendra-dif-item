@@ -18,7 +18,8 @@ import {
   Boxes,
   FolderOpen,
   ChevronDown,
-  Globe
+  Globe,
+  Wallet
 } from 'lucide-react';
 import logo from '../assets/logo.png';
 import { useLanguage } from '../contexts/LanguageContext';
@@ -129,6 +130,12 @@ const Navbar: React.FC = () => {
       label: t('dashboard'),
       icon: LayoutDashboard,
       colorClass: 'blue'
+    },
+    {
+      path: '/quick-payments',
+      label: language === 'gu' ? 'ચૂકવણી કલેક્શન' : 'Quick Payments',
+      icon: Wallet,
+      colorClass: 'green'
     },
     {
       path: '/client-ledger',

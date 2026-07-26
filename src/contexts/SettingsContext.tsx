@@ -31,6 +31,8 @@ interface SettingsContextType {
   setRequireLoginPassword: (val: boolean) => void;
   enableCategorySeparation: boolean;
   setEnableCategorySeparation: (val: boolean) => void;
+  enableCategoryClientSeparation: boolean;
+  setEnableCategoryClientSeparation: (val: boolean) => void;
   activeCategory: BusinessCategory | null;
   setActiveCategory: (category: BusinessCategory | null) => void;
   quickActionsSortMethod: QuickActionsSortMethod;
@@ -212,6 +214,19 @@ export const SettingsProvider: React.FC<{ children: ReactNode }> = ({ children }
     setEnableCategorySeparationState(val);
   };
 
+  const [enableCategoryClientSeparation, setEnableCategoryClientSeparationState] = useState<boolean>(() => {
+    const saved = localStorage.getItem('enableCategoryClientSeparation');
+    return saved === 'true';
+  });
+
+  useEffect(() => {
+    localStorage.setItem('enableCategoryClientSeparation', String(enableCategoryClientSeparation));
+  }, [enableCategoryClientSeparation]);
+
+  const setEnableCategoryClientSeparation = (val: boolean) => {
+    setEnableCategoryClientSeparationState(val);
+  };
+
   const setActiveCategory = (category: BusinessCategory | null) => {
     setActiveCategoryState(category);
   };
@@ -245,6 +260,8 @@ export const SettingsProvider: React.FC<{ children: ReactNode }> = ({ children }
       setRequireLoginPassword,
       enableCategorySeparation,
       setEnableCategorySeparation,
+      enableCategoryClientSeparation,
+      setEnableCategoryClientSeparation,
       activeCategory,
       setActiveCategory,
       quickActionsSortMethod,

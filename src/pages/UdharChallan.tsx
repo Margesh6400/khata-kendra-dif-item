@@ -686,7 +686,7 @@ const UdharChallan: React.FC = () => {
   const location = useLocation();
   const { t } = useLanguage();
   const { sizes: plateSizes } = usePlateSizes();
-  const { enableCategorySeparation, activeCategory } = useSettings();
+  const { enableCategorySeparation, enableCategoryClientSeparation, activeCategory } = useSettings();
 
   // Step management
   const [currentStep, setCurrentStep] = useState<Step>('client-selection');
@@ -856,7 +856,12 @@ const UdharChallan: React.FC = () => {
       return;
     }
 
-    setClients(data || []);
+    let clientList = data || [];
+    if (enableCategoryClientSeparation && activeCategory) {
+      clientList = clientList.filter((c: any) => !c.category || c.category === activeCategory);
+    }
+
+    setClients(clientList);
   };
 
   const handleQuickAddClient = async (clientData: ClientFormData) => {

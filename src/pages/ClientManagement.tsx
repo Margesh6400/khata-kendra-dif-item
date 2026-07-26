@@ -48,12 +48,14 @@ const naturalSort = (a: string, b: string): number => {
 };
 import ClientList from '../components/ClientList';
 import { useLanguage } from '../contexts/LanguageContext';
+import { useSettings } from '../contexts/SettingsContext';
 import Navbar from '../components/Navbar';
 import { supabase } from '../utils/supabase';
 import toast, { Toaster } from 'react-hot-toast';
 
 const ClientManagement: React.FC = () => {
   const { t } = useLanguage();
+  const { enableCategoryClientSeparation, activeCategory } = useSettings();
   const [clients, setClients] = useState<ClientFormData[]>([]);
   const [editingClient, setEditingClient] = useState<ClientFormData | undefined>(undefined);
   const [showForm, setShowForm] = useState(false);
@@ -109,7 +111,7 @@ const ClientManagement: React.FC = () => {
 
   useEffect(() => {
     fetchClients();
-  }, []);
+  }, [enableCategoryClientSeparation, activeCategory]);
 
   // Reset pagination when search query changes
   useEffect(() => {
@@ -164,8 +166,14 @@ const ClientManagement: React.FC = () => {
         return;
       }
 
+      let clientList = data || [];
+
+      if (enableCategoryClientSeparation && activeCategory) {
+        clientList = clientList.filter((c: any) => !c.category || c.category === activeCategory);
+      }
+
       // Sort the data using improved natural sort
-      const sortedData = [...(data || [])].sort((a, b) => {
+      const sortedData = [...clientList].sort((a, b) => {
         const result = naturalSort(
           (a.client_nic_name || '').toString(),
           (b.client_nic_name || '').toString()

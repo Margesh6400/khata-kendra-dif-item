@@ -28,6 +28,8 @@ const Settings: React.FC = () => {
     setRequireLoginPassword,
     enableCategorySeparation,
     setEnableCategorySeparation,
+    enableCategoryClientSeparation,
+    setEnableCategoryClientSeparation,
     quickActionsSortMethod,
     setQuickActionsSortMethod,
     visibleQuickActions,
@@ -683,6 +685,69 @@ const Settings: React.FC = () => {
                     />
                   </div>
                 </button>
+              </div>
+            </div>
+
+            {/* Business Category & Client Separation Settings Card */}
+            <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
+              <div className="p-4 sm:p-6 border-b border-gray-100 bg-gray-50/50 flex items-center gap-3">
+                <Layers className="w-5 h-5 text-blue-600" />
+                <h3 className="font-bold text-gray-900 text-base sm:text-lg">
+                  {language === 'gu' ? 'વિભાગીય વ્યવસાય સેટિંગ્સ (Business Categories)' : 'Business Category & Client Separation'}
+                </h3>
+              </div>
+              <div className="p-4 sm:p-6 space-y-4">
+                
+                {/* Category Separation */}
+                <button
+                  onClick={() => setEnableCategorySeparation(!enableCategorySeparation)}
+                  className={`w-full flex items-center justify-between p-4 rounded-xl border text-left transition-all ${enableCategorySeparation
+                      ? 'border-blue-600 bg-blue-50/40 ring-1 ring-blue-500'
+                      : 'border-gray-200 hover:border-gray-300 bg-white'
+                    }`}
+                >
+                  <div className="pr-4">
+                    <span className="font-bold text-sm sm:text-base text-gray-900 block mb-1">
+                      {language === 'gu' ? 'વિભાગ આધારિત અલગ વ્યવસ્થા ચાલુ કરો (Shuttering, Jack, Cuplock, Other)' : 'Enable Business Category Separation'}
+                    </span>
+                    <p className="text-xs text-gray-500 leading-relaxed">
+                      {language === 'gu'
+                        ? 'શટરિંગ, જેક, કપલોક અને અન્ય માટે અલગ સ્ટોક, ચલણ અને બિલિંગ વ્યવસ્થા સક્રિય કરો.'
+                        : 'Separate inventory, challans, and bills across Shuttering, Jack, Cuplock, and Other sections.'}
+                    </p>
+                  </div>
+                  <div className={`relative inline-flex h-7 w-12 flex-shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-300 ease-in-out shadow-inner ${enableCategorySeparation ? 'bg-blue-600' : 'bg-gray-300'}`}>
+                    <span
+                      className={`pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow-md ring-0 transition duration-300 ease-in-out ${enableCategorySeparation ? 'translate-x-5' : 'translate-x-0'}`}
+                    />
+                  </div>
+                </button>
+
+                {/* Separate Clients per Category */}
+                <button
+                  onClick={() => setEnableCategoryClientSeparation(!enableCategoryClientSeparation)}
+                  className={`w-full flex items-center justify-between p-4 rounded-xl border text-left transition-all ${enableCategoryClientSeparation
+                      ? 'border-blue-600 bg-blue-50/40 ring-1 ring-blue-500'
+                      : 'border-gray-200 hover:border-gray-300 bg-white'
+                    }`}
+                >
+                  <div className="pr-4">
+                    <span className="font-bold text-sm sm:text-base text-gray-900 block mb-1">
+                      {language === 'gu' ? 'દરેક વિભાગ માટે અલગ ગ્રાહક લિસ્ટ (Separate Client Lists per Category)' : 'Separate Clients for Separate Business Categories'}
+                    </span>
+                    <p className="text-xs text-gray-500 leading-relaxed">
+                      {language === 'gu'
+                        ? 'જ્યારે વિભાગ બદલો (શટરિંગ / જેક / કપલોક), ત્યારે તે વિભાગના ગ્રાહકો જ લિસ્ટ અને ચલણમાં બતાવો.'
+                        : 'Filter and display separate client lists when switching between business categories (Shuttering, Jack, Cuplock, Other).'}
+                    </p>
+                  </div>
+                  <div className={`relative inline-flex h-7 w-12 flex-shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-300 ease-in-out shadow-inner ${enableCategoryClientSeparation ? 'bg-blue-600' : 'bg-gray-300'}`}>
+                    <span
+                      className={`pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow-md ring-0 transition duration-300 ease-in-out ${enableCategoryClientSeparation ? 'translate-x-5' : 'translate-x-0'}`}
+                    />
+                  </div>
+                </button>
+
               </div>
             </div>
 
