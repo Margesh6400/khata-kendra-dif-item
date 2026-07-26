@@ -33,6 +33,10 @@ export interface PlacedField {
   x: number;                                 // top-left, fraction of width
   y: number;                                 // top-left, fraction of height
   w: number;                                 // box width, fraction of width
+  h?: number;                                // box height, fraction of height (square/rectangle box frame)
+  showBox?: boolean;                         // draw square border box around field
+  borderColor?: string;                      // box border color
+  borderWidth?: number;                      // box border stroke width
   style: TextStyle;
   printOn: PrintOn;
   staticText?: string;                       // used when key === 'literal'
@@ -111,7 +115,7 @@ export interface ChallanRenderInput {
   loadingUnloadingCharges?: number;
   vehicleRent?: number;
   deposit?: number;
-  mainNote?: string;
+  mainNote?: string | null;
   rows: ChallanRow[];
   grandTotal: number;
 }
@@ -124,6 +128,10 @@ export interface ResolvedField {
   x: number;
   y: number;
   w: number;
+  h?: number;
+  showBox?: boolean;
+  borderColor?: string;
+  borderWidth?: number;
   style: TextStyle;
 }
 

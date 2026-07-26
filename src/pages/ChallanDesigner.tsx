@@ -321,12 +321,15 @@ const ChallanDesigner: React.FC = () => {
   const addField = (key: string) => {
     // Stagger drop positions so consecutive adds don't stack invisibly.
     const n = draft.config.fields.length;
+    const isMainNote = key === 'mainNote';
     const field: PlacedField = {
       id: uid(),
       key,
       x: 0.3 + (n % 4) * 0.06,
       y: 0.06 + (Math.floor(n / 4) % 8) * 0.05,
-      w: 0,
+      w: isMainNote ? 0.35 : 0,
+      h: isMainNote ? 0.10 : undefined,
+      showBox: isMainNote ? true : false,
       style: { ...DEFAULT_TEXT_STYLE },
       printOn: key === 'grandTotal' ? 'last' : 'every',
       staticText: key === 'literal' ? 'Text' : undefined,
@@ -1040,6 +1043,69 @@ const ChallanDesigner: React.FC = () => {
                       className="w-full accent-blue-600"
                     />
                   </label>
+
+                  {/* Square / Box Frame Controls (Ideal for mainNote and signature boxes) */}
+                  <div className="p-3 bg-blue-50/60 rounded-lg border border-blue-100 space-y-2.5">
+                    <label className="flex items-center justify-between cursor-pointer">
+                      <span className="text-xs font-bold text-blue-900">
+                        {gt('ચોરસ/બોક્સ ફ્રેમ બતાવો (Square Box Frame)', 'Draw Square / Box Frame')}
+                      </span>
+                      <input
+                        type="checkbox"
+                        checked={!!selectedField.showBox}
+                        onChange={(e) => updateField(selectedField.id, {
+                          showBox: e.target.checked,
+                          h: e.target.checked && (!selectedField.h || selectedField.h === 0) ? 0.10 : selectedField.h,
+                          w: e.target.checked && (!selectedField.w || selectedField.w === 0) ? 0.35 : selectedField.w,
+                        })}
+                        className="w-4 h-4 text-blue-600 rounded"
+                      />
+                    </label>
+
+                    {(selectedField.showBox || (selectedField.h && selectedField.h > 0)) && (
+                      <>
+                        <label className="block text-xs font-semibold text-gray-700">
+                          {gt(`ફ્રેમની ઊંચાઈ (Box Height): ${Math.round((selectedField.h || 0) * 100)}%`, `Box Height: ${Math.round((selectedField.h || 0) * 100)}%`)}
+                          <input
+                            type="range"
+                            min={2}
+                            max={50}
+                            value={Math.round((selectedField.h || 0.08) * 100)}
+                            onChange={(e) => updateField(selectedField.id, {
+                              h: Number(e.target.value) / 100,
+                              showBox: true,
+                            })}
+                            className="w-full accent-blue-600"
+                          />
+                        </label>
+                        <div className="grid grid-cols-2 gap-2 pt-1 border-t border-blue-100">
+                          <label className="text-xs font-semibold text-gray-700">
+                            {gt('બોર્ડર રંગ', 'Border Color')}
+                            <input
+                              type="color"
+                              value={selectedField.borderColor || '#000000'}
+                              onChange={(e) => updateField(selectedField.id, { borderColor: e.target.value })}
+                              className="mt-1 w-full h-8 p-0.5 rounded border border-gray-300 cursor-pointer bg-white"
+                            />
+                          </label>
+                          <label className="text-xs font-semibold text-gray-700">
+                            {gt('બોર્ડર જાડાઈ', 'Border Width')}
+                            <select
+                              value={selectedField.borderWidth || 1}
+                              onChange={(e) => updateField(selectedField.id, { borderWidth: Number(e.target.value) })}
+                              className="mt-1 w-full px-2 py-1.5 text-xs border border-gray-300 rounded-lg bg-white"
+                            >
+                              <option value={1}>1px</option>
+                              <option value={2}>2px</option>
+                              <option value={3}>3px</option>
+                              <option value={4}>4px</option>
+                            </select>
+                          </label>
+                        </div>
+                      </>
+                    )}
+                  </div>
+
                   <label className="block text-xs font-semibold text-gray-600">
                     {gt('ક્યારે પ્રિન્ટ કરવું', 'Print on')}
                     <select

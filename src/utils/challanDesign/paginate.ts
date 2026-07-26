@@ -38,6 +38,10 @@ export function paginate(config: DesignConfig, input: ChallanRenderInput): Rende
         x: f.x,
         y: f.y,
         w: f.w,
+        h: f.h,
+        showBox: f.showBox,
+        borderColor: f.borderColor,
+        borderWidth: f.borderWidth,
         style: f.style,
       }));
 

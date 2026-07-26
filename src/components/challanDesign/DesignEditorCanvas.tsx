@@ -195,12 +195,18 @@ const DesignEditorCanvas: React.FC<Props> = ({
         {/* Placed fields */}
         {config.fields.map((f) => {
           const isSel = selection?.type === 'field' && selection.id === f.id;
-          const sample = fieldSampleText(f);
+          const sample = fieldSampleText(f, sampleInput);
           const fontPx = pxH(f.style.fontSize);
+          const isBox = f.showBox || (f.h && f.h > 0);
           const boxW = f.w ? pxW(f.w) : Math.max(40, sample.length * fontPx * 0.55);
-          const boxH = fontPx * 1.3;
+          const boxH = f.h ? pxH(f.h) : fontPx * 1.4;
+
+          const strokeColor = f.borderColor || '#000000';
+          const strokeW = f.borderWidth || 1;
+
           return (
             <React.Fragment key={f.id}>
+              {/* Highlight outline when selected */}
               {isSel && (
                 <Rect
                   x={pxW(f.x) - 2}
@@ -212,11 +218,26 @@ const DesignEditorCanvas: React.FC<Props> = ({
                   listening={false}
                 />
               )}
+
+              {/* Square / Box frame */}
+              {isBox && (
+                <Rect
+                  x={pxW(f.x)}
+                  y={pxH(f.y)}
+                  width={boxW}
+                  height={boxH}
+                  stroke={strokeColor}
+                  strokeWidth={strokeW}
+                  listening={false}
+                />
+              )}
+
               <KonvaText
                 text={sample}
-                x={pxW(f.x)}
-                y={pxH(f.y)}
-                width={f.w ? boxW : undefined}
+                x={isBox ? pxW(f.x) + 4 : pxW(f.x)}
+                y={isBox ? pxH(f.y) + 4 : pxH(f.y)}
+                width={f.w ? (isBox ? Math.max(10, boxW - 8) : boxW) : undefined}
+                height={isBox && f.h ? Math.max(10, boxH - 8) : undefined}
                 fontSize={fontPx}
                 fontFamily={f.style.fontFamily}
                 fontStyle={fontStyleString(f.style)}

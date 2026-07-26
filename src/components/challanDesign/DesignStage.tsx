@@ -65,21 +65,41 @@ const DesignStage = React.forwardRef<Konva.Stage, DesignStageProps>(function Des
           <Rect x={0} y={0} width={width} height={height} fill="#ffffff" listening={false} />
         )}
 
-        {page.fields.map((f) => (
-          <KonvaText
-            key={f.id}
-            text={f.text}
-            x={px(f.x)}
-            y={py(f.y)}
-            width={px(f.w) || undefined}
-            fontSize={py(f.style.fontSize)}
-            fontFamily={f.style.fontFamily}
-            fontStyle={fontStyleString(f.style)}
-            fill={f.style.fill}
-            align={f.style.align}
-            listening={false}
-          />
-        ))}
+        {page.fields.map((f) => {
+          const isBox = f.showBox || (f.h && f.h > 0);
+          const boxHeight = f.h ? py(f.h) : py(f.style.fontSize) * 2.5;
+          const strokeW = f.borderWidth || 1;
+          const strokeColor = f.borderColor || '#000000';
+
+          return (
+            <React.Fragment key={f.id}>
+              {isBox && (
+                <Rect
+                  x={px(f.x)}
+                  y={py(f.y)}
+                  width={px(f.w) || 100}
+                  height={boxHeight}
+                  stroke={strokeColor}
+                  strokeWidth={strokeW}
+                  listening={false}
+                />
+              )}
+              <KonvaText
+                text={f.text}
+                x={isBox ? px(f.x) + 4 : px(f.x)}
+                y={isBox ? py(f.y) + 4 : py(f.y)}
+                width={f.w ? (isBox ? Math.max(10, px(f.w) - 8) : px(f.w)) : undefined}
+                height={isBox && f.h ? Math.max(10, py(f.h) - 8) : undefined}
+                fontSize={py(f.style.fontSize)}
+                fontFamily={f.style.fontFamily}
+                fontStyle={fontStyleString(f.style)}
+                fill={f.style.fill}
+                align={f.style.align}
+                listening={false}
+              />
+            </React.Fragment>
+          );
+        })}
 
         {page.rows.map((row, ri) =>
           row.cells.map((cell, ci) => (
