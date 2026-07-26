@@ -243,6 +243,21 @@ export default function BillBook() {
       const derivedGrandTotal = calculatedTotalRent + calculatedExtra + pending;
       const derivedDue = derivedGrandTotal - calculatedDiscount - calculatedPaid;
 
+      const mappedDiscounts = (discounts || []).map((d: any) => ({
+        id: d.id,
+        date: d.date,
+        description: d.note,
+        amount: d.total_amount || (d.pieces * (d.discount_per_piece || 0)),
+      }));
+
+      const calculatedDeposit = mappedDiscounts
+        .filter((d: any) => String(d.id || '').includes('deposit') || String(d.description || '').includes('ડિપોઝિટ') || String(d.description || '').includes('Deposit'))
+        .reduce((sum: number, d: any) => sum + (d.amount || 0), 0);
+
+      const otherDiscounts = mappedDiscounts
+        .filter((d: any) => !(String(d.id || '').includes('deposit') || String(d.description || '').includes('ડિપોઝિટ') || String(d.description || '').includes('Deposit')))
+        .reduce((sum: number, d: any) => sum + (d.amount || 0), 0);
+
       // 4. Construct Full Bill Object
       const fullBillData = {
         companyDetails: {
@@ -288,9 +303,7 @@ export default function BillBook() {
           pieces: c.pieces,
           rate: c.price_per_piece
         })),
-        discounts: (discounts || []).map((d: any) => ({
-          id: d.id, date: d.date, description: d.note, amount: d.total_amount || (d.pieces * d.discount_per_piece)
-        })),
+        discounts: mappedDiscounts,
         payments: (payments || []).map((p: any) => ({
           id: p.id, date: p.date, method: p.payment_method, note: p.note, amount: p.amount
         })),
@@ -300,7 +313,8 @@ export default function BillBook() {
           duePayment: bill.due_payment !== undefined ? bill.due_payment : derivedDue,
           totalRent: calculatedTotalRent,
           totalExtraCosts: calculatedExtra,
-          discounts: calculatedDiscount,
+          totalDeposit: calculatedDeposit,
+          discounts: otherDiscounts,
           // placeholders for template required fields
           totalUdharPlates: 0,
           totalJamaPlates: 0,

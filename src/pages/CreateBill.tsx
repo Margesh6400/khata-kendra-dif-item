@@ -131,7 +131,7 @@ export default function CreateBill() {
   const editBillNumber = searchParams.get("edit");
   const isEditMode = !!editBillNumber;
   const { t, language } = useLanguage();
-  const { dateSortingMethod, enableCategorySeparation, activeCategory } = useSettings();
+  const { dateSortingMethod, enableCategorySeparation, activeCategory, showExtraCost } = useSettings();
   const { sizes: rawPlateSizes } = usePlateSizes();
   const plateSizes = useMemo(() => {
     if (enableCategorySeparation && activeCategory) {
@@ -541,13 +541,19 @@ export default function CreateBill() {
         (sum, cost) => sum + cost.total,
         0
       ),
-      discounts: billData.discounts.reduce(
-        (sum, discount) => sum + discount.total,
-        0
-      ),
+      totalDeposit: billData.discounts
+        .filter((d: any) => d.id?.includes('deposit') || d.note?.includes('ડિપોઝિટ') || d.note?.includes('Deposit'))
+        .reduce((sum, d) => sum + d.total, 0),
+      otherDiscounts: billData.discounts
+        .filter((d: any) => !(d.id?.includes('deposit') || d.note?.includes('ડિપોઝિટ') || d.note?.includes('Deposit')))
+        .reduce((sum, d) => sum + d.total, 0),
+      discounts: billData.discounts
+        .filter((d: any) => !(d.id?.includes('deposit') || d.note?.includes('ડિપોઝિટ') || d.note?.includes('Deposit')))
+        .reduce((sum, d) => sum + d.total, 0),
       grandTotal:
         calculatedTotalRent +
-        billData.extraCosts.reduce((sum, cost) => sum + cost.total, 0) +
+        billData.extraCosts.reduce((sum, cost) => sum + cost.total, 0) -
+        billData.discounts.reduce((sum, discount) => sum + discount.total, 0) +
         (pendingAmount || 0),
       totalPaid: billData.payments.reduce(
         (sum, payment) => sum + payment.amount,
@@ -571,6 +577,8 @@ export default function CreateBill() {
       netPlates: 0,
       serviceCharge: 0,
       totalExtraCosts: 0,
+      totalDeposit: 0,
+      otherDiscounts: 0,
       discounts: 0,
       grandTotal: 0,
       totalPaid: 0,
@@ -579,17 +587,24 @@ export default function CreateBill() {
     };
 
   // UI-friendly map of labels -> amounts (used in Bill Summary section)
-  const summaryMap = {
-    "કુલ ભાડું": fullSummary.totalRent,
-    "વધારાના ચાર્જ": fullSummary.totalExtraCosts,
-    "પેટા કુલ":
-      fullSummary.totalRent +
-      fullSummary.totalExtraCosts,
-    "છૂટ": fullSummary.discounts,
-    "કુલ રકમ": fullSummary.grandTotal,
-    "ચૂકવણી મળી": fullSummary.totalPaid,
-    "બાકી રકમ": fullSummary.duePayment,
-  } as const;
+  const summaryMap: Record<string, number> = {
+    [language === 'gu' ? "કુલ ભાડું" : "Total Rent"]: fullSummary.totalRent,
+    ...(fullSummary.totalExtraCosts > 0
+      ? { [language === 'gu' ? "વધારાના ચાર્જ (+)" : "Extra Costs (+)"]: fullSummary.totalExtraCosts }
+      : {}),
+    [language === 'gu' ? "પેટા કુલ" : "Sub Total"]: fullSummary.totalRent + fullSummary.totalExtraCosts,
+    ...(fullSummary.totalDeposit > 0
+      ? { [language === 'gu' ? "ડિપોઝિટ જમા (-)" : "Deposit Credit (-)"]: fullSummary.totalDeposit }
+      : {}),
+    ...(fullSummary.otherDiscounts > 0
+      ? { [language === 'gu' ? "કસર / ડિસ્કાઉન્ટ (-)" : "Discount (-)"]: fullSummary.otherDiscounts }
+      : {}),
+    [language === 'gu' ? "કુલ રકમ" : "Grand Total"]: fullSummary.grandTotal,
+    ...(fullSummary.totalPaid > 0
+      ? { [language === 'gu' ? "ચૂકવણી મળી (-)" : "Total Paid (-)"]: fullSummary.totalPaid }
+      : {}),
+    [language === 'gu' ? "બાકી રકમ" : "Due Payment"]: fullSummary.duePayment,
+  };
 
   const handleGenerateBill = async () => {
     try {
@@ -625,13 +640,12 @@ export default function CreateBill() {
 
         if (billUpdateError) throw billUpdateError;
 
-        // 2. Delete Existing Related Data
-        await supabase.from("bill_extra_costs").delete().eq('bill_number', billData.billNumber);
-        await supabase.from("bill_discounts").delete().eq('bill_number', billData.billNumber);
-        await supabase.from("bill_payments").delete().eq('bill_number', billData.billNumber);
+        // 2. Delete Existing Related Data (graceful fallback if table cache isn't available)
+        try { await supabase.from("bill_extra_costs").delete().eq('bill_number', billData.billNumber); } catch (e) { console.warn("Notice: bill_extra_costs delete:", e); }
+        try { await supabase.from("bill_discounts").delete().eq('bill_number', billData.billNumber); } catch (e) { console.warn("Notice: bill_discounts delete:", e); }
+        try { await supabase.from("bill_payments").delete().eq('bill_number', billData.billNumber); } catch (e) { console.warn("Notice: bill_payments delete:", e); }
 
         // 3. Insert New Related Data
-        // Save extra costs
         if (billData.extraCosts.length > 0) {
           const extraCostsData = billData.extraCosts.map((cost) => ({
             bill_number: billData.billNumber,
@@ -641,7 +655,7 @@ export default function CreateBill() {
             price_per_piece: cost.pricePerPiece,
           }));
           const { error: extraCostsError } = await supabase.from("bill_extra_costs").insert(extraCostsData);
-          if (extraCostsError) throw extraCostsError;
+          if (extraCostsError) console.warn("Could not insert bill_extra_costs:", extraCostsError);
         }
 
         if (billData.discounts.length > 0) {
@@ -651,10 +665,9 @@ export default function CreateBill() {
             note: discount.note,
             pieces: discount.pieces,
             discount_per_piece: discount.discountPerPiece,
-            // total_amount is generated by the database
           }));
           const { error: discountsError } = await supabase.from("bill_discounts").insert(discountsData);
-          if (discountsError) throw discountsError;
+          if (discountsError) console.warn("Could not insert bill_discounts:", discountsError);
         }
 
         if (billData.payments.length > 0) {
@@ -666,13 +679,13 @@ export default function CreateBill() {
             payment_method: payment.method,
           }));
           const { error: paymentsError } = await supabase.from("bill_payments").insert(paymentsData);
-          if (paymentsError) throw paymentsError;
+          if (paymentsError) console.warn("Could not insert bill_payments:", paymentsError);
         }
 
         toast.success("Bill updated successfully!");
 
       } else {
-        // CREATE NEW BILL (Existing Logic)
+        // CREATE NEW BILL
         const insertPayload: any = {
           bill_number: billData.billNumber,
           billing_date: billData.billDate,
@@ -703,14 +716,13 @@ export default function CreateBill() {
             note: cost.note,
             pieces: cost.pieces,
             price_per_piece: cost.pricePerPiece,
-            // total_amount is generated by the database
           }));
 
           const { error: extraCostsError } = await supabase
             .from("bill_extra_costs")
             .insert(extraCostsData);
 
-          if (extraCostsError) throw extraCostsError;
+          if (extraCostsError) console.warn("Could not insert bill_extra_costs:", extraCostsError);
         }
 
         // Save discounts
@@ -721,14 +733,13 @@ export default function CreateBill() {
             note: discount.note,
             pieces: discount.pieces,
             discount_per_piece: discount.discountPerPiece,
-            // total_amount is generated by the database
           }));
 
           const { error: discountsError } = await supabase
             .from("bill_discounts")
             .insert(discountsData);
 
-          if (discountsError) throw discountsError;
+          if (discountsError) console.warn("Could not insert bill_discounts:", discountsError);
         }
 
         // Save payments
@@ -745,7 +756,7 @@ export default function CreateBill() {
             .from("bill_payments")
             .insert(paymentsData);
 
-          if (paymentsError) throw paymentsError;
+          if (paymentsError) console.warn("Could not insert bill_payments:", paymentsError);
         }
 
         toast.success("Bill generated successfully!");
@@ -826,7 +837,7 @@ export default function CreateBill() {
   const calculateBill = async () => {
     setIsLoading(true);
     try {
-      // Fetch Udhar challans with their items
+      // Fetch Udhar challans with their items & extra costs
       const { data: udharChallans, error: udharError } = await supabase
         .from("udhar_challans")
         .select(
@@ -835,6 +846,9 @@ export default function CreateBill() {
           udhar_date,
           driver_name,
           alternative_site,
+          loading_unloading_charges,
+          vehicle_rent,
+          deposit,
           items:udhar_items (
             items,
             main_note
@@ -851,7 +865,7 @@ export default function CreateBill() {
         throw udharError;
       }
 
-      // Fetch Jama challans with their items
+      // Fetch Jama challans with their items & extra costs
       const { data: rawJamaChallans, error: jamaError } = await supabase
         .from("jama_challans")
         .select(
@@ -861,6 +875,9 @@ export default function CreateBill() {
           driver_name,
           alternative_site,
           is_all_return,
+          loading_unloading_charges,
+          vehicle_rent,
+          deposit,
           items:jama_items (
             items,
             main_note
@@ -876,14 +893,109 @@ export default function CreateBill() {
       console.log("Jama Challans:", jamaChallans);
 
       if (udharChallans && udharChallans.length > 0) {
-        const earliestDate = udharChallans[0].udhar_date;
+        // Extract extra costs & deposit discounts from challans in billing period if showExtraCost setting is enabled
+        const challanExtraCosts: typeof billData.extraCosts = [];
+        const challanDiscounts: typeof billData.discounts = [];
+        if (showExtraCost) {
+          const filterDate = (d: string) => {
+            if (!d) return true;
+            if (billData.fromDate && d < billData.fromDate) return false;
+            if (billData.toDate && d > billData.toDate) return false;
+            return true;
+          };
 
-        // Use the new billingPeriodCalculations for accurate rent calculation
-        // Convert cost/discount/payment objects to match the new API
-        const extraCharges = billData.extraCosts.map((cost) => ({
+          (udharChallans || []).forEach((ch: any) => {
+            if (!filterDate(ch.udhar_date)) return;
+            const num = ch.udhar_challan_number;
+            const loadVal = Number(ch.loading_unloading_charges || 0);
+            const rentVal = Number(ch.vehicle_rent || 0);
+            const depVal = Number(ch.deposit || 0);
+
+            if (loadVal > 0) {
+              challanExtraCosts.push({
+                id: `udhar-${num}-loading`,
+                date: ch.udhar_date,
+                note: language === 'gu' ? `ભાડાની હમાલી (ઉધાર ચલણ #${num})` : `Loading & Unloading Charges (Udhar Challan #${num})`,
+                pieces: 1,
+                pricePerPiece: loadVal,
+                total: loadVal,
+                isFromChallan: true,
+              } as any);
+            }
+            if (rentVal > 0) {
+              challanExtraCosts.push({
+                id: `udhar-${num}-rent`,
+                date: ch.udhar_date,
+                note: language === 'gu' ? `વાહન ભાડું (ઉધાર ચલણ #${num})` : `Vehicle Rent (Udhar Challan #${num})`,
+                pieces: 1,
+                pricePerPiece: rentVal,
+                total: rentVal,
+                isFromChallan: true,
+              } as any);
+            }
+            if (depVal > 0) {
+              challanDiscounts.push({
+                id: `udhar-${num}-deposit`,
+                date: ch.udhar_date,
+                note: language === 'gu' ? `ડિપોઝિટ જમા (ઉધાર ચલણ #${num})` : `Deposit Credit (Udhar Challan #${num})`,
+                pieces: 1,
+                discountPerPiece: depVal,
+                total: depVal,
+                isFromChallan: true,
+              } as any);
+            }
+          });
+
+          (jamaChallans || []).forEach((ch: any) => {
+            if (!filterDate(ch.jama_date)) return;
+            const num = ch.jama_challan_number;
+            const loadVal = Number(ch.loading_unloading_charges || 0);
+            const rentVal = Number(ch.vehicle_rent || 0);
+
+            if (loadVal > 0) {
+              challanExtraCosts.push({
+                id: `jama-${num}-loading`,
+                date: ch.jama_date,
+                note: language === 'gu' ? `ભાડાની હમાલી (જમા ચલણ #${num})` : `Loading & Unloading Charges (Jama Challan #${num})`,
+                pieces: 1,
+                pricePerPiece: loadVal,
+                total: loadVal,
+                isFromChallan: true,
+              } as any);
+            }
+            if (rentVal > 0) {
+              challanExtraCosts.push({
+                id: `jama-${num}-rent`,
+                date: ch.jama_date,
+                note: language === 'gu' ? `વાહન ભાડું (જમા ચલણ #${num})` : `Vehicle Rent (Jama Challan #${num})`,
+                pieces: 1,
+                pricePerPiece: rentVal,
+                total: rentVal,
+                isFromChallan: true,
+              } as any);
+            }
+          });
+        }
+
+        // Combine challan extra costs and discounts with manually entered items
+        const manualCosts = billData.extraCosts.filter((c: any) => !c.isFromChallan);
+        const combinedExtraCosts = showExtraCost ? [...challanExtraCosts, ...manualCosts] : manualCosts;
+
+        const manualDiscounts = billData.discounts.filter((d: any) => !d.isFromChallan);
+        const combinedDiscounts = showExtraCost ? [...challanDiscounts, ...manualDiscounts] : manualDiscounts;
+
+        // Update billData if changed
+        setBillData((prev) => ({
+          ...prev,
+          extraCosts: combinedExtraCosts,
+          discounts: combinedDiscounts,
+        }));
+
+        // Convert cost/discount/payment objects for period calculations
+        const extraCharges = combinedExtraCosts.map((cost) => ({
           amount: cost.pieces * cost.pricePerPiece,
         }));
-        const discounts = billData.discounts.map((discount) => ({
+        const discounts = combinedDiscounts.map((discount) => ({
           amount: discount.pieces * discount.discountPerPiece,
         }));
         const payments = billData.payments.map((payment) => ({

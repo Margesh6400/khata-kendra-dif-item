@@ -52,6 +52,9 @@ CREATE TABLE IF NOT EXISTS udhar_challans (
 -- Ensure columns exist for existing databases
 ALTER TABLE udhar_challans ADD COLUMN IF NOT EXISTS driver_mobile text;
 ALTER TABLE udhar_challans ADD COLUMN IF NOT EXISTS vehicle_number text;
+ALTER TABLE udhar_challans ADD COLUMN IF NOT EXISTS loading_unloading_charges numeric DEFAULT 0;
+ALTER TABLE udhar_challans ADD COLUMN IF NOT EXISTS vehicle_rent numeric DEFAULT 0;
+ALTER TABLE udhar_challans ADD COLUMN IF NOT EXISTS deposit numeric DEFAULT 0;
 
 -- D. Jama Challans Table
 CREATE TABLE IF NOT EXISTS jama_challans (
@@ -70,6 +73,9 @@ CREATE TABLE IF NOT EXISTS jama_challans (
 -- Ensure columns exist for existing databases
 ALTER TABLE jama_challans ADD COLUMN IF NOT EXISTS driver_mobile text;
 ALTER TABLE jama_challans ADD COLUMN IF NOT EXISTS vehicle_number text;
+ALTER TABLE jama_challans ADD COLUMN IF NOT EXISTS loading_unloading_charges numeric DEFAULT 0;
+ALTER TABLE jama_challans ADD COLUMN IF NOT EXISTS vehicle_rent numeric DEFAULT 0;
+ALTER TABLE jama_challans ADD COLUMN IF NOT EXISTS deposit numeric DEFAULT 0;
 
 -- E. Udhar Items Table (stores size quantities & notes as JSON)
 CREATE TABLE IF NOT EXISTS udhar_items (

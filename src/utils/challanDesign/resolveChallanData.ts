@@ -15,6 +15,9 @@ export interface ChallanMeta {
   driverName?: string;
   driverPhone?: string;
   vehicleNumber?: string;
+  loadingUnloadingCharges?: number;
+  vehicleRent?: number;
+  deposit?: number;
 }
 
 interface BuildParams {
@@ -63,6 +66,9 @@ export function buildRenderInput({ design, plateSizes, items, meta }: BuildParam
     driverName: meta.driverName,
     driverPhone: meta.driverPhone,
     vehicleNumber: meta.vehicleNumber,
+    loadingUnloadingCharges: meta.loadingUnloadingCharges,
+    vehicleRent: meta.vehicleRent,
+    deposit: meta.deposit,
     mainNote: items.main_note,
     rows,
     grandTotal,

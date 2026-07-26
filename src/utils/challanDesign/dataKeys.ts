@@ -20,6 +20,10 @@ export const FIELD_KEYS: FieldKeyDef[] = [
   { key: 'driverName', label: 'Driver Name', labelGu: 'ડ્રાઈવર નામ' },
   { key: 'driverPhone', label: 'Driver Phone', labelGu: 'ડ્રાઈવર ફોન' },
   { key: 'vehicleNumber', label: 'Vehicle Number', labelGu: 'ગાડી નંબર' },
+  { key: 'loadingUnloadingCharges', label: 'Loading & Unloading Charges', labelGu: 'ભાડાની હમાલી' },
+  { key: 'vehicleRent', label: 'Vehicle Rent', labelGu: 'વાહન ભાડું' },
+  { key: 'deposit', label: 'Deposit', labelGu: 'ડિપોઝિટ' },
+  { key: 'totalExtraCost', label: 'Total Extra Cost', labelGu: 'કુલ અતિરિક્ત ખર્ચ' },
   { key: 'grandTotal', label: 'Grand Total', labelGu: 'કુલ સરવાળો' },
   { key: 'mainNote', label: 'Main Note', labelGu: 'મુખ્ય નોંધ' },
   { key: 'pageNumber', label: 'Page Number', labelGu: 'પાનું નં.' },
@@ -74,6 +78,13 @@ export function resolveFieldText(
     case 'driverName': return input.driverName ?? '';
     case 'driverPhone': return input.driverPhone ?? '';
     case 'vehicleNumber': return input.vehicleNumber ?? '';
+    case 'loadingUnloadingCharges': return input.loadingUnloadingCharges ? String(input.loadingUnloadingCharges) : '';
+    case 'vehicleRent': return input.vehicleRent ? String(input.vehicleRent) : '';
+    case 'deposit': return input.deposit ? String(input.deposit) : '';
+    case 'totalExtraCost': {
+      const sum = (input.loadingUnloadingCharges || 0) + (input.vehicleRent || 0) + (input.deposit || 0);
+      return sum ? String(sum) : '';
+    }
     case 'grandTotal': return input.grandTotal ? String(input.grandTotal) : '';
     case 'mainNote': return input.mainNote ?? '';
     case 'pageNumber': return String(ctx.pageNumber);

@@ -66,6 +66,7 @@ interface BillInvoiceProps {
     netPlates: number;
     serviceCharge: number;
     totalExtraCosts: number;
+    totalDeposit?: number;
     discounts: number;
     grandTotal: number;
     totalPaid: number;
@@ -623,6 +624,36 @@ const BillInvoiceTemplate: React.FC<BillInvoiceProps> = ({
                     </td>
                   </tr>
                 )}
+                {(summary.totalExtraCosts > 0 || (summary.serviceCharge || 0) > 0) && (
+                  <tr style={{ backgroundColor: '#f3f4f6' }}>
+                    <td style={{ padding: '8px 14px', borderBottom: '1px solid #d1d5db', fontWeight: '700', fontSize: '13.5px' }}>
+                      પેટા કુલ:
+                    </td>
+                    <td style={{ padding: '8px 14px', borderBottom: '1px solid #d1d5db', textAlign: 'right', fontWeight: '800', fontSize: '14.5px' }}>
+                      {formatIndianCurrency(Math.round(summary.totalRent + (summary.serviceCharge || 0) + summary.totalExtraCosts))}
+                    </td>
+                  </tr>
+                )}
+                {(summary.totalDeposit || 0) > 0 && (
+                  <tr>
+                    <td style={{ padding: '8px 14px', borderBottom: '1px solid #e5e7eb', fontWeight: '600', fontSize: '13.5px', color: '#1d4ed8' }}>
+                      ડિપોઝિટ જમા:
+                    </td>
+                    <td style={{ padding: '8px 14px', borderBottom: '1px solid #e5e7eb', textAlign: 'right', fontWeight: '700', fontSize: '14.5px', color: '#1d4ed8' }}>
+                      -{formatIndianCurrency(Math.round(summary.totalDeposit!))}
+                    </td>
+                  </tr>
+                )}
+                {(summary.discounts - (summary.totalDeposit || 0)) > 0 && (
+                  <tr>
+                    <td style={{ padding: '11px 14px', borderBottom: '1px solid #e5e7eb', fontWeight: '600', fontSize: '14px' }}>
+                      કસર:
+                    </td>
+                    <td style={{ padding: '11px 14px', borderBottom: '1px solid #e5e7eb', textAlign: 'right', fontWeight: '700', fontSize: '15px', color: '#b45309' }}>
+                      -{formatIndianCurrency(Math.round(summary.discounts - (summary.totalDeposit || 0)))}
+                    </td>
+                  </tr>
+                )}
                 <tr style={{ backgroundColor: '#f9fafb' }}>
                   <td style={{ padding: '10px 14px', borderBottom: '1.5px solid #111', fontWeight: '700', fontSize: '14px' }}>
                     કુલ રકમ:
@@ -638,16 +669,6 @@ const BillInvoiceTemplate: React.FC<BillInvoiceProps> = ({
                     </td>
                     <td style={{ padding: '11px 14px', borderBottom: '1px solid #e5e7eb', textAlign: 'right', fontWeight: '700', fontSize: '15px', color: '#15803d' }}>
                       -{formatIndianCurrency(Math.round(summary.totalPaid))}
-                    </td>
-                  </tr>
-                )}
-                {summary.discounts > 0 && (
-                  <tr>
-                    <td style={{ padding: '11px 14px', borderBottom: '1px solid #e5e7eb', fontWeight: '600', fontSize: '14px' }}>
-                      કસર:
-                    </td>
-                    <td style={{ padding: '11px 14px', borderBottom: '1px solid #e5e7eb', textAlign: 'right', fontWeight: '700', fontSize: '15px', color: '#b45309' }}>
-                      -{formatIndianCurrency(Math.round(summary.discounts))}
                     </td>
                   </tr>
                 )}

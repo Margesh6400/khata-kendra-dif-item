@@ -36,6 +36,11 @@ interface ChallanData {
   site: string;
   phone: string;
   driverName: string | null;
+  driverMobile?: string;
+  vehicleNumber?: string;
+  loadingUnloadingCharges?: number;
+  vehicleRent?: number;
+  deposit?: number;
   isAlternativeSite: boolean;
   isSecondaryPhone: boolean;
   items: ItemsData;
@@ -104,7 +109,8 @@ async function fetchChallansPage(
   let query = supabase
     .from(table)
     .select(
-      `${numField}, ${dateField}, created_at, driver_name,
+      `${numField}, ${dateField}, created_at, driver_name, driver_mobile, vehicle_number,
+       loading_unloading_charges, vehicle_rent, deposit,
        alternative_site, secondary_phone_number, client_id,
        client:${clientRel} ( id, client_nic_name, client_name, site, primary_phone_number ),
        items:${itemsRel} ( ${ITEMS_SELECT} )`,
@@ -151,6 +157,11 @@ async function fetchChallansPage(
       date: ch[dateField],
       createdAt: ch.created_at,
       driverName: ch.driver_name,
+      driverMobile: ch.driver_mobile,
+      vehicleNumber: ch.vehicle_number,
+      loadingUnloadingCharges: Number(ch.loading_unloading_charges) || 0,
+      vehicleRent: Number(ch.vehicle_rent) || 0,
+      deposit: Number(ch.deposit) || 0,
       clientNicName: ch.client?.client_nic_name || '',
       clientFullName: ch.client?.client_name || '',
       clientId: ch.client_id,

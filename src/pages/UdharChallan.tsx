@@ -253,11 +253,16 @@ interface ChallanDetailsStepProps {
   showSuccess: boolean;
   hideExtraColumns: boolean;
   setHideExtraColumns: (value: boolean) => void;
-  stockData: StockData[];
   driverPhone: string;
   setDriverPhone: (val: string) => void;
   vehicleNumber: string;
   setVehicleNumber: (val: string) => void;
+  loadingUnloadingCharges: string;
+  setLoadingUnloadingCharges: (val: string) => void;
+  vehicleRent: string;
+  setVehicleRent: (val: string) => void;
+  deposit: string;
+  setDeposit: (val: string) => void;
 }
 
 const ChallanDetailsStep: React.FC<ChallanDetailsStepProps> = ({
@@ -287,10 +292,16 @@ const ChallanDetailsStep: React.FC<ChallanDetailsStepProps> = ({
   driverPhone,
   setDriverPhone,
   vehicleNumber,
-  setVehicleNumber
+  setVehicleNumber,
+  loadingUnloadingCharges,
+  setLoadingUnloadingCharges,
+  vehicleRent,
+  setVehicleRent,
+  deposit,
+  setDeposit
 }) => {
   const { t } = useLanguage();
-  const { showDriverDetails } = useSettings();
+  const { showDriverDetails, showExtraCost } = useSettings();
   const navigate = useNavigate();
 
   return (
@@ -537,6 +548,76 @@ const ChallanDetailsStep: React.FC<ChallanDetailsStepProps> = ({
           </div>
         </div>
 
+        {/* Extra Cost Section */}
+        {showExtraCost && (
+          <div className="p-3 bg-white border border-gray-200 rounded-lg shadow-sm sm:p-4 lg:p-6 sm:rounded-xl">
+            <div className="flex items-center gap-2 mb-3 sm:mb-4">
+              <div className="p-1.5 sm:p-2 bg-amber-100 rounded-md sm:rounded-lg">
+                <FileText className="w-4 h-4 text-amber-600 sm:w-4.5 sm:h-4.5 lg:w-5 lg:h-5" />
+              </div>
+              <div>
+                <h3 className="text-sm font-semibold text-gray-900 sm:text-base lg:text-lg">
+                  {t('extraCostOption') || 'Extra Cost'}
+                </h3>
+                <p className="text-[10px] sm:text-xs text-gray-500">{t('optional') || 'Optional'}</p>
+              </div>
+            </div>
+            <div className="grid grid-cols-1 gap-3 sm:grid-cols-3 sm:gap-4">
+              <div>
+                <label className="block mb-1 text-xs font-medium text-gray-700 sm:text-xs lg:text-sm">
+                  1. {t('loadingUnloadingCharges') || 'Loading & Unloading Charges'}
+                </label>
+                <div className="relative">
+                  <span className="absolute text-gray-500 transform -translate-y-1/2 left-3 top-1/2 text-xs sm:text-sm">₹</span>
+                  <input
+                    type="number"
+                    min="0"
+                    step="any"
+                    value={loadingUnloadingCharges}
+                    onChange={(e) => setLoadingUnloadingCharges(e.target.value)}
+                    placeholder="0"
+                    className="w-full py-2 pl-7 pr-3 text-xs sm:text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  />
+                </div>
+              </div>
+              <div>
+                <label className="block mb-1 text-xs font-medium text-gray-700 sm:text-xs lg:text-sm">
+                  2. {t('vehicleRent') || 'Vehicle Rent'}
+                </label>
+                <div className="relative">
+                  <span className="absolute text-gray-500 transform -translate-y-1/2 left-3 top-1/2 text-xs sm:text-sm">₹</span>
+                  <input
+                    type="number"
+                    min="0"
+                    step="any"
+                    value={vehicleRent}
+                    onChange={(e) => setVehicleRent(e.target.value)}
+                    placeholder="0"
+                    className="w-full py-2 pl-7 pr-3 text-xs sm:text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  />
+                </div>
+              </div>
+              <div>
+                <label className="block mb-1 text-xs font-medium text-gray-700 sm:text-xs lg:text-sm">
+                  3. {t('deposit') || 'Deposit'}
+                </label>
+                <div className="relative">
+                  <span className="absolute text-gray-500 transform -translate-y-1/2 left-3 top-1/2 text-xs sm:text-sm">₹</span>
+                  <input
+                    type="number"
+                    min="0"
+                    step="any"
+                    value={deposit}
+                    onChange={(e) => setDeposit(e.target.value)}
+                    placeholder="0"
+                    className="w-full py-2 pl-7 pr-3 text-xs sm:text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  />
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+
         {/* Items Table - Compact */}
         <div className="p-3 bg-white border border-gray-200 rounded-lg shadow-sm sm:p-4 lg:p-6 sm:rounded-xl">
           <div className="flex items-center gap-2 mb-3 sm:mb-4">
@@ -633,6 +714,9 @@ const UdharChallan: React.FC = () => {
   const [hideExtraColumns, setHideExtraColumns] = useState(true);
   const [driverPhone, setDriverPhone] = useState('');
   const [vehicleNumber, setVehicleNumber] = useState('');
+  const [loadingUnloadingCharges, setLoadingUnloadingCharges] = useState('');
+  const [vehicleRent, setVehicleRent] = useState('');
+  const [deposit, setDeposit] = useState('');
 
   const generateNextChallanNumber = async () => {
     try {
@@ -884,6 +968,9 @@ const UdharChallan: React.FC = () => {
       driver_name: driverName || null,
       driver_mobile: driverPhone || null,
       vehicle_number: vehicleNumber || null,
+      loading_unloading_charges: loadingUnloadingCharges ? parseFloat(loadingUnloadingCharges) || 0 : 0,
+      vehicle_rent: vehicleRent ? parseFloat(vehicleRent) || 0 : 0,
+      deposit: deposit ? parseFloat(deposit) || 0 : 0,
     };
     if (enableCategorySeparation) {
       insertPayload.category = activeCategory || 'shuttering';
@@ -1109,6 +1196,12 @@ const UdharChallan: React.FC = () => {
                 setDriverPhone={setDriverPhone}
                 vehicleNumber={vehicleNumber}
                 setVehicleNumber={setVehicleNumber}
+                loadingUnloadingCharges={loadingUnloadingCharges}
+                setLoadingUnloadingCharges={setLoadingUnloadingCharges}
+                vehicleRent={vehicleRent}
+                setVehicleRent={setVehicleRent}
+                deposit={deposit}
+                setDeposit={setDeposit}
               />
             )
           )}

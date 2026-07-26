@@ -3,6 +3,7 @@ import { X, Download } from 'lucide-react';
 import { useLanguage } from '../contexts/LanguageContext';
 import { format } from 'date-fns';
 import { usePlateSizes } from '../hooks/usePlateSizes';
+import { useSettings } from '../contexts/SettingsContext';
 import { supabase } from '../utils/supabase';
 
 interface ItemsData {
@@ -25,6 +26,9 @@ interface ChallanData {
   driverName: string | null;
   driverMobile?: string | null;
   vehicleNumber?: string | null;
+  loadingUnloadingCharges?: number;
+  vehicleRent?: number;
+  deposit?: number;
   isAlternativeSite: boolean;
   isSecondaryPhone: boolean;
   items: ItemsData;
@@ -48,12 +52,16 @@ const ChallanEditModal: React.FC<ChallanEditModalProps> = ({
   onSave,
 }) => {
   const { t } = useLanguage();
+  const { showExtraCost } = useSettings();
   const { sizes: plateSizes } = usePlateSizes();
   const [loading, setLoading] = useState(false);
   const [date, setDate] = useState('');
   const [driverName, setDriverName] = useState('');
   const [driverMobile, setDriverMobile] = useState('');
   const [vehicleNumber, setVehicleNumber] = useState('');
+  const [loadingUnloadingCharges, setLoadingUnloadingCharges] = useState('');
+  const [vehicleRent, setVehicleRent] = useState('');
+  const [deposit, setDeposit] = useState('');
   const [alternativeSite, setAlternativeSite] = useState('');
   const [secondaryPhone, setSecondaryPhone] = useState('');
   const [items, setItems] = useState<FormItems>({
@@ -69,6 +77,9 @@ const ChallanEditModal: React.FC<ChallanEditModalProps> = ({
       setDriverName(challan.driverName || '');
       setDriverMobile(challan.driverMobile || '');
       setVehicleNumber(challan.vehicleNumber || '');
+      setLoadingUnloadingCharges(challan.loadingUnloadingCharges ? String(challan.loadingUnloadingCharges) : '');
+      setVehicleRent(challan.vehicleRent ? String(challan.vehicleRent) : '');
+      setDeposit(challan.deposit ? String(challan.deposit) : '');
       setAlternativeSite(challan.isAlternativeSite ? challan.site : '');
       setSecondaryPhone(challan.isSecondaryPhone ? challan.phone : '');
       setOriginalItems(challan.items);
@@ -155,6 +166,18 @@ const ChallanEditModal: React.FC<ChallanEditModalProps> = ({
       });
 
       if (error) throw error;
+
+      const targetTable = type === 'udhar' ? 'udhar_challans' : 'jama_challans';
+      const targetNumField = type === 'udhar' ? 'udhar_challan_number' : 'jama_challan_number';
+
+      await supabase
+        .from(targetTable)
+        .update({
+          loading_unloading_charges: loadingUnloadingCharges ? parseFloat(loadingUnloadingCharges) || 0 : 0,
+          vehicle_rent: vehicleRent ? parseFloat(vehicleRent) || 0 : 0,
+          deposit: deposit ? parseFloat(deposit) || 0 : 0,
+        })
+        .eq(targetNumField, challan.challanNumber);
 
       const rpcFailed = data && typeof data === 'object' && 'success' in data && !data.success;
 
@@ -299,6 +322,73 @@ const ChallanEditModal: React.FC<ChallanEditModalProps> = ({
                   />
                 </div>
               </div>
+
+              {/* Extra Cost Section (3 columns) */}
+              {showExtraCost && (
+                <div className="p-3 border border-amber-200 rounded-lg bg-amber-50/50 space-y-2">
+                  <div className="flex items-center justify-between">
+                    <label className="block text-xs font-semibold text-amber-900 sm:text-sm">
+                      {t('extraCostOption') || 'Extra Cost'}
+                    </label>
+                    <span className="text-[10px] text-gray-500">{t('optional') || 'Optional'}</span>
+                  </div>
+                  <div className={`grid grid-cols-1 ${type === 'jama' ? 'sm:grid-cols-2' : 'sm:grid-cols-3'} gap-3`}>
+                    <div>
+                      <label className="block mb-1 text-[11px] font-medium text-gray-700 sm:text-xs">
+                        1. {t('loadingUnloadingCharges') || 'Loading & Unloading'}
+                      </label>
+                      <div className="relative">
+                        <span className="absolute text-gray-500 transform -translate-y-1/2 left-2.5 top-1/2 text-xs">₹</span>
+                        <input
+                          type="number"
+                          min="0"
+                          step="any"
+                          value={loadingUnloadingCharges}
+                          onChange={(e) => setLoadingUnloadingCharges(e.target.value)}
+                          placeholder="0"
+                          className="w-full py-1.5 pl-6 pr-2 text-xs sm:text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                        />
+                      </div>
+                    </div>
+                    <div>
+                      <label className="block mb-1 text-[11px] font-medium text-gray-700 sm:text-xs">
+                        2. {t('vehicleRent') || 'Vehicle Rent'}
+                      </label>
+                      <div className="relative">
+                        <span className="absolute text-gray-500 transform -translate-y-1/2 left-2.5 top-1/2 text-xs">₹</span>
+                        <input
+                          type="number"
+                          min="0"
+                          step="any"
+                          value={vehicleRent}
+                          onChange={(e) => setVehicleRent(e.target.value)}
+                          placeholder="0"
+                          className="w-full py-1.5 pl-6 pr-2 text-xs sm:text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                        />
+                      </div>
+                    </div>
+                    {type !== 'jama' && (
+                      <div>
+                        <label className="block mb-1 text-[11px] font-medium text-gray-700 sm:text-xs">
+                          3. {t('deposit') || 'Deposit'}
+                        </label>
+                        <div className="relative">
+                          <span className="absolute text-gray-500 transform -translate-y-1/2 left-2.5 top-1/2 text-xs">₹</span>
+                          <input
+                            type="number"
+                            min="0"
+                            step="any"
+                            value={deposit}
+                            onChange={(e) => setDeposit(e.target.value)}
+                            placeholder="0"
+                            className="w-full py-1.5 pl-6 pr-2 text-xs sm:text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                          />
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              )}
             </div>
           </div>
 

@@ -343,9 +343,9 @@ const Dashboard: React.FC = () => {
         <div className="w-full px-3 pt-1 pb-3 mx-auto sm:px-4 sm:py-5 lg:px-8 lg:pt-1 lg:pb-8 max-w-7xl">
           {/* Welcome Section - Compact Mobile */}
           <div className="relative p-3 mb-3 overflow-hidden text-white rounded-lg shadow-lg sm:p-5 sm:mb-5 lg:p-8 lg:mb-8 bg-gradient-to-r from-blue-600 to-indigo-700 sm:rounded-xl lg:rounded-2xl">
-            <img
-              src="/greenting_bg.png"
-              alt=""
+            <img 
+              src="/greenting_bg.png" 
+              alt="" 
               aria-hidden="true"
               style={{
                 position: 'absolute',

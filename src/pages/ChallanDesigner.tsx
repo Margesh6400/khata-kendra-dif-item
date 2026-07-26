@@ -123,6 +123,9 @@ function sampleInput(draft: Draft): ChallanRenderInput {
     driverName: 'રાકેશભાઈ ડ્રાઈવર',
     driverPhone: '9988776655',
     vehicleNumber: 'GJ-01-XX-1234',
+    loadingUnloadingCharges: 250,
+    vehicleRent: 500,
+    deposit: 1000,
     mainNote: 'નમૂનો નોંધ',
     rows,
     grandTotal: rows.reduce((s, r) => s + r.total, 0),
@@ -953,7 +956,7 @@ const ChallanDesigner: React.FC = () => {
                       onClick={() => addField(k.key)}
                       className="px-2 py-1 text-[11px] font-semibold rounded-md border border-gray-200 text-gray-700 hover:bg-blue-50 hover:border-blue-300"
                     >
-                      + {k.label}
+                      + {gt(k.labelGu, k.label)}
                     </button>
                   ))}
                 </div>
@@ -978,7 +981,7 @@ const ChallanDesigner: React.FC = () => {
                             }`}
                         >
                           <span className="font-semibold truncate">
-                            {f.key === 'literal' ? `"${f.staticText || 'Text'}"` : fieldKeyLabel(f.key)}
+                            {f.key === 'literal' ? `"${f.staticText || 'Text'}"` : fieldKeyLabel(f.key, language === 'gu')}
                           </span>
                           <span className="flex items-center gap-1.5 flex-shrink-0">
                             {f.printOn !== 'every' && (

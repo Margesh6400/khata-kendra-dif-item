@@ -64,12 +64,12 @@ async function processClient(
     const [udharRes, jamaRes, billsRes] = await Promise.all([
       supabase
         .from('udhar_challans')
-        .select('udhar_challan_number, udhar_date, items:udhar_items (items, main_note)')
+        .select('udhar_challan_number, udhar_date, loading_unloading_charges, vehicle_rent, deposit, items:udhar_items (items, main_note)')
         .eq('client_id', client.id)
         .order('udhar_date', { ascending: true }),
       supabase
         .from('jama_challans')
-        .select('jama_challan_number, jama_date, is_all_return, items:jama_items (items, main_note)')
+        .select('jama_challan_number, jama_date, is_all_return, loading_unloading_charges, vehicle_rent, deposit, items:jama_items (items, main_note)')
         .eq('client_id', client.id)
         .order('jama_date', { ascending: true }),
       supabase
@@ -110,14 +110,33 @@ async function processClient(
       return { kind: 'skipped', client: label, reason: 'settled, no activity in period' };
     }
 
+    // Calculate extra costs & deposit discounts from Udhar and Jama challans in this period
+    let periodExtraCosts = 0;
+    let periodDiscounts = 0;
+
+    udharChallans.forEach((ch: any) => {
+      if (ch.udhar_date >= fromDate && ch.udhar_date <= periodEnd) {
+        periodExtraCosts += Number(ch.loading_unloading_charges || 0) + Number(ch.vehicle_rent || 0);
+        periodDiscounts += Number(ch.deposit || 0);
+      }
+    });
+    jamaChallans.forEach((ch: any) => {
+      if (ch.jama_date >= fromDate && ch.jama_date <= periodEnd) {
+        periodExtraCosts += Number(ch.loading_unloading_charges || 0) + Number(ch.vehicle_rent || 0);
+      }
+    });
+
+    const extraCharges = periodExtraCosts > 0 ? [{ amount: periodExtraCosts }] : [];
+    const discountCharges = periodDiscounts > 0 ? [{ amount: periodDiscounts }] : [];
+
     const dailyRent = client.daily_rent_price ?? 1;
     const result = calculateBill(
       udharChallans,
       jamaChallans,
       periodEnd,
       dailyRent,
-      [], // extra charges — added by owner on review
-      [], // discounts
+      extraCharges, // extra charges from challans
+      discountCharges, // deposit discounts from challans
       [], // payments
       10,
       fromDate,
@@ -147,10 +166,10 @@ async function processClient(
       to_date: periodEnd,
       daily_rent: dailyRent,
       total_rent_amount: totalRent,
-      total_extra_cost: 0,
-      total_discount: 0,
+      total_extra_cost: periodExtraCosts,
+      total_discount: periodDiscounts,
       total_payment: 0,
-      due_payment: Math.round(totalRent + pending),
+      due_payment: Math.round(totalRent + pending + periodExtraCosts - periodDiscounts),
       status: 'draft',
       generated_by: trigger,
       category: client.category || 'shuttering',

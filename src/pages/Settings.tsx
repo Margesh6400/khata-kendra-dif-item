@@ -20,6 +20,8 @@ const Settings: React.FC = () => {
     resetFontSize,
     showDriverDetails,
     setShowDriverDetails,
+    showExtraCost,
+    setShowExtraCost,
     shareBillMode,
     setShareBillMode,
     requireLoginPassword,
@@ -633,7 +635,7 @@ const Settings: React.FC = () => {
                   {t('extraFieldsSettings') || 'Feature Visibility Settings'}
                 </h3>
               </div>
-              <div className="p-4 sm:p-6">
+              <div className="p-4 sm:p-6 space-y-4">
                 <button
                   onClick={() => setShowDriverDetails(!showDriverDetails)}
                   className={`w-full flex items-center justify-between p-4 rounded-xl border text-left transition-all ${showDriverDetails
@@ -652,6 +654,32 @@ const Settings: React.FC = () => {
                   <div className={`relative inline-flex h-7 w-12 flex-shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-300 ease-in-out shadow-inner ${showDriverDetails ? 'bg-blue-600' : 'bg-gray-300'}`}>
                     <span
                       className={`pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow-md ring-0 transition duration-300 ease-in-out ${showDriverDetails ? 'translate-x-5' : 'translate-x-0'}`}
+                    />
+                  </div>
+                </button>
+
+                <button
+                  onClick={() => setShowExtraCost(!showExtraCost)}
+                  className={`w-full flex items-center justify-between p-4 rounded-xl border text-left transition-all ${showExtraCost
+                      ? 'border-blue-600 bg-blue-50/40 ring-1 ring-blue-500'
+                      : 'border-gray-200 hover:border-gray-300 bg-white'
+                    }`}
+                >
+                  <div className="pr-4">
+                    <span className="font-bold text-sm sm:text-base text-gray-900 block mb-1">
+                      {language === 'gu'
+                        ? 'ચલણમાં અતિરિક્ત ખર્ચ વિકલ્પો સક્રિય કરો (હમાલી, વાહન ભાડું, ડિપોઝિટ)'
+                        : 'Enable Extra Cost Options (Loading/Unloading, Vehicle Rent, Deposit)'}
+                    </span>
+                    <p className="text-xs text-gray-500 leading-relaxed">
+                      {language === 'gu'
+                        ? 'ચલણ બનાવતી વખતે ભાડાની હમાલી, વાહન ભાડું અને ડિપોઝિટના વિકલ્પો બતાવો અને બિલની ગણતરીમાં તેને ઉમેરો.'
+                        : 'Show fields for Loading & Unloading Charges, Vehicle Rent, and Deposit during Jama and Udhar challan creation, and include them in bill calculation.'}
+                    </p>
+                  </div>
+                  <div className={`relative inline-flex h-7 w-12 flex-shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-300 ease-in-out shadow-inner ${showExtraCost ? 'bg-blue-600' : 'bg-gray-300'}`}>
+                    <span
+                      className={`pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow-md ring-0 transition duration-300 ease-in-out ${showExtraCost ? 'translate-x-5' : 'translate-x-0'}`}
                     />
                   </div>
                 </button>

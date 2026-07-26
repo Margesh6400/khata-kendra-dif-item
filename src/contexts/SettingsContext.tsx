@@ -23,6 +23,8 @@ interface SettingsContextType {
   resetFontSize: () => void;
   showDriverDetails: boolean;
   setShowDriverDetails: (show: boolean) => void;
+  showExtraCost: boolean;
+  setShowExtraCost: (show: boolean) => void;
   shareBillMode: ShareBillMode;
   setShareBillMode: (mode: ShareBillMode) => void;
   requireLoginPassword: boolean;
@@ -59,6 +61,11 @@ export const SettingsProvider: React.FC<{ children: ReactNode }> = ({ children }
   const [showDriverDetails, setShowDriverDetailsState] = useState<boolean>(() => {
     const saved = localStorage.getItem('showDriverDetails');
     return saved === 'true'; // Default is false unless explicitly enabled
+  });
+
+  const [showExtraCost, setShowExtraCostState] = useState<boolean>(() => {
+    const saved = localStorage.getItem('showExtraCost');
+    return saved !== 'false'; // Default is true unless explicitly disabled
   });
 
   const [shareBillMode, setShareBillModeState] = useState<ShareBillMode>(() => {
@@ -116,6 +123,10 @@ export const SettingsProvider: React.FC<{ children: ReactNode }> = ({ children }
   useEffect(() => {
     localStorage.setItem('showDriverDetails', String(showDriverDetails));
   }, [showDriverDetails]);
+
+  useEffect(() => {
+    localStorage.setItem('showExtraCost', String(showExtraCost));
+  }, [showExtraCost]);
 
   useEffect(() => {
     localStorage.setItem('shareBillMode', shareBillMode);
@@ -185,6 +196,10 @@ export const SettingsProvider: React.FC<{ children: ReactNode }> = ({ children }
     setShowDriverDetailsState(show);
   };
 
+  const setShowExtraCost = (show: boolean) => {
+    setShowExtraCostState(show);
+  };
+
   const setShareBillMode = (mode: ShareBillMode) => {
     setShareBillModeState(mode);
   };
@@ -222,6 +237,8 @@ export const SettingsProvider: React.FC<{ children: ReactNode }> = ({ children }
       resetFontSize,
       showDriverDetails,
       setShowDriverDetails,
+      showExtraCost,
+      setShowExtraCost,
       shareBillMode,
       setShareBillMode,
       requireLoginPassword,

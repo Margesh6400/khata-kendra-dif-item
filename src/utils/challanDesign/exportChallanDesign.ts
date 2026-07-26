@@ -31,6 +31,9 @@ export interface ExportChallanParams {
   driverName?: string;
   driverPhone?: string;
   vehicleNumber?: string;
+  loadingUnloadingCharges?: number;
+  vehicleRent?: number;
+  deposit?: number;
   designId?: string; // optional override; falls back to the category default
 }
 
@@ -59,6 +62,9 @@ export async function tryExportChallanDesign(p: ExportChallanParams): Promise<bo
       driverName: p.driverName,
       driverPhone: p.driverPhone,
       vehicleNumber: p.vehicleNumber,
+      loadingUnloadingCharges: p.loadingUnloadingCharges,
+      vehicleRent: p.vehicleRent,
+      deposit: p.deposit,
     },
   });
 
