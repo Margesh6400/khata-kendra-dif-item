@@ -118,24 +118,7 @@ const ItemsTable: React.FC<ItemsTableProps> = ({
     }
   }, [outstandingBalances, borrowedOutstanding, plateSizes]);
 
-  React.useEffect(() => {
-    if (activeCategory) {
-      setCollapsedSections(prev => {
-        const next = { ...prev };
-        Object.keys(next).forEach(cat => {
-          if (cat !== activeCategory) {
-            next[cat] = true; // Force collapsed
-          }
-        });
-        return next;
-      });
-    }
-  }, [activeCategory]);
-
   const toggleSection = (section: string) => {
-    if (activeCategory && activeCategory !== section) {
-      return;
-    }
     setCollapsedSections(prev => ({
       ...prev,
       [section]: !prev[section]
@@ -146,9 +129,16 @@ const ItemsTable: React.FC<ItemsTableProps> = ({
   const handleChange = (sizeId: number, field: 'qty' | 'borrowed' | 'lost' | 'damaged' | 'note', value: number | string) => {
     const currentItem = items.items[sizeId] || { qty: 0, borrowed: 0, lost: 0, damaged: 0, note: '' };
 
-    let newValue = value;
+    let newValue: any = value;
     if (field !== 'note') {
-      newValue = (typeof value === 'string' && value === '') ? 0 : parseInt(value as string) || 0;
+      if (typeof value === 'string') {
+        if (value === '' || value === '-') {
+          newValue = value;
+        } else {
+          const parsed = parseInt(value, 10);
+          newValue = isNaN(parsed) ? 0 : parsed;
+        }
+      }
     }
 
     onChange({
@@ -199,9 +189,8 @@ const ItemsTable: React.FC<ItemsTableProps> = ({
       <td className="px-4 py-4 text-center whitespace-nowrap">
         <input
           type="number"
-          min="0"
           value={
-            items.items[ps.id]?.qty || ""
+            items.items[ps.id]?.qty === 0 || items.items[ps.id]?.qty === undefined ? "" : items.items[ps.id]?.qty
           }
           onChange={(e) => handleChange(ps.id, 'qty', e.target.value)}
           className="w-24 px-3 py-2 text-center border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
@@ -313,10 +302,9 @@ const ItemsTable: React.FC<ItemsTableProps> = ({
       <td className="px-1 py-1.5 border-r border-gray-200">
         <input
           type="number"
-          min="0"
           inputMode="numeric"
           value={
-            items.items[ps.id]?.qty || ""
+            items.items[ps.id]?.qty === 0 || items.items[ps.id]?.qty === undefined ? "" : items.items[ps.id]?.qty
           }
           onChange={(e) =>
             handleChange(ps.id, 'qty', e.target.value)
@@ -459,16 +447,11 @@ const ItemsTable: React.FC<ItemsTableProps> = ({
               <>
                 <tr
                   onClick={() => toggleSection('shuttering')}
-                  className={`font-semibold border-y select-none transition-colors ${activeCategory && activeCategory !== 'shuttering'
-                      ? "bg-gray-100/60 text-gray-400 cursor-not-allowed opacity-60 border-gray-200"
-                      : "bg-blue-50/70 text-blue-800 hover:bg-blue-100/70 border-blue-100 cursor-pointer"
-                    }`}
+                  className="font-semibold border-y select-none transition-colors bg-blue-50/70 text-blue-800 hover:bg-blue-100/70 border-blue-100 cursor-pointer"
                 >
                   <td colSpan={10} className="px-4 py-2 text-xs sm:text-sm font-bold text-left">
                     <div className="flex items-center gap-2">
-                      {activeCategory && activeCategory !== 'shuttering' ? (
-                        <span className="text-[10px] bg-gray-200 text-gray-500 px-1.5 py-0.5 rounded font-medium">{t('locked')}</span>
-                      ) : collapsedSections.shuttering ? (
+                      {collapsedSections.shuttering ? (
                         <ChevronRight className="w-4 h-4 text-blue-600" />
                       ) : (
                         <ChevronDown className="w-4 h-4 text-blue-600" />
@@ -486,16 +469,11 @@ const ItemsTable: React.FC<ItemsTableProps> = ({
               <>
                 <tr
                   onClick={() => toggleSection('jack')}
-                  className={`font-semibold border-y select-none transition-colors ${activeCategory && activeCategory !== 'jack'
-                      ? "bg-gray-100/60 text-gray-400 cursor-not-allowed opacity-60 border-gray-200"
-                      : "bg-purple-50/70 text-purple-800 hover:bg-purple-100/70 border-purple-100 cursor-pointer"
-                    }`}
+                  className="font-semibold border-y select-none transition-colors bg-purple-50/70 text-purple-800 hover:bg-purple-100/70 border-purple-100 cursor-pointer"
                 >
                   <td colSpan={10} className="px-4 py-2 text-xs sm:text-sm font-bold text-left">
                     <div className="flex items-center gap-2">
-                      {activeCategory && activeCategory !== 'jack' ? (
-                        <span className="text-[10px] bg-gray-200 text-gray-500 px-1.5 py-0.5 rounded font-medium">{t('locked')}</span>
-                      ) : collapsedSections.jack ? (
+                      {collapsedSections.jack ? (
                         <ChevronRight className="w-4 h-4 text-purple-600" />
                       ) : (
                         <ChevronDown className="w-4 h-4 text-purple-600" />
@@ -513,16 +491,11 @@ const ItemsTable: React.FC<ItemsTableProps> = ({
               <>
                 <tr
                   onClick={() => toggleSection('cuplock')}
-                  className={`font-semibold border-y select-none transition-colors ${activeCategory && activeCategory !== 'cuplock'
-                      ? "bg-gray-100/60 text-gray-400 cursor-not-allowed opacity-60 border-gray-200"
-                      : "bg-orange-50/70 text-orange-800 hover:bg-orange-100/70 border-orange-100 cursor-pointer"
-                    }`}
+                  className="font-semibold border-y select-none transition-colors bg-orange-50/70 text-orange-800 hover:bg-orange-100/70 border-orange-100 cursor-pointer"
                 >
                   <td colSpan={10} className="px-4 py-2 text-xs sm:text-sm font-bold text-left">
                     <div className="flex items-center gap-2">
-                      {activeCategory && activeCategory !== 'cuplock' ? (
-                        <span className="text-[10px] bg-gray-200 text-gray-500 px-1.5 py-0.5 rounded font-medium">{t('locked')}</span>
-                      ) : collapsedSections.cuplock ? (
+                      {collapsedSections.cuplock ? (
                         <ChevronRight className="w-4 h-4 text-orange-600" />
                       ) : (
                         <ChevronDown className="w-4 h-4 text-orange-600" />
@@ -540,16 +513,11 @@ const ItemsTable: React.FC<ItemsTableProps> = ({
               <>
                 <tr
                   onClick={() => toggleSection('other')}
-                  className={`font-semibold border-y select-none transition-colors ${activeCategory && activeCategory !== 'other'
-                      ? "bg-gray-100/60 text-gray-400 cursor-not-allowed opacity-60 border-gray-200"
-                      : "bg-green-50/70 text-green-800 hover:bg-green-100/70 border-green-100 cursor-pointer"
-                    }`}
+                  className="font-semibold border-y select-none transition-colors bg-green-50/70 text-green-800 hover:bg-green-100/70 border-green-100 cursor-pointer"
                 >
                   <td colSpan={10} className="px-4 py-2 text-xs sm:text-sm font-bold text-left">
                     <div className="flex items-center gap-2">
-                      {activeCategory && activeCategory !== 'other' ? (
-                        <span className="text-[10px] bg-gray-200 text-gray-500 px-1.5 py-0.5 rounded font-medium">{t('locked')}</span>
-                      ) : collapsedSections.other ? (
+                      {collapsedSections.other ? (
                         <ChevronRight className="w-4 h-4 text-green-600" />
                       ) : (
                         <ChevronDown className="w-4 h-4 text-green-600" />
@@ -622,17 +590,11 @@ const ItemsTable: React.FC<ItemsTableProps> = ({
                     <>
                       <tr
                         onClick={() => toggleSection('shuttering')}
-                        className={`font-semibold border-y select-none transition-colors ${activeCategory && activeCategory !== 'shuttering'
-                            ? "bg-gray-100/60 text-gray-400 cursor-not-allowed opacity-60 border-gray-200"
-                            : "bg-blue-50/70 text-blue-800 border-blue-100 cursor-pointer"
-                          }`}
+                        className="font-semibold border-y select-none transition-colors bg-blue-50/70 text-blue-800 border-blue-100 cursor-pointer"
                       >
-                        <td colSpan={10} className={`px-2 py-1 text-[11px] sm:text-xs font-bold sticky left-0 z-10 text-left transition-colors ${activeCategory && activeCategory !== 'shuttering' ? "bg-gray-100/60" : "bg-blue-50/70"
-                          }`}>
+                        <td colSpan={10} className="px-2 py-1 text-[11px] sm:text-xs font-bold sticky left-0 z-10 text-left transition-colors bg-blue-50/70">
                           <div className="flex items-center gap-1.5">
-                            {activeCategory && activeCategory !== 'shuttering' ? (
-                              <span className="text-[9px] bg-gray-200 text-gray-500 px-1 py-0.5 rounded font-medium">{t('locked')}</span>
-                            ) : collapsedSections.shuttering ? (
+                            {collapsedSections.shuttering ? (
                               <ChevronRight className="w-3.5 h-3.5 text-blue-600" />
                             ) : (
                               <ChevronDown className="w-3.5 h-3.5 text-blue-600" />
@@ -650,17 +612,11 @@ const ItemsTable: React.FC<ItemsTableProps> = ({
                     <>
                       <tr
                         onClick={() => toggleSection('jack')}
-                        className={`font-semibold border-y select-none transition-colors ${activeCategory && activeCategory !== 'jack'
-                            ? "bg-gray-100/60 text-gray-400 cursor-not-allowed opacity-60 border-gray-200"
-                            : "bg-purple-50/70 text-purple-800 border-purple-100 cursor-pointer"
-                          }`}
+                        className="font-semibold border-y select-none transition-colors bg-purple-50/70 text-purple-800 border-purple-100 cursor-pointer"
                       >
-                        <td colSpan={10} className={`px-2 py-1 text-[11px] sm:text-xs font-bold sticky left-0 z-10 text-left transition-colors ${activeCategory && activeCategory !== 'jack' ? "bg-gray-100/60" : "bg-purple-50/70"
-                          }`}>
+                        <td colSpan={10} className="px-2 py-1 text-[11px] sm:text-xs font-bold sticky left-0 z-10 text-left transition-colors bg-purple-50/70">
                           <div className="flex items-center gap-1.5">
-                            {activeCategory && activeCategory !== 'jack' ? (
-                              <span className="text-[9px] bg-gray-200 text-gray-500 px-1 py-0.5 rounded font-medium">{t('locked')}</span>
-                            ) : collapsedSections.jack ? (
+                            {collapsedSections.jack ? (
                               <ChevronRight className="w-3.5 h-3.5 text-purple-600" />
                             ) : (
                               <ChevronDown className="w-3.5 h-3.5 text-purple-600" />
@@ -678,17 +634,11 @@ const ItemsTable: React.FC<ItemsTableProps> = ({
                     <>
                       <tr
                         onClick={() => toggleSection('cuplock')}
-                        className={`font-semibold border-y select-none transition-colors ${activeCategory && activeCategory !== 'cuplock'
-                            ? "bg-gray-100/60 text-gray-400 cursor-not-allowed opacity-60 border-gray-200"
-                            : "bg-orange-50/70 text-orange-800 border-orange-100 cursor-pointer"
-                          }`}
+                        className="font-semibold border-y select-none transition-colors bg-orange-50/70 text-orange-800 border-orange-100 cursor-pointer"
                       >
-                        <td colSpan={10} className={`px-2 py-1 text-[11px] sm:text-xs font-bold sticky left-0 z-10 text-left transition-colors ${activeCategory && activeCategory !== 'cuplock' ? "bg-gray-100/60" : "bg-orange-50/70"
-                          }`}>
+                        <td colSpan={10} className="px-2 py-1 text-[11px] sm:text-xs font-bold sticky left-0 z-10 text-left transition-colors bg-orange-50/70">
                           <div className="flex items-center gap-1.5">
-                            {activeCategory && activeCategory !== 'cuplock' ? (
-                              <span className="text-[9px] bg-gray-200 text-gray-500 px-1 py-0.5 rounded font-medium">{t('locked')}</span>
-                            ) : collapsedSections.cuplock ? (
+                            {collapsedSections.cuplock ? (
                               <ChevronRight className="w-3.5 h-3.5 text-orange-600" />
                             ) : (
                               <ChevronDown className="w-3.5 h-3.5 text-orange-600" />
@@ -706,17 +656,11 @@ const ItemsTable: React.FC<ItemsTableProps> = ({
                     <>
                       <tr
                         onClick={() => toggleSection('other')}
-                        className={`font-semibold border-y select-none transition-colors ${activeCategory && activeCategory !== 'other'
-                            ? "bg-gray-100/60 text-gray-400 cursor-not-allowed opacity-60 border-gray-200"
-                            : "bg-green-50/70 text-green-800 border-green-100 cursor-pointer"
-                          }`}
+                        className="font-semibold border-y select-none transition-colors bg-green-50/70 text-green-800 border-green-100 cursor-pointer"
                       >
-                        <td colSpan={10} className={`px-2 py-1 text-[11px] sm:text-xs font-bold sticky left-0 z-10 text-left transition-colors ${activeCategory && activeCategory !== 'other' ? "bg-gray-100/60" : "bg-green-50/70"
-                          }`}>
+                        <td colSpan={10} className="px-2 py-1 text-[11px] sm:text-xs font-bold sticky left-0 z-10 text-left transition-colors bg-green-50/70">
                           <div className="flex items-center gap-1.5">
-                            {activeCategory && activeCategory !== 'other' ? (
-                              <span className="text-[9px] bg-gray-200 text-gray-500 px-1 py-0.5 rounded font-medium">{t('locked')}</span>
-                            ) : collapsedSections.other ? (
+                            {collapsedSections.other ? (
                               <ChevronRight className="w-3.5 h-3.5 text-green-600" />
                             ) : (
                               <ChevronDown className="w-3.5 h-3.5 text-green-600" />

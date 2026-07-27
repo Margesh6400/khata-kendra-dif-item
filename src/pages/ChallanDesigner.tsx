@@ -651,10 +651,10 @@ const ChallanDesigner: React.FC = () => {
                 <span
                   key={s.label}
                   className={`flex items-center gap-1 px-2.5 py-1 text-[11px] font-semibold rounded-full border ${s.done
-                      ? 'border-emerald-200 bg-emerald-50 text-emerald-700'
-                      : i === currentStep
-                        ? 'border-blue-400 bg-blue-50 text-blue-700'
-                        : 'border-gray-200 bg-white text-gray-400'
+                    ? 'border-emerald-200 bg-emerald-50 text-emerald-700'
+                    : i === currentStep
+                      ? 'border-blue-400 bg-blue-50 text-blue-700'
+                      : 'border-gray-200 bg-white text-gray-400'
                     }`}
                 >
                   {s.done && <Check className="w-3 h-3" />}
@@ -736,8 +736,8 @@ const ChallanDesigner: React.FC = () => {
                       confirmIfDirty(() => loadDesignRaw(d));
                     }}
                     className={`px-3 py-1.5 text-xs font-semibold rounded-lg border ${draft.id === d.id
-                        ? 'border-blue-500 bg-blue-50 text-blue-700'
-                        : 'border-gray-200 text-gray-600 hover:bg-gray-50'
+                      ? 'border-blue-500 bg-blue-50 text-blue-700'
+                      : 'border-gray-200 text-gray-600 hover:bg-gray-50'
                       }`}
                     title={`${d.category} · ${d.challan_type}`}
                   >
@@ -850,8 +850,8 @@ const ChallanDesigner: React.FC = () => {
               </div>
             </div>
 
-            {/* Inspector column */}
-            <div className="space-y-4">
+            {/* Inspector column (Scrollable panel for all fields & controls) */}
+            <div className="space-y-4 lg:max-h-[calc(100vh-130px)] lg:overflow-y-auto lg:sticky lg:top-20 pr-1 custom-scrollbar">
               {/* Design meta */}
               <section className="bg-white rounded-xl border border-gray-200 p-4 space-y-3">
                 <h3 className="font-bold text-gray-900 text-sm">{gt('ડિઝાઇન વિગત', 'Design')}</h3>
@@ -952,12 +952,12 @@ const ChallanDesigner: React.FC = () => {
                 <p className="text-[11px] text-gray-500">
                   {gt('કેનવાસ પર લાવવા માટે ક્લિક કરો, પછી તેને કાગળ પર યોગ્ય જગ્યાએ ખેંચી લો.', 'Click to drop on the canvas, then drag into place over the paper.')}
                 </p>
-                <div className="flex flex-wrap gap-1.5">
+                <div className="flex flex-wrap gap-1.5 max-h-60 overflow-y-auto p-2 border border-gray-100 rounded-lg bg-gray-50/60 custom-scrollbar">
                   {FIELD_KEYS.map((k) => (
                     <button
                       key={k.key}
                       onClick={() => addField(k.key)}
-                      className="px-2 py-1 text-[11px] font-semibold rounded-md border border-gray-200 text-gray-700 hover:bg-blue-50 hover:border-blue-300"
+                      className="px-2.5 py-1 text-[11px] font-semibold rounded-md border border-gray-200 bg-white text-gray-700 hover:bg-blue-50 hover:border-blue-300 hover:text-blue-700 shadow-sm transition-all active:scale-95"
                     >
                       + {gt(k.labelGu, k.label)}
                     </button>
@@ -979,8 +979,8 @@ const ChallanDesigner: React.FC = () => {
                           key={f.id}
                           onClick={() => setSelection({ type: 'field', id: f.id })}
                           className={`flex items-center justify-between gap-2 px-2.5 py-1.5 rounded-lg border cursor-pointer text-xs ${isSel
-                              ? 'border-blue-400 bg-blue-50 text-blue-800'
-                              : 'border-gray-100 text-gray-700 hover:bg-gray-50'
+                            ? 'border-blue-400 bg-blue-50 text-blue-800'
+                            : 'border-gray-100 text-gray-700 hover:bg-gray-50'
                             }`}
                         >
                           <span className="font-semibold truncate">
@@ -1238,8 +1238,8 @@ const ChallanDesigner: React.FC = () => {
                               key={col.id}
                               onClick={() => setSelection({ type: 'column', id: col.id })}
                               className={`flex items-center justify-between gap-2 px-2.5 py-1.5 rounded-lg border cursor-pointer text-xs ${isSel
-                                  ? 'border-amber-400 bg-amber-50 text-amber-800'
-                                  : 'border-gray-100 text-gray-700 hover:bg-gray-50'
+                                ? 'border-amber-400 bg-amber-50 text-amber-800'
+                                : 'border-gray-100 text-gray-700 hover:bg-gray-50'
                                 }`}
                             >
                               <span className="font-semibold">{bandFieldLabel(col.field)}</span>
@@ -1273,11 +1273,41 @@ const ChallanDesigner: React.FC = () => {
                         <p className="text-[11px] text-gray-500">
                           {gt('કોલમની આડી સ્થિતિ નક્કી કરવા માટે કેનવાસ પરની પીળી લાઇન ખેંચો (અથવા ←/→ કી વાપરો).', "Drag the amber line on the canvas (or use ←/→ keys) to set the column's horizontal position.")}
                         </p>
-                        <label className="block text-xs font-semibold text-gray-600">
-                          {gt(`કોલમની પહોળાઈ: ${Math.round(selectedColumn.w * 100)}%`, `Column width: ${Math.round(selectedColumn.w * 100)}%`)}
+                        <div className="space-y-2 pt-1 border-t border-amber-200/60">
+                          <label className="block text-xs font-semibold text-gray-700">
+                            {gt(`કોલમ સ્થાન (Horizontal Position): ${Math.round(selectedColumn.x * 100)}%`, `Column Position: ${Math.round(selectedColumn.x * 100)}%`)}
+                            <input
+                              type="range"
+                              min={0}
+                              max={100}
+                              value={Math.round(selectedColumn.x * 100)}
+                              onChange={(e) => updateColumn(selectedColumn.id, { x: Number(e.target.value) / 100 })}
+                              className="w-full accent-amber-600"
+                            />
+                          </label>
+                          <div className="flex items-center gap-2">
+                            <button
+                              type="button"
+                              onClick={() => updateColumn(selectedColumn.id, { x: Math.max(0, Number((selectedColumn.x - 0.01).toFixed(3))) })}
+                              className="px-2 py-1 text-xs font-semibold bg-white border border-gray-300 rounded hover:bg-amber-100"
+                            >
+                              ← {gt('ડાબે ખસેડો (-1%)', 'Move Left (-1%)')}
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => updateColumn(selectedColumn.id, { x: Math.min(1, Number((selectedColumn.x + 0.01).toFixed(3))) })}
+                              className="px-2 py-1 text-xs font-semibold bg-white border border-gray-300 rounded hover:bg-amber-100"
+                            >
+                              {gt('જમણે ખસેડો (+1%)', 'Move Right (+1%)')} →
+                            </button>
+                          </div>
+                        </div>
+
+                        <label className="block text-xs font-semibold text-gray-600 pt-1">
+                          {gt(`કોલમની પહોળાઈ (Column Width): ${Math.round(selectedColumn.w * 100)}%`, `Column width: ${Math.round(selectedColumn.w * 100)}%`)}
                           <input
                             type="range"
-                            min={2}
+                            min={1}
                             max={100}
                             value={Math.round(selectedColumn.w * 100)}
                             onChange={(e) => updateColumn(selectedColumn.id, { w: Number(e.target.value) / 100 })}
