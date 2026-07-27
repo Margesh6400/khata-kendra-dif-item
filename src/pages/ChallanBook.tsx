@@ -14,6 +14,8 @@ import { generateJPEG } from '../utils/generateJPEG';
 import { format } from 'date-fns';
 import toast, { Toaster } from 'react-hot-toast';
 import { usePlateSizes } from '../hooks/usePlateSizes';
+import { tryExportChallanDesign } from '../utils/challanDesign/exportChallanDesign';
+import { ItemsData as DesignItemsData } from '../components/ItemsTable';
 
 type SortOption = 'dateNewOld' | 'dateOldNew' | 'numberHighLow' | 'numberLowHigh';
 type TabType = 'udhar' | 'jama';
@@ -70,6 +72,26 @@ const convertJSONToFlatItems = (jsonItemsArray: any[], mainNote: string | null):
   
   return result;
 };
+
+// Convert the flat ChallanBook ItemsData ({ size_1_qty, ... }) to the nested
+// format expected by tryExportChallanDesign / buildRenderInput.
+function flatToDesignItemsData(flat: ItemsData): DesignItemsData {
+  const nested: DesignItemsData = { items: {}, main_note: flat.main_note || '' };
+  Object.keys(flat).forEach(key => {
+    if (key.startsWith('size_') && key.endsWith('_qty')) {
+      const sizeId = parseInt(key.split('_')[1], 10);
+      if (!nested.items[sizeId]) {
+        nested.items[sizeId] = { qty: 0, borrowed: 0, lost: 0, damaged: 0, note: '' };
+      }
+      nested.items[sizeId].qty = (flat as any)[`size_${sizeId}_qty`] || 0;
+      nested.items[sizeId].borrowed = (flat as any)[`size_${sizeId}_borrowed`] || 0;
+      nested.items[sizeId].lost = (flat as any)[`size_${sizeId}_lost`] || 0;
+      nested.items[sizeId].damaged = (flat as any)[`size_${sizeId}_damaged`] || 0;
+      nested.items[sizeId].note = (flat as any)[`size_${sizeId}_note`] || '';
+    }
+  });
+  return nested;
+}
 
 function calcTotalItems(items: ItemsData): number {
   let total = 0;
@@ -302,6 +324,38 @@ const ChallanBook: React.FC = () => {
   const handleDownloadJPEG = async (challan: ChallanData) => {
     const loadingToast = toast.loading(t('generatingJPEG'));
     try {
+      const formattedDate = challan.date
+        ? new Date(challan.date).toLocaleDateString('en-GB')
+        : '';
+
+      // Try the designer-based PDF export first (respects the default design set
+      // in Challan Designer), just like UdharChallan / JamaChallan do.
+      const designItemsData = flatToDesignItemsData(challan.items);
+      const exported = await tryExportChallanDesign({
+        challanType: activeTab,
+        challanNumber: challan.challanNumber,
+        date: formattedDate,
+        plateSizes,
+        items: designItemsData,
+        clientName: challan.clientFullName,
+        clientNicName: challan.clientNicName,
+        site: challan.site,
+        phone: challan.phone,
+        driverName: challan.driverName || undefined,
+        driverPhone: challan.driverMobile || undefined,
+        vehicleNumber: challan.vehicleNumber || undefined,
+        loadingUnloadingCharges: challan.loadingUnloadingCharges,
+        vehicleRent: challan.vehicleRent,
+        deposit: challan.deposit,
+      });
+
+      if (exported) {
+        toast.dismiss(loadingToast);
+        toast.success(t('challanDownloadSuccess'));
+        return;
+      }
+
+      // Fall back to the legacy hard-coded JPEG template when no matching design exists.
       const container = document.createElement('div');
       container.style.position = 'absolute';
       container.style.left = '-9999px';
@@ -315,7 +369,7 @@ const ChallanBook: React.FC = () => {
           <ReceiptTemplate
             challanType={activeTab}
             challanNumber={challan.challanNumber}
-            date={new Date(challan.date).toLocaleDateString('en-GB')}
+            date={formattedDate}
             clientName={challan.clientFullName}
             clientSortName={challan.clientNicName}
             site={challan.site}
@@ -327,7 +381,7 @@ const ChallanBook: React.FC = () => {
         setTimeout(resolve, 100);
       });
 
-      await generateJPEG(activeTab, challan.challanNumber, new Date(challan.date).toLocaleDateString('en-GB'));
+      await generateJPEG(activeTab, challan.challanNumber, formattedDate);
       reactRoot.unmount();
       document.body.removeChild(container);
       toast.dismiss(loadingToast);
