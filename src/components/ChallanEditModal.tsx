@@ -335,7 +335,7 @@ const ChallanEditModal: React.FC<ChallanEditModalProps> = ({
                   <div className={`grid grid-cols-1 ${type === 'jama' ? 'sm:grid-cols-2' : 'sm:grid-cols-3'} gap-3`}>
                     <div>
                       <label className="block mb-1 text-[11px] font-medium text-gray-700 sm:text-xs">
-                        1. {t('loadingUnloadingCharges') || 'Loading & Unloading'}
+                        1. {type === 'udhar' ? (t('loadingUnloadingChargesUdhar') || 'Loading') : (t('loadingUnloadingChargesJama') || 'Unloading')}
                       </label>
                       <div className="relative">
                         <span className="absolute text-gray-500 transform -translate-y-1/2 left-2.5 top-1/2 text-xs">₹</span>

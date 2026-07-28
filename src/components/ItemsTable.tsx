@@ -445,6 +445,7 @@ const ItemsTable: React.FC<ItemsTableProps> = ({
             {/* Shuttering Plates Section */}
             {(!enableCategorySeparation || globalActiveCategory === 'shuttering') && (
               <>
+                {!enableCategorySeparation && (
                 <tr
                   onClick={() => toggleSection('shuttering')}
                   className="font-semibold border-y select-none transition-colors bg-blue-50/70 text-blue-800 hover:bg-blue-100/70 border-blue-100 cursor-pointer"
@@ -460,6 +461,7 @@ const ItemsTable: React.FC<ItemsTableProps> = ({
                     </div>
                   </td>
                 </tr>
+                )}
                 {!collapsedSections.shuttering && plateSizes.filter(ps => (ps.category || 'shuttering') === 'shuttering').map(renderDesktopRow)}
               </>
             )}
@@ -467,6 +469,7 @@ const ItemsTable: React.FC<ItemsTableProps> = ({
             {/* Jacks Section */}
             {(!enableCategorySeparation || globalActiveCategory === 'jack') && (
               <>
+                {!enableCategorySeparation && (
                 <tr
                   onClick={() => toggleSection('jack')}
                   className="font-semibold border-y select-none transition-colors bg-purple-50/70 text-purple-800 hover:bg-purple-100/70 border-purple-100 cursor-pointer"
@@ -482,6 +485,7 @@ const ItemsTable: React.FC<ItemsTableProps> = ({
                     </div>
                   </td>
                 </tr>
+                )}
                 {!collapsedSections.jack && plateSizes.filter(ps => ps.category === 'jack').map(renderDesktopRow)}
               </>
             )}
@@ -489,6 +493,7 @@ const ItemsTable: React.FC<ItemsTableProps> = ({
             {/* Cuplock Section */}
             {(!enableCategorySeparation || globalActiveCategory === 'cuplock') && plateSizes.some(ps => ps.category === 'cuplock') && (
               <>
+                {!enableCategorySeparation && (
                 <tr
                   onClick={() => toggleSection('cuplock')}
                   className="font-semibold border-y select-none transition-colors bg-orange-50/70 text-orange-800 hover:bg-orange-100/70 border-orange-100 cursor-pointer"
@@ -504,6 +509,7 @@ const ItemsTable: React.FC<ItemsTableProps> = ({
                     </div>
                   </td>
                 </tr>
+                )}
                 {!collapsedSections.cuplock && plateSizes.filter(ps => ps.category === 'cuplock').map(renderDesktopRow)}
               </>
             )}
@@ -511,6 +517,7 @@ const ItemsTable: React.FC<ItemsTableProps> = ({
             {/* Other Section */}
             {(!enableCategorySeparation || globalActiveCategory === 'other') && plateSizes.some(ps => ps.category === 'other') && (
               <>
+                {!enableCategorySeparation && (
                 <tr
                   onClick={() => toggleSection('other')}
                   className="font-semibold border-y select-none transition-colors bg-green-50/70 text-green-800 hover:bg-green-100/70 border-green-100 cursor-pointer"
@@ -526,6 +533,7 @@ const ItemsTable: React.FC<ItemsTableProps> = ({
                     </div>
                   </td>
                 </tr>
+                )}
                 {!collapsedSections.other && plateSizes.filter(ps => ps.category === 'other').map(renderDesktopRow)}
               </>
             )}
@@ -588,6 +596,7 @@ const ItemsTable: React.FC<ItemsTableProps> = ({
                   {/* Shuttering Plates Section */}
                   {(!enableCategorySeparation || globalActiveCategory === 'shuttering') && (
                     <>
+                      {!enableCategorySeparation && (
                       <tr
                         onClick={() => toggleSection('shuttering')}
                         className="font-semibold border-y select-none transition-colors bg-blue-50/70 text-blue-800 border-blue-100 cursor-pointer"
@@ -603,6 +612,7 @@ const ItemsTable: React.FC<ItemsTableProps> = ({
                           </div>
                         </td>
                       </tr>
+                      )}
                       {!collapsedSections.shuttering && plateSizes.filter(ps => (ps.category || 'shuttering') === 'shuttering').map((ps, idx) => renderMobileRow(ps, idx))}
                     </>
                   )}
@@ -610,6 +620,7 @@ const ItemsTable: React.FC<ItemsTableProps> = ({
                   {/* Jacks Section */}
                   {(!enableCategorySeparation || globalActiveCategory === 'jack') && (
                     <>
+                      {!enableCategorySeparation && (
                       <tr
                         onClick={() => toggleSection('jack')}
                         className="font-semibold border-y select-none transition-colors bg-purple-50/70 text-purple-800 border-purple-100 cursor-pointer"
@@ -625,6 +636,7 @@ const ItemsTable: React.FC<ItemsTableProps> = ({
                           </div>
                         </td>
                       </tr>
+                      )}
                       {!collapsedSections.jack && plateSizes.filter(ps => ps.category === 'jack').map((ps, idx) => renderMobileRow(ps, idx))}
                     </>
                   )}
@@ -632,6 +644,7 @@ const ItemsTable: React.FC<ItemsTableProps> = ({
                   {/* Cuplock Section */}
                   {(!enableCategorySeparation || globalActiveCategory === 'cuplock') && plateSizes.some(ps => ps.category === 'cuplock') && (
                     <>
+                      {!enableCategorySeparation && (
                       <tr
                         onClick={() => toggleSection('cuplock')}
                         className="font-semibold border-y select-none transition-colors bg-orange-50/70 text-orange-800 border-orange-100 cursor-pointer"
@@ -647,6 +660,7 @@ const ItemsTable: React.FC<ItemsTableProps> = ({
                           </div>
                         </td>
                       </tr>
+                      )}
                       {!collapsedSections.cuplock && plateSizes.filter(ps => ps.category === 'cuplock').map((ps, idx) => renderMobileRow(ps, idx))}
                     </>
                   )}
@@ -654,6 +668,7 @@ const ItemsTable: React.FC<ItemsTableProps> = ({
                   {/* Other Section */}
                   {(!enableCategorySeparation || globalActiveCategory === 'other') && plateSizes.some(ps => ps.category === 'other') && (
                     <>
+                      {!enableCategorySeparation && (
                       <tr
                         onClick={() => toggleSection('other')}
                         className="font-semibold border-y select-none transition-colors bg-green-50/70 text-green-800 border-green-100 cursor-pointer"
@@ -669,6 +684,7 @@ const ItemsTable: React.FC<ItemsTableProps> = ({
                           </div>
                         </td>
                       </tr>
+                      )}
                       {!collapsedSections.other && plateSizes.filter(ps => ps.category === 'other').map((ps, idx) => renderMobileRow(ps, idx))}
                     </>
                   )}

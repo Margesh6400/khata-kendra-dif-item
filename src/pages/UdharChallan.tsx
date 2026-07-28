@@ -562,10 +562,10 @@ const ChallanDetailsStep: React.FC<ChallanDetailsStepProps> = ({
                 <p className="text-[10px] sm:text-xs text-gray-500">{t('optional') || 'Optional'}</p>
               </div>
             </div>
-            <div className="grid grid-cols-1 gap-3 sm:grid-cols-3 sm:gap-4">
+            <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 sm:gap-4">
               <div>
                 <label className="block mb-1 text-xs font-medium text-gray-700 sm:text-xs lg:text-sm">
-                  1. {t('loadingUnloadingCharges') || 'Loading & Unloading Charges'}
+                  1. {t('loadingUnloadingChargesUdhar') || 'Loading'}
                 </label>
                 <div className="relative">
                   <span className="absolute text-gray-500 transform -translate-y-1/2 left-3 top-1/2 text-xs sm:text-sm">₹</span>

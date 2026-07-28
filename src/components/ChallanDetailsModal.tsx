@@ -195,7 +195,7 @@ const ChallanDetailsModal: React.FC<ChallanDetailsModalProps> = ({
                 <div className="flex flex-wrap gap-4">
                   {hasLoading && (
                     <div className="flex-1 min-w-[100px]">
-                      <p className="text-[10px] md:text-sm text-amber-700">{t('loadingUnloadingCharges') || 'Loading & Unloading'}</p>
+                      <p className="text-[10px] md:text-sm text-amber-700">{type === 'udhar' ? (t('loadingUnloadingChargesUdhar') || 'Loading') : (t('loadingUnloadingChargesJama') || 'Unloading')}</p>
                       <p className="text-xs md:text-base font-medium text-amber-950">₹{challan.loadingUnloadingCharges}</p>
                     </div>
                   )}
