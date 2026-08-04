@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from "react";
+import React, { useState, useEffect, useMemo, useCallback } from "react";
 import { Link } from "react-router-dom";
 import { useLanguage } from "../contexts/LanguageContext";
 import { supabase } from "../utils/supabase";
@@ -224,12 +224,7 @@ const StockManagement: React.FC = () => {
 
   const [calculatedStocks, setCalculatedStocks] = useState<Map<number, { rent: number; borrowed: number }>>(new Map());
 
-  useEffect(() => {
-    fetchStock();
-    fetchCalculatedStocks();
-  }, []);
-
-  const fetchCalculatedStocks = async () => {
+  const fetchCalculatedStocks = useCallback(async () => {
     try {
       const [allUdhar, allJama] = await Promise.all([
         fetchUdharChallansForClient(),
@@ -238,50 +233,54 @@ const StockManagement: React.FC = () => {
 
       const calculations = new Map<number, { rent: number; borrowed: number }>();
 
-      // Initialize for all sizes
-      for (const ps of plateSizes) {
-        calculations.set(ps.id, { rent: 0, borrowed: 0 });
-      }
-
       // Process Udhar (Outgoing)
       allUdhar.forEach(challan => {
-        for (const ps of plateSizes) {
-          const itemData = challan.items.items?.[ps.id] || { qty: 0, borrowed: 0 };
-          const qty = itemData.qty;
-          const borrowed = itemData.borrowed;
-          const i = ps.id;
+        const itemMap = challan.items?.items || {};
+        Object.entries(itemMap).forEach(([sizeIdStr, itemData]: [string, any]) => {
+          const sizeId = parseInt(sizeIdStr, 10);
+          if (isNaN(sizeId)) return;
 
-          const current = calculations.get(i) || { rent: 0, borrowed: 0 };
-          calculations.set(i, {
+          const qty = Number(itemData.qty) || 0;
+          const borrowed = Number(itemData.borrowed) || 0;
+
+          const current = calculations.get(sizeId) || { rent: 0, borrowed: 0 };
+          calculations.set(sizeId, {
             rent: current.rent + qty,
             borrowed: current.borrowed + borrowed
           });
-        }
+        });
       });
 
       // Process Jama (Incoming) — lost/damaged plates also leave "on rent"
       allJama.forEach(challan => {
-        for (const ps of plateSizes) {
-          const itemData = challan.items.items?.[ps.id] || { qty: 0, borrowed: 0, lost: 0, damaged: 0 };
-          const qty = itemData.qty;
-          const borrowed = itemData.borrowed;
-          const lost = itemData.lost || 0;
-          const damaged = itemData.damaged || 0;
-          const i = ps.id;
+        const itemMap = challan.items?.items || {};
+        Object.entries(itemMap).forEach(([sizeIdStr, itemData]: [string, any]) => {
+          const sizeId = parseInt(sizeIdStr, 10);
+          if (isNaN(sizeId)) return;
 
-          const current = calculations.get(i) || { rent: 0, borrowed: 0 };
-          calculations.set(i, {
+          const qty = Number(itemData.qty) || 0;
+          const borrowed = Number(itemData.borrowed) || 0;
+          const lost = Number(itemData.lost) || 0;
+          const damaged = Number(itemData.damaged) || 0;
+
+          const current = calculations.get(sizeId) || { rent: 0, borrowed: 0 };
+          calculations.set(sizeId, {
             rent: current.rent - qty - lost - damaged,
             borrowed: current.borrowed - borrowed
           });
-        }
+        });
       });
 
       setCalculatedStocks(calculations);
     } catch (error) {
       console.error("Error calculating stocks:", error);
     }
-  };
+  }, []);
+
+  useEffect(() => {
+    fetchStock();
+    fetchCalculatedStocks();
+  }, [fetchCalculatedStocks, plateSizes, activeCategory, selectedCategory]);
 
   const fetchStock = async (showRefreshToast = false) => {
     if (showRefreshToast) setRefreshing(true);
