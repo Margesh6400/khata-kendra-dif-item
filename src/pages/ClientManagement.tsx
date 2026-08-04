@@ -218,6 +218,7 @@ const ClientManagement: React.FC = () => {
         }
       }
 
+      const clientCategory = data.category || editingClient?.category || (enableCategoryClientSeparation && activeCategory ? activeCategory : 'shuttering');
       const updatePayload: any = {
         client_nic_name: data.client_nic_name,
         client_name: data.client_name,
@@ -226,6 +227,7 @@ const ClientManagement: React.FC = () => {
         daily_rent_price: data.daily_rent_price ?? 1,
         jack_rents: data.jack_rents ?? {},
         previous_pending_amount: data.previous_pending_amount ?? 0,
+        category: clientCategory,
         updated_at: new Date().toISOString(),
       };
 
@@ -259,6 +261,7 @@ const ClientManagement: React.FC = () => {
         return;
       }
 
+      const clientCategory = data.category || (enableCategoryClientSeparation && activeCategory ? activeCategory : 'shuttering');
       const { error } = await supabase
         .from('clients')
         .insert({
@@ -269,6 +272,7 @@ const ClientManagement: React.FC = () => {
           daily_rent_price: data.daily_rent_price ?? 1,
           jack_rents: data.jack_rents ?? {},
           previous_pending_amount: data.previous_pending_amount ?? 0,
+          category: clientCategory,
         });
 
       toast.dismiss(loadingToast);

@@ -9,6 +9,7 @@ import {
 } from 'lucide-react';
 import { naturalSort } from '../utils/sortingUtils';
 import { useLanguage } from '../contexts/LanguageContext';
+import { useSettings } from '../contexts/SettingsContext';
 import { usePlateSizes } from '../hooks/usePlateSizes';
 import { translations } from '../utils/translations';
 import { supabase } from '../utils/supabase';
@@ -209,6 +210,7 @@ const ITEMS_PER_PAGE = 10;
 
 export default function ClientLedger() {
   const { language } = useLanguage();
+  const { enableCategorySeparation, enableCategoryClientSeparation, activeCategory } = useSettings();
   const { sizes: plateSizes } = usePlateSizes();
   const t = translations[language];
 
@@ -326,12 +328,17 @@ export default function ClientLedger() {
       .select('*')
       .order('client_nic_name', { ascending: true });
     if (error) throw error;
-    return data || [];
-  }, []);
+    let clientList = data || [];
+    if (enableCategoryClientSeparation && activeCategory) {
+      clientList = clientList.filter((c: any) => !c.category || c.category === activeCategory);
+    }
+    return clientList;
+  }, [enableCategoryClientSeparation, activeCategory]);
 
   const loadInitialData = useCallback(async (showRefreshToast = false) => {
     setLoading(true);
     setRefreshing(showRefreshToast);
+    setLedgers([]);
     try {
       const clients = await fetchClients();
       setAllClients(clients);
@@ -463,7 +470,7 @@ export default function ClientLedger() {
 
   // ── Effects ─────────────────────────────────────────────────────────────────
 
-  useEffect(() => { loadInitialData(); }, [loadInitialData]);
+  useEffect(() => { loadInitialData(); }, [loadInitialData, enableCategorySeparation, enableCategoryClientSeparation, activeCategory]);
 
   useEffect(() => { setCurrentPage(1); }, [searchQuery]);
 

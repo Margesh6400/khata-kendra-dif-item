@@ -931,9 +931,10 @@ const JamaChallan: React.FC = () => {
     }
 
     try {
+      const clientCategory = clientData.category || (enableCategoryClientSeparation && activeCategory ? activeCategory : 'shuttering');
       const { data, error } = await supabase
         .from('clients')
-        .insert([clientData])
+        .insert([{ ...clientData, category: clientCategory }])
         .select()
         .single();
 

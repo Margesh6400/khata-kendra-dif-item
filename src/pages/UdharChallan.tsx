@@ -880,6 +880,7 @@ const UdharChallan: React.FC = () => {
       return;
     }
 
+    const clientCategory = enableCategoryClientSeparation && activeCategory ? activeCategory : 'shuttering';
     const { data, error } = await supabase
       .from('clients')
       .insert({
@@ -887,6 +888,7 @@ const UdharChallan: React.FC = () => {
         client_name: clientData.client_name,
         site: clientData.site,
         primary_phone_number: clientData.primary_phone_number,
+        category: clientCategory,
       })
       .select()
       .single();

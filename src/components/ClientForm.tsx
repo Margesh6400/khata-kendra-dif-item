@@ -26,7 +26,7 @@ interface ClientFormProps {
 const ClientForm: React.FC<ClientFormProps> = ({ initialData, onSubmit, onCancel, isQuickAdd = false }) => {
   const { t } = useLanguage();
   const { sizes: plateSizes } = usePlateSizes();
-  const { activeCategory } = useSettings();
+  const { activeCategory, enableCategoryClientSeparation } = useSettings();
 
   // Group plateSizes by category
   const groupedSizes = React.useMemo(() => {
@@ -224,6 +224,24 @@ const ClientForm: React.FC<ClientFormProps> = ({ initialData, onSubmit, onCancel
             step="any"
           />
         </div>
+
+        {enableCategoryClientSeparation && (
+          <div>
+            <label className="block mb-1 text-sm font-medium text-gray-700">
+              {t('category') || 'Category'}
+            </label>
+            <select
+              value={formData.category || activeCategory || 'shuttering'}
+              onChange={(e) => setFormData({ ...formData, category: e.target.value })}
+              className="w-full px-3 py-2 bg-white border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm"
+            >
+              <option value="shuttering">{t('shuttering') || 'Shuttering'}</option>
+              <option value="jack">{t('jack') || 'Jack'}</option>
+              <option value="cuplock">{t('cuplock') || 'Cuplock'}</option>
+              <option value="other">{t('other') || 'Other'}</option>
+            </select>
+          </div>
+        )}
 
         {plateSizes.length > 0 && (
           <div className="pt-3 border-t border-gray-200 space-y-4">
