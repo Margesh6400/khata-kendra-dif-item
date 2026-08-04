@@ -26,7 +26,7 @@ interface ClientFormProps {
 const ClientForm: React.FC<ClientFormProps> = ({ initialData, onSubmit, onCancel, isQuickAdd = false }) => {
   const { t } = useLanguage();
   const { sizes: plateSizes } = usePlateSizes();
-  const { activeCategory, enableCategoryClientSeparation } = useSettings();
+  const { activeCategory, enableCategoryClientSeparation, enableCategorySeparation } = useSettings();
 
   // Group plateSizes by category
   const groupedSizes = React.useMemo(() => {
@@ -225,7 +225,7 @@ const ClientForm: React.FC<ClientFormProps> = ({ initialData, onSubmit, onCancel
           />
         </div>
 
-        {enableCategoryClientSeparation && (
+        {(enableCategoryClientSeparation || enableCategorySeparation) && (
           <div>
             <label className="block mb-1 text-sm font-medium text-gray-700">
               {t('category') || 'Category'}

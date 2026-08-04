@@ -140,8 +140,10 @@ export default function Billing() {
 
       if (error) throw error;
       let clientList = clientsData || [];
-      if (enableCategoryClientSeparation && activeCategory) {
-        clientList = clientList.filter((c: any) => !c.category || c.category === activeCategory);
+      if ((enableCategoryClientSeparation || enableCategorySeparation) && activeCategory) {
+        clientList = clientList.filter((c: any) =>
+          activeCategory === 'shuttering' ? (!c.category || c.category === 'shuttering') : c.category === activeCategory
+        );
       }
       setClients(clientList);
 

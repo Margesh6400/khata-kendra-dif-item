@@ -106,8 +106,10 @@ export default function QuickPayments() {
 
       let clientsData = (rawClientsData || []).filter((c: any) => c.is_hidden !== true);
 
-      if (enableCategoryClientSeparation && activeCategory) {
-        clientsData = clientsData.filter((c: any) => !c.category || c.category === activeCategory);
+      if ((enableCategoryClientSeparation || enableCategorySeparation) && activeCategory) {
+        clientsData = clientsData.filter((c: any) =>
+          activeCategory === 'shuttering' ? (!c.category || c.category === 'shuttering') : c.category === activeCategory
+        );
       }
 
       // 2. Fetch Latest Bills for calculations

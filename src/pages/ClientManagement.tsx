@@ -55,7 +55,7 @@ import toast, { Toaster } from 'react-hot-toast';
 
 const ClientManagement: React.FC = () => {
   const { t } = useLanguage();
-  const { enableCategoryClientSeparation, activeCategory } = useSettings();
+  const { enableCategoryClientSeparation, enableCategorySeparation, activeCategory } = useSettings();
   const [clients, setClients] = useState<ClientFormData[]>([]);
   const [editingClient, setEditingClient] = useState<ClientFormData | undefined>(undefined);
   const [showForm, setShowForm] = useState(false);
@@ -168,8 +168,10 @@ const ClientManagement: React.FC = () => {
 
       let clientList = data || [];
 
-      if (enableCategoryClientSeparation && activeCategory) {
-        clientList = clientList.filter((c: any) => !c.category || c.category === activeCategory);
+      if ((enableCategoryClientSeparation || enableCategorySeparation) && activeCategory) {
+        clientList = clientList.filter((c: any) =>
+          activeCategory === 'shuttering' ? (!c.category || c.category === 'shuttering') : c.category === activeCategory
+        );
       }
 
       // Sort the data using improved natural sort
@@ -218,7 +220,7 @@ const ClientManagement: React.FC = () => {
         }
       }
 
-      const clientCategory = data.category || editingClient?.category || (enableCategoryClientSeparation && activeCategory ? activeCategory : 'shuttering');
+      const clientCategory = data.category || editingClient?.category || activeCategory || 'shuttering';
       const updatePayload: any = {
         client_nic_name: data.client_nic_name,
         client_name: data.client_name,
@@ -261,7 +263,7 @@ const ClientManagement: React.FC = () => {
         return;
       }
 
-      const clientCategory = data.category || (enableCategoryClientSeparation && activeCategory ? activeCategory : 'shuttering');
+      const clientCategory = data.category || activeCategory || 'shuttering';
       const { error } = await supabase
         .from('clients')
         .insert({

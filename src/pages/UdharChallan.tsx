@@ -857,8 +857,10 @@ const UdharChallan: React.FC = () => {
     }
 
     let clientList = data || [];
-    if (enableCategoryClientSeparation && activeCategory) {
-      clientList = clientList.filter((c: any) => !c.category || c.category === activeCategory);
+    if ((enableCategoryClientSeparation || enableCategorySeparation) && activeCategory) {
+      clientList = clientList.filter((c: any) =>
+        activeCategory === 'shuttering' ? (!c.category || c.category === 'shuttering') : c.category === activeCategory
+      );
     }
 
     setClients(clientList);
@@ -880,7 +882,7 @@ const UdharChallan: React.FC = () => {
       return;
     }
 
-    const clientCategory = enableCategoryClientSeparation && activeCategory ? activeCategory : 'shuttering';
+    const clientCategory = clientData.category || activeCategory || 'shuttering';
     const { data, error } = await supabase
       .from('clients')
       .insert({

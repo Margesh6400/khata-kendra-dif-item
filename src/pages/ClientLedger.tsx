@@ -329,11 +329,13 @@ export default function ClientLedger() {
       .order('client_nic_name', { ascending: true });
     if (error) throw error;
     let clientList = data || [];
-    if (enableCategoryClientSeparation && activeCategory) {
-      clientList = clientList.filter((c: any) => !c.category || c.category === activeCategory);
+    if ((enableCategoryClientSeparation || enableCategorySeparation) && activeCategory) {
+      clientList = clientList.filter((c: any) =>
+        activeCategory === 'shuttering' ? (!c.category || c.category === 'shuttering') : c.category === activeCategory
+      );
     }
     return clientList;
-  }, [enableCategoryClientSeparation, activeCategory]);
+  }, [enableCategoryClientSeparation, enableCategorySeparation, activeCategory]);
 
   const loadInitialData = useCallback(async (showRefreshToast = false) => {
     setLoading(true);
