@@ -1,21 +1,15 @@
-import React, { memo } from 'react';
-import { formatLocalDate, safeParseLocalDate } from '../utils/dateUtils';
-import './BillInvoice.css';
+import React from 'react';
+import { format } from 'date-fns';
 import { formatIndianCurrency } from '../utils/currencyFormat';
 
 interface BillInvoiceProps {
-  companyDetails: {
-    name: string;
-    address: string;
-    phone: string;
-    gst?: string;
-  };
   billDetails: {
     billNumber: string;
     billDate: string;
     fromDate: string;
     toDate: string;
     dailyRent: number;
+    category?: string;
   };
   clientDetails: {
     name: string;
@@ -46,12 +40,6 @@ interface BillInvoiceProps {
     pieces?: number;
     rate?: number;
   }[];
-  discounts: {
-    id: string;
-    date: string;
-    description: string;
-    amount: number;
-  }[];
   payments: {
     id: string;
     date: string;
@@ -66,7 +54,6 @@ interface BillInvoiceProps {
     netPlates: number;
     serviceCharge: number;
     totalExtraCosts: number;
-    totalDeposit?: number;
     discounts: number;
     grandTotal: number;
     totalPaid: number;
@@ -80,78 +67,42 @@ interface BillInvoiceProps {
   };
 }
 
-type RentalCharge = BillInvoiceProps['rentalCharges'][number];
+const MavaniLogoSVG = () => (
+  <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+    <svg width="55" height="35" viewBox="0 0 100 65" fill="#000">
+      <path d="M10,55 L28,15 L45,45 L62,15 L80,55 L70,55 L53,28 L45,42 L37,28 L20,55 Z" />
+      <path d="M5,22 C35,2 75,18 90,28 C65,12 35,10 15,32 Z" opacity="0.85" />
+    </svg>
+    <div style={{ fontSize: '12px', fontWeight: '900', letterSpacing: '1px', marginTop: '2px', color: '#000' }}>MAVANI</div>
+  </div>
+);
 
-// ── Static style objects (created once, never on every render) ─────────────
-const BASE_CELL: React.CSSProperties = {
-  border: '1px solid #d1d5db',
-  padding: '7px 10px',
-  fontSize: '13px',
-};
+const JackPropsSVG = () => (
+  <svg width="50" height="42" viewBox="0 0 80 65" stroke="#000" fill="none" strokeWidth="2.5">
+    <g>
+      <line x1="12" y1="12" x2="12" y2="60" />
+      <line x1="6" y1="12" x2="18" y2="12" />
+      <line x1="6" y1="60" x2="18" y2="60" />
+      <circle cx="12" cy="26" r="3.5" fill="#000" />
 
-const C = {
-  base: BASE_CELL,
-  prevBillLabel: { ...BASE_CELL, fontWeight: 'bold', color: '#b91c1c', fontSize: '13px' } as React.CSSProperties,
-  prevBillAmt: { ...BASE_CELL, textAlign: 'center', fontWeight: 'bold', color: '#b91c1c', fontSize: '14px' } as React.CSSProperties,
-  dateRange: { ...BASE_CELL, textAlign: 'center', fontWeight: '600' } as React.CSSProperties,
-  udharJama: { ...BASE_CELL, textAlign: 'center', lineHeight: 1.5 } as React.CSSProperties,
-  rateDays: { ...BASE_CELL, textAlign: 'center', fontWeight: '600', color: '#4b5563' } as React.CSSProperties,
-  amount: { ...BASE_CELL, textAlign: 'center', fontWeight: '700', fontSize: '14px' } as React.CSSProperties,
-  extraDesc: { ...BASE_CELL, fontWeight: '600' } as React.CSSProperties,
-} as const;
+      <line x1="30" y1="8" x2="30" y2="60" />
+      <line x1="24" y1="8" x2="36" y2="8" />
+      <line x1="24" y1="60" x2="36" y2="60" />
+      <circle cx="30" cy="22" r="3.5" fill="#000" />
 
-// Pieces cell varies based on isZero — build on each row but reuse base
-function piecesCell(isZero: boolean): React.CSSProperties {
-  return {
-    ...BASE_CELL,
-    textAlign: 'center',
-    fontWeight: isZero ? '900' : '700',
-    fontSize: '14px',
-    color: isZero ? '#dc2626' : '#111',
-  };
-}
+      <line x1="48" y1="8" x2="48" y2="60" />
+      <line x1="42" y1="8" x2="54" y2="8" />
+      <line x1="42" y1="60" x2="54" y2="60" />
+      <circle cx="48" cy="22" r="3.5" fill="#000" />
 
-// ── Pure function: computes udharQty / jamaQty for a rental row ────────────
-function computeRentalRow(
-  charge: RentalCharge,
-  index: number,
-  allCharges: RentalCharge[],
-  fromDate: string,
-  toDate: string,
-): { udharQty: number; jamaQty: number; skip: boolean } {
-  if (charge.udharQty !== undefined || charge.jamaQty !== undefined) {
-    return { udharQty: charge.udharQty ?? 0, jamaQty: charge.jamaQty ?? 0, skip: false };
-  }
+      <line x1="66" y1="12" x2="66" y2="60" />
+      <line x1="60" y1="12" x2="72" y2="12" />
+      <line x1="60" y1="60" x2="72" y2="60" />
+      <circle cx="66" cy="26" r="3.5" fill="#000" />
+    </g>
+  </svg>
+);
 
-  const isJama = charge.causeType === 'jama';
-  const prevPieces = index > 0 ? allCharges[index - 1].pieces : 0;
-  const currentQty = charge.txnQty || Math.abs(charge.pieces - prevPieces) || charge.pieces;
-  const chargeStart = charge.startDate ?? fromDate;
-  const chargeEnd = charge.endDate ?? toDate;
-
-  // Single findIndex replaces the previous find + findIndex pair
-  const matchingIdx = allCharges.findIndex((c, i) => {
-    if (i === index) return false;
-    return (c.startDate ?? fromDate) === chargeStart
-      && (c.endDate ?? toDate) === chargeEnd
-      && c.causeType !== charge.causeType;
-  });
-
-  if (isJama && matchingIdx !== -1) return { udharQty: 0, jamaQty: 0, skip: true };
-
-  const matchingCharge = matchingIdx !== -1 ? allCharges[matchingIdx] : null;
-  const matchingQty = matchingCharge
-    ? (matchingCharge.txnQty ?? Math.abs(matchingCharge.pieces - (matchingIdx > 0 ? allCharges[matchingIdx - 1].pieces : 0)))
-    : 0;
-
-  return {
-    udharQty: isJama ? matchingQty : currentQty,
-    jamaQty: isJama ? currentQty : matchingQty,
-    skip: false,
-  };
-}
-
-// ── Component ──────────────────────────────────────────────────────────────
 const BillInvoiceTemplate: React.FC<BillInvoiceProps> = ({
   billDetails,
   clientDetails,
@@ -162,537 +113,300 @@ const BillInvoiceTemplate: React.FC<BillInvoiceProps> = ({
   mainNote,
   previousBill,
 }) => {
+  const categoryTitle = (() => {
+    const cat = (billDetails.category || '').toLowerCase();
+    if (cat.includes('pharma') || cat.includes('ફર્મા')) return 'ફર્મા ભાડા બિલ';
+    if (cat.includes('khapeda') || cat.includes('ખપેડા')) return 'ખપેડા ભાડા બિલ';
+    if (cat.includes('jack') || cat.includes('જેક')) return 'જેક ભાડા બિલ';
+    if (cat.includes('cuplock') || cat.includes('કપલોક')) return 'કપલોક ભાડા બિલ';
+    if (cat.includes('shuttering')) return 'શટરિંગ ભાડા બિલ';
+    return 'ઝૂલા ભાડા બિલ';
+  })();
+
+  const formatLocalDate = (dateStr?: string) => {
+    if (!dateStr) return '';
+    try {
+      return format(new Date(dateStr), 'dd/MM/yyyy');
+    } catch {
+      return dateStr;
+    }
+  };
+
   return (
-    <div style={{
-      width: '794px',
+    <div className="invoice-container" style={{
+      padding: '20px',
+      maxWidth: '820px',
+      margin: '0 auto',
+      fontFamily: '"Noto Sans Gujarati", "Arya", Arial, sans-serif',
       backgroundColor: '#fff',
-      fontFamily: '"Noto Sans Gujarati", Arial, sans-serif',
-      color: '#111',
-      padding: '18px',
-      boxSizing: 'border-box',
+      color: '#000',
     }}>
-      {/* ── Outer border ── */}
-      <div style={{ border: '2.5px solid #111' }}>
+      {/* Outer Monolithic Border Container */}
+      <div style={{ border: '2.5px solid #000', padding: '0', position: 'relative', minHeight: '920px', display: 'flex', flexDirection: 'column' }}>
 
-        {/* ══════════ HEADER ══════════ */}
-        <div style={{ borderBottom: '2px solid #111' }}>
-
-          {/* Top row: partner | religious | phones */}
-          <div style={{
-            display: 'flex',
-            justifyContent: 'space-between',
-            alignItems: 'center',
-            padding: '4px 16px 3px',
-            borderBottom: '1px solid #d1d5db',
-          }}>
-            <div style={{ fontWeight: 'bold', fontSize: '10px', lineHeight: 1.4 }}>
-              પરષોત્તમભાઈ પોલરા<br />
-              <span style={{ fontWeight: '500', fontSize: '9px' }}>(રૂપાવટીવાળા)</span>
-            </div>
-
-            <div style={{ textAlign: 'center', lineHeight: 1.3 }}>
-              <div style={{ fontWeight: '900', fontSize: '11px', letterSpacing: '1px' }}>
-                ॥ શ્રી ૧ ॥
-              </div>
-              <div style={{ fontWeight: '700', fontSize: '10px', color: '#4b5563' }}>
-                શ્રી ગણેશાય નમઃ
+        {/* ══════════ TOP HEADER SECTION ══════════ */}
+        <div style={{ borderBottom: '2px solid #000' }}>
+          {/* Top Info Row */}
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '8px 14px', borderBottom: '1.5px solid #000' }}>
+            {/* Left Phone & Logo */}
+            <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+              <MavaniLogoSVG />
+              <div style={{ fontSize: '11px', fontWeight: 'bold', lineHeight: 1.3 }}>
+                (૦) ૦૨૬૧-૨૮૫૪૩૦૭
               </div>
             </div>
 
-            <div style={{ textAlign: 'right', fontSize: '9.5px', lineHeight: 1.5 }}>
-              <div><b>માર્ગેશ પોલારા</b> - 88664 71567</div>
-              <div><b>માર્ગેશ પોલારા</b> - 88664 71567</div>
+            {/* Center Religious Title & Header */}
+            <div style={{ textAlign: 'center' }}>
+              <div style={{ fontSize: '11px', fontWeight: 'bold', letterSpacing: '0.5px' }}>
+                ॥ શ્રી ગણેશાય નમઃ ॥
+              </div>
+              <div style={{ fontSize: '38px', fontWeight: '900', lineHeight: 1.1, letterSpacing: '1px' }}>
+                માવાણી
+              </div>
+              <div style={{ fontSize: '12px', fontWeight: 'bold', marginTop: '1px' }}>
+                જેક ટેકા * સ્પેન * પ્લેટ * ઝુલા
+              </div>
+              <div style={{ fontSize: '10px', fontWeight: '600' }}>
+                (સેન્ટરીંગ સામાનવાળા)
+              </div>
             </div>
-          </div>
 
-          {/* Company name — full-width double-rule banner */}
-          <div style={{
-            padding: '24px 16px',
-            borderBottom: '1px solid #d1d5db',
-            textAlign: 'center',
-            borderTop: '3px double #111',
-          }}>
-            <div style={{
-              borderTop: '1px solid #111',
-              borderBottom: '1px solid #111',
-              padding: '32px 0',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              backgroundColor: '#fff',
-            }}>
-              <span style={{
-                fontSize: '44px',
-                fontWeight: '500',
-                letterSpacing: '6px',
-                lineHeight: 1,
-                display: 'block',
+            {/* Right Estimate Bill Pill & Jacks Logo */}
+            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: '4px' }}>
+              <div style={{
+                backgroundColor: '#000',
+                color: '#fff',
+                padding: '4px 16px',
+                borderRadius: '6px',
+                fontWeight: 'bold',
+                fontSize: '13px',
+                letterSpacing: '0.5px',
               }}>
-                &nbsp;ખાતા કેન્દ્ર&nbsp;
-              </span>
+                {categoryTitle}
+              </div>
+              <JackPropsSVG />
             </div>
           </div>
 
-          {/* Address + Bill number */}
-          <div style={{
-            display: 'flex',
-            justifyContent: 'space-between',
-            alignItems: 'center',
-            padding: '8px 16px',
-          }}>
-            <div style={{ fontWeight: '600', fontSize: '13px' }}>
-              ૧, રામનગર સોસાયટી, સીમાડા ગામ, સુરત.
-            </div>
-            <div style={{
-              border: '2px solid #111',
-              borderRadius: '20px',
-              padding: '3px 18px',
-              fontWeight: 'bold',
-              fontSize: '14px',
-              backgroundColor: '#f8fafc',
-              letterSpacing: '0.3px',
-            }}>
-              બિલ નં. {billDetails.billNumber}
-            </div>
+          {/* Sub-Header Address Row */}
+          <div style={{ padding: '4px 10px', textAlign: 'center', fontSize: '10.5px', fontWeight: 'bold', backgroundColor: '#f8fafc', borderBottom: '1px solid #000' }}>
+            ઓફિસ-૨૩/૨૪, જે.જે. નગર, પુણાગામ, કનૈયા કોમ્પ.ની પાછળ, ઝુપડપટ્ટીની સામે, પુણા ટુ બોમ્બે માર્કેટ રોડ, સુરત.
           </div>
         </div>
 
-        {/* ══════════ CLIENT DETAILS ══════════ */}
-        <div style={{ padding: '8px 14px' }}>
-          <div style={{
-            border: '1.5px solid #374151',
-            borderRadius: '14px',
-            padding: '10px 16px',
-          }}>
-            <div style={{ display: 'grid', gridTemplateColumns: '3fr 1fr', gap: '6px 24px' }}>
-              {/* Row 1 */}
-              <div style={{ display: 'flex', alignItems: 'baseline', gap: '6px' }}>
-                <span style={{ fontWeight: 'bold', fontSize: '14px', whiteSpace: 'nowrap' }}>નામ:</span>
-                <span style={{ fontWeight: '700', fontSize: '15px', borderBottom: '1px dotted #6b7280', flex: 1, paddingLeft: '4px' }}>
-                  {clientDetails.name}
+        {/* ══════════ CLIENT DETAILS GRID BOX ══════════ */}
+        <div style={{ padding: '8px 12px', borderBottom: '2px solid #000' }}>
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 220px', gap: '8px', fontSize: '14px', fontWeight: 'bold' }}>
+            {/* Left: Client Name & Site */}
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+              <div style={{ display: 'flex', alignItems: 'baseline' }}>
+                <span style={{ whiteSpace: 'nowrap', width: '55px' }}>નામ :</span>
+                <span style={{ borderBottom: '1px dotted #000', flex: 1, paddingLeft: '4px', fontSize: '15px' }}>
+                  {clientDetails.name} {clientDetails.nicName ? `(${clientDetails.nicName})` : ''}
                 </span>
               </div>
-              <div style={{ display: 'flex', alignItems: 'baseline', gap: '6px' }}>
-                <span style={{ fontWeight: 'bold', fontSize: '14px', whiteSpace: 'nowrap' }}>ID:</span>
-                <span style={{ fontWeight: '700', fontSize: '15px', borderBottom: '1px dotted #6b7280', flex: 1, paddingLeft: '4px', textAlign: 'center' }}>
-                  {clientDetails.nicName}
-                </span>
-              </div>
-              {/* Row 2 */}
-              <div style={{ display: 'flex', alignItems: 'baseline', gap: '6px' }}>
-                <span style={{ fontWeight: 'bold', fontSize: '14px', whiteSpace: 'nowrap' }}>સાઈટ:</span>
-                <span style={{ fontWeight: '700', fontSize: '15px', borderBottom: '1px dotted #6b7280', flex: 1, paddingLeft: '4px' }}>
+              <div style={{ display: 'flex', alignItems: 'baseline' }}>
+                <span style={{ whiteSpace: 'nowrap', width: '55px' }}>સાઈટ :</span>
+                <span style={{ borderBottom: '1px dotted #000', flex: 1, paddingLeft: '4px' }}>
                   {clientDetails.site}
                 </span>
               </div>
-              <div style={{ display: 'flex', alignItems: 'baseline', gap: '6px' }}>
-                <span style={{ fontWeight: 'bold', fontSize: '14px', whiteSpace: 'nowrap' }}>તારીખ:</span>
-                <span style={{ fontWeight: '700', fontSize: '15px', borderBottom: '1px dotted #6b7280', flex: 1, paddingLeft: '4px', textAlign: 'center' }}>
-                  {formatLocalDate(billDetails.billDate, 'dd/MM/yyyy')}
+            </div>
+
+            {/* Right: Bill Number & Date */}
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+              <div style={{ display: 'flex', alignItems: 'baseline' }}>
+                <span style={{ whiteSpace: 'nowrap', width: '60px' }}>નંબર :</span>
+                <span style={{ borderBottom: '1px dotted #000', flex: 1, textAlign: 'center', fontSize: '15px' }}>
+                  {billDetails.billNumber}
+                </span>
+              </div>
+              <div style={{ display: 'flex', alignItems: 'baseline' }}>
+                <span style={{ whiteSpace: 'nowrap', width: '60px' }}>તા. :</span>
+                <span style={{ borderBottom: '1px dotted #000', flex: 1, textAlign: 'center' }}>
+                  {formatLocalDate(billDetails.billDate)}
                 </span>
               </div>
             </div>
           </div>
         </div>
 
-        {/* ══════════ MAIN TABLE ══════════ */}
-        <table style={{ width: '100%', borderCollapse: 'collapse' }}>
-          <thead>
-            <tr style={{ backgroundColor: '#111', color: '#fff' }}>
-              {[
-                { label: 'આ. તારીખ થી જમા તારીખ', w: '32%' },
-                { label: 'જમા / ઉધાર', w: '15%' },
-                { label: 'ચાલુ નંગ', w: '14%' },
-                { label: 'ભાવ', w: '11%' },
-                { label: 'દિવસ', w: '10%' },
-                { label: 'રકમ', w: '18%' },
-              ].map(({ label, w }) => (
-                <th key={label} style={{
-                  padding: '10px 8px',
-                  textAlign: 'center',
-                  fontWeight: 'bold',
-                  fontSize: '13px',
-                  border: '1px solid #374151',
-                  width: w,
-                  letterSpacing: '0.2px',
-                }}>
-                  {label}
-                </th>
-              ))}
-            </tr>
-          </thead>
-          <tbody>
-
-            {/* Previous bill row */}
-            {previousBill && previousBill.amount > 0 && (
-              <tr style={{ backgroundColor: '#fff5f5' }}>
-                <td colSpan={5} style={C.prevBillLabel}>
-                  ⚠ અગાઉનું બિલ #{previousBill.billNumber} બાકી
-                </td>
-                <td style={C.prevBillAmt}>
-                  {formatIndianCurrency(previousBill.amount)}
+        {/* ══════════ MAIN RENTAL TABLE (7 COLUMNS MATCHING UPLOADED IMAGE) ══════════ */}
+        <div style={{ flex: 1, display: 'flex', flexDirection: 'column' }}>
+          <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '12.5px' }}>
+            <thead>
+              <tr style={{ backgroundColor: '#f1f5f9', borderBottom: '2px solid #000' }}>
+                <th style={{ borderRight: '1px solid #000', padding: '6px 4px', width: '7%', textAlign: 'center', fontWeight: 'bold' }}>નંગ</th>
+                <th style={{ borderRight: '1px solid #000', padding: '6px 4px', width: '22%', textAlign: 'center', fontWeight: 'bold' }}>આ.તારીખ</th>
+                <th style={{ borderRight: '1px solid #000', padding: '6px 4px', width: '22%', textAlign: 'center', fontWeight: 'bold' }}>જ.તારીખ</th>
+                <th style={{ borderRight: '1px solid #000', padding: '6px 4px', width: '10%', textAlign: 'center', fontWeight: 'bold' }}>ભાવ</th>
+                <th style={{ borderRight: '1px solid #000', padding: '6px 4px', width: '13%', textAlign: 'center', fontWeight: 'bold' }}>૧ દિવસનુ</th>
+                <th style={{ borderRight: '1px solid #000', padding: '6px 4px', width: '11%', textAlign: 'center', fontWeight: 'bold' }}>કુ. દિવસ</th>
+                <th style={{ padding: '6px 4px', width: '15%', textAlign: 'right', fontWeight: 'bold', paddingRight: '8px' }}>કુલ રકમ</th>
+              </tr>
+            </thead>
+            <tbody>
+              {/* Category Subtitle Row */}
+              <tr style={{ borderBottom: '1px solid #000', backgroundColor: '#fafafa' }}>
+                <td colSpan={7} style={{ padding: '4px 8px', fontWeight: 'bold', fontSize: '13px', fontStyle: 'italic' }}>
+                  ઝુલા
                 </td>
               </tr>
-            )}
 
-            {/* Rental rows */}
-            {(() => {
-              // Pre-calculate subtotals for each size group (shuttering vs jack size)
-              const groupSubtotals: Record<string, number> = {};
-              const groupIsJack: Record<string, boolean> = {};
-              const groupSizeLabel: Record<string, string> = {};
+              {/* Previous Bill Row */}
+              {previousBill && previousBill.amount > 0 && (
+                <tr style={{ borderBottom: '1px solid #000' }}>
+                  <td style={{ borderRight: '1px solid #000', padding: '6px 4px', textAlign: 'center' }}>-</td>
+                  <td colSpan={5} style={{ borderRight: '1px solid #000', padding: '6px 8px', fontWeight: 'bold' }}>
+                    અગાઉનું બિલ #{previousBill.billNumber} બાકી
+                  </td>
+                  <td style={{ padding: '6px 8px', textAlign: 'right', fontWeight: 'bold' }}>
+                    {formatIndianCurrency(previousBill.amount)}
+                  </td>
+                </tr>
+              )}
 
-              // Find all visible charges and populate subtotal mapping
-              const visibleCharges = rentalCharges.filter((charge, idx) => {
-                const { skip } = computeRentalRow(
-                  charge, idx, rentalCharges, billDetails.fromDate, billDetails.toDate
-                );
-                return !skip;
-              });
+              {/* Rental Charges Rows */}
+              {rentalCharges.map((charge, index) => {
+                const rowStartDate = charge.startDate ? formatLocalDate(charge.startDate) : formatLocalDate(billDetails.fromDate);
+                const rowEndDate = charge.endDate ? formatLocalDate(charge.endDate) : formatLocalDate(billDetails.toDate);
+                const dailyRate = charge.rate || billDetails.dailyRent;
+                const oneDayAmount = Math.round(charge.pieces * dailyRate);
+                const isZeroBalance = charge.pieces === 0 && charge.days === 0;
 
-              visibleCharges.forEach(charge => {
-                const hasSize = charge.size && charge.size !== 'All';
-                const isJack = hasSize;
-
-                // Group key is 'shuttering' or the specific jack sizeId
-                const key = isJack ? String(charge.sizeId || charge.size) : 'shuttering';
-                
-                groupSubtotals[key] = (groupSubtotals[key] || 0) + (charge.amount || 0);
-                groupIsJack[key] = isJack;
-                if (hasSize) {
-                  groupSizeLabel[key] = charge.size;
-                }
-              });
-
-              // Now map and render the visible charges
-              const renderedRows: React.ReactNode[] = [];
-
-              visibleCharges.forEach((charge, idx) => {
-                const { udharQty, jamaQty } = computeRentalRow(
-                  charge, rentalCharges.indexOf(charge), rentalCharges, billDetails.fromDate, billDetails.toDate
-                );
-
-                const rowStartDate = charge.startDate ? safeParseLocalDate(charge.startDate) : safeParseLocalDate(billDetails.fromDate);
-                const rowEndDate = charge.endDate ? safeParseLocalDate(charge.endDate) : safeParseLocalDate(billDetails.toDate);
-                const displayEndDate = charge.days === 0 
-                  ? rowEndDate 
-                  : new Date(rowEndDate.getFullYear(), rowEndDate.getMonth(), rowEndDate.getDate() - 1);
-                const isZero = charge.pieces === 0 && charge.days === 0;
-
-                const hasSize = charge.size && charge.size !== 'All';
-                const effectiveRate = charge.rate || billDetails.dailyRent;
-                const isJackRow = hasSize;
-
-                const key = isJackRow ? String(charge.sizeId || charge.size) : 'shuttering';
-                
-                // Color configuration
-                const bg = isJackRow
-                  ? (idx % 2 === 0 ? '#faf5ff' : '#f3e8ff')
-                  : (idx % 2 === 0 ? '#fff' : '#f9fafb');
-
-                const topBorder = '1px solid #d1d5db';
-
-                const cellStyle = (extra?: React.CSSProperties): React.CSSProperties => ({
-                  ...BASE_CELL,
-                  borderTop: topBorder,
-                  ...extra,
-                });
-
-                renderedRows.push(
-                  <tr key={`rent-${idx}`} style={{ backgroundColor: bg }}>
-                    <td style={cellStyle({ fontWeight: '600', textAlign: 'center' })}>
-                      <div style={{ display: 'flex', flexDirection: 'column', gap: '3px' }}>
-                        <div>
-                          {charge.days === 0
-                            ? formatLocalDate(displayEndDate, 'dd/MM/yyyy')
-                            : <>{formatLocalDate(rowStartDate, 'dd/MM/yyyy')} થી {formatLocalDate(displayEndDate, 'dd/MM/yyyy')}</>
-                          }
-                        </div>
-                        {hasSize && (
-                          <div style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', justifyContent: 'center' }}>
-                            <span style={{
-                              backgroundColor: isJackRow ? '#7c3aed' : '#374151',
-                              color: '#fff',
-                              fontSize: '10px',
-                              fontWeight: 'bold',
-                              padding: '1px 6px',
-                              borderRadius: '999px',
-                            }}>
-                              {isJackRow ? '⚙ ' : ''}{charge.size}
-                            </span>
-                            {isJackRow && (
-                              <span style={{ fontSize: '10px', color: '#7c3aed', fontWeight: '600' }}>(જેક)</span>
-                            )}
-                          </div>
-                        )}
-                      </div>
-                    </td>
-                    <td style={cellStyle({ textAlign: 'center', lineHeight: 1.5 })}>
-                      {(charge.udharDetails && charge.udharDetails.length > 1)
-                        ? charge.udharDetails.map((d, i) => <div key={i} style={{ color: '#dc2626', fontWeight: 'bold' }}>+{d.qty}</div>)
-                        : udharQty > 0 && <div style={{ color: '#dc2626', fontWeight: 'bold' }}>+{udharQty}</div>
-                      }
-                      {(charge.jamaDetails && charge.jamaDetails.length > 1)
-                        ? charge.jamaDetails.map((d, i) => <div key={i} style={{ color: '#16a34a', fontWeight: 'bold' }}>-{d.qty}</div>)
-                        : jamaQty > 0 && <div style={{ color: '#16a34a', fontWeight: 'bold' }}>-{jamaQty}</div>
-                      }
-                      {udharQty === 0 && jamaQty === 0
-                        && !(charge.udharDetails?.length) && !(charge.jamaDetails?.length)
-                        && <span style={{ color: '#9ca3af' }}>—</span>
-                      }
-                    </td>
-                    <td style={cellStyle({
-                      textAlign: 'center',
-                      fontWeight: isZero ? '900' : '700',
-                      fontSize: '14px',
-                      color: isZero ? '#dc2626' : '#111',
-                    })}>
+                return (
+                  <tr key={`charge-${index}`} style={{ borderBottom: '1px solid #000', height: '28px' }}>
+                    {/* 1. નંગ (Pieces) */}
+                    <td style={{ borderRight: '1px solid #000', padding: '4px', textAlign: 'center', fontWeight: 'bold' }}>
                       {charge.pieces}
                     </td>
-                    <td style={cellStyle({
-                      textAlign: 'center',
-                      fontWeight: '600',
-                      color: isJackRow && !isZero ? '#7c3aed' : '#4b5563',
-                      background: isJackRow && !isZero ? 'rgba(124,58,237,0.07)' : undefined,
-                    })}>
-                      {isZero ? '—' : effectiveRate}
+
+                    {/* 2. આ.તારીખ (Udhar Date) */}
+                    <td style={{ borderRight: '1px solid #000', padding: '4px', textAlign: 'center', fontWeight: '500' }}>
+                      {rowStartDate}
                     </td>
-                    <td style={cellStyle({ textAlign: 'center', fontWeight: '600', color: '#4b5563' })}>
-                      {isZero ? '—' : charge.days}
+
+                    {/* 3. જ.તારીખ (Jama Date) */}
+                    <td style={{ borderRight: '1px solid #000', padding: '4px', textAlign: 'center', fontWeight: '500' }}>
+                      {isZeroBalance ? '-' : `થી ${rowEndDate}`}
                     </td>
-                    <td style={cellStyle({
-                      textAlign: 'center',
-                      fontWeight: '700',
-                      fontSize: '14px',
-                      color: isJackRow && !isZero ? '#7c3aed' : '#111',
-                    })}>
-                      {isZero ? '—' : formatIndianCurrency(Math.round(charge.amount))}
+
+                    {/* 4. ભાવ (Rate) */}
+                    <td style={{ borderRight: '1px solid #000', padding: '4px', textAlign: 'center', fontWeight: '500' }}>
+                      {isZeroBalance ? '-' : dailyRate}
+                    </td>
+
+                    {/* 5. ૧ દિવસનુ (1 Day Rent = Pieces * Rate) */}
+                    <td style={{ borderRight: '1px solid #000', padding: '4px', textAlign: 'center', fontWeight: '600' }}>
+                      {isZeroBalance ? '-' : formatIndianCurrency(oneDayAmount)}
+                    </td>
+
+                    {/* 6. કુ. દિવસ (Total Days) */}
+                    <td style={{ borderRight: '1px solid #000', padding: '4px', textAlign: 'center', fontWeight: 'bold' }}>
+                      {isZeroBalance ? '-' : charge.days}
+                    </td>
+
+                    {/* 7. કુલ રકમ (Total Amount) */}
+                    <td style={{ padding: '4px 8px', textAlign: 'right', fontWeight: 'bold' }}>
+                      {isZeroBalance ? '-' : formatIndianCurrency(Math.round(charge.amount))}
                     </td>
                   </tr>
                 );
+              })}
 
-                // Detect group change or end of list to inject the subtotal row
-                const nextCharge = idx < visibleCharges.length - 1 ? visibleCharges[idx + 1] : null;
-                const nextHasSize = nextCharge?.size && nextCharge.size !== 'All';
-                const nextRate = nextCharge ? (nextCharge.rate || billDetails.dailyRent) : billDetails.dailyRent;
-                const nextIsJack = nextHasSize && nextRate !== billDetails.dailyRent;
-                const nextKey = nextCharge ? (nextIsJack ? String(nextCharge.sizeId || nextCharge.size) : 'shuttering') : null;
-
-                if (!nextKey || nextKey !== key) {
-                  // End of the group!
-                  const subtotalValue = groupSubtotals[key] || 0;
-                  const isLastGroup = !nextKey;
-                  const subtotalBg = isJackRow ? '#faf5ff' : '#ffffff';
-
-                  renderedRows.push(
-                    <tr key={`subtotal-${key}`} style={{ backgroundColor: subtotalBg, fontWeight: 'bold' }}>
-                      <td colSpan={5} style={{
-                        ...BASE_CELL,
-                        borderTop: '1.5px solid #111',
-                        borderBottom: isLastGroup ? '1.5px solid #111' : '3px solid #111',
-                        padding: '9px 12px',
-                        textAlign: 'right',
-                        fontSize: '13.5px',
-                        color: isJackRow ? '#7c3aed' : '#1f2937',
-                      }}>
-                        {isJackRow
-                          ? `કુલ જેક ભાડું (સાઈઝ: ${groupSizeLabel[key] || ''}):`
-                          : 'કુલ શટરિંગ ભાડું (કમ્બાઈન):'
-                        }
-                      </td>
-                      <td style={{
-                        ...BASE_CELL,
-                        borderTop: '1.5px solid #111',
-                        borderBottom: isLastGroup ? '1.5px solid #111' : '3px solid #111',
-                        padding: '9px 12px',
-                        textAlign: 'center',
-                        fontWeight: '800',
-                        fontSize: '15px',
-                        color: isJackRow ? '#7c3aed' : '#111',
-                      }}>
-                        {formatIndianCurrency(Math.round(subtotalValue))}
-                      </td>
-                    </tr>
-                  );
-                }
-              });
-
-              return renderedRows;
-            })()}
-
-            {/* Extra costs rows */}
-            {extraCosts.map((cost, index) => (
-              <tr key={`extra-${index}`} style={{ backgroundColor: '#fffbeb' }}>
-                <td colSpan={5} style={C.extraDesc}>
-                  {cost.description}
-                  {(cost.description === 'સર્વિસ ચાર્જ' || cost.description === 'Service Charge') && cost.pieces && cost.rate && (
-                    <span style={{ fontSize: '12px', color: '#6b7280', marginLeft: '8px' }}>
-                      ({cost.pieces} × {cost.rate})
-                    </span>
-                  )}
-                </td>
-                <td style={C.amount}>
-                  {formatIndianCurrency(cost.amount)}
-                </td>
-              </tr>
-            ))}
-
-          </tbody>
-        </table>
-
-        {/* ══════════ PAYMENTS ══════════ */}
-        {payments.length > 0 && (
-          <div style={{ padding: '10px 16px', borderTop: '1px solid #e5e7eb' }}>
-            <div style={{ fontWeight: 'bold', fontSize: '13.5px', marginBottom: '6px', borderBottom: '1.5px solid #374151', paddingBottom: '4px' }}>
-              ✓ ચુકવણી વિગત
-            </div>
-            <table style={{ width: '100%', fontSize: '13px' }}>
-              <tbody>
-                {payments.map((p, i) => (
-                  <tr key={i}>
-                    <td style={{ padding: '3px 0', width: '22%', color: '#4b5563' }}>
-                      {formatLocalDate(p.date, 'dd/MM/yyyy')}
-                    </td>
-                    <td style={{ padding: '3px 0', color: '#374151' }}>
-                      {p.method}{p.note ? ` (${p.note})` : ''}
-                    </td>
-                    <td style={{ padding: '3px 0', textAlign: 'right', fontWeight: 'bold', color: '#15803d', fontSize: '14px' }}>
-                      {formatIndianCurrency(p.amount)}
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        )}
-
-        {/* Main note */}
-        {mainNote && (
-          <div style={{ padding: '6px 16px 8px', fontSize: '13px', color: '#4b5563', borderTop: '1px solid #e5e7eb' }}>
-            <span style={{ fontWeight: 'bold', color: '#111' }}>નોંધ: </span>{mainNote}
-          </div>
-        )}
-
-        {/* ══════════ FOOTER ══════════ */}
-        <div style={{ borderTop: '2px solid #111', display: 'flex' }}>
-
-          {/* Left: note + signatures */}
-          <div style={{ flex: '0 0 62%', padding: '12px 16px', borderRight: '2px solid #111', display: 'flex', flexDirection: 'column', justifyContent: 'space-between', minHeight: '90px' }}>
-            <div style={{ fontWeight: '700', fontSize: '13px', color: '#b91c1c' }}>
-              ⚠ નોંધ: આ બીલ મળ્યા પછી તરત જ બીલ ચુકવવાનું રહેશે.
-            </div>
-            <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: '28px' }}>
-              {['લેનારની સહી', 'આપનારની સહી'].map(label => (
-                <div key={label} style={{ textAlign: 'center', fontSize: '13px', fontWeight: '600' }}>
-                  <div style={{ borderTop: '1px solid #374151', paddingTop: '4px', width: '140px' }}>
-                    {label}
-                  </div>
-                </div>
+              {/* Extra Costs Rows */}
+              {extraCosts.map((cost, index) => (
+                <tr key={`extra-${index}`} style={{ borderBottom: '1px solid #000' }}>
+                  <td style={{ borderRight: '1px solid #000', padding: '4px', textAlign: 'center' }}>-</td>
+                  <td colSpan={5} style={{ borderRight: '1px solid #000', padding: '6px 8px', fontWeight: 'bold' }}>
+                    {cost.description} {cost.pieces && cost.rate ? `(${cost.pieces} × ₹${cost.rate})` : ''}
+                  </td>
+                  <td style={{ padding: '6px 8px', textAlign: 'right', fontWeight: 'bold' }}>
+                    {formatIndianCurrency(cost.amount)}
+                  </td>
+                </tr>
               ))}
+
+              {/* Payments Received Rows */}
+              {payments.map((payment, index) => (
+                <tr key={`pay-${index}`} style={{ borderBottom: '1px solid #000' }}>
+                  <td style={{ borderRight: '1px solid #000', padding: '4px', textAlign: 'center' }}>-</td>
+                  <td colSpan={5} style={{ borderRight: '1px solid #000', padding: '6px 8px', fontWeight: 'bold' }}>
+                    ચુકવણી મળી ({formatLocalDate(payment.date)} - {payment.method} {payment.note ? `[${payment.note}]` : ''})
+                  </td>
+                  <td style={{ padding: '6px 8px', textAlign: 'right', fontWeight: 'bold' }}>
+                    -{formatIndianCurrency(payment.amount)}
+                  </td>
+                </tr>
+              ))}
+
+              {/* Empty Rows Padding to match physical printed slip layout */}
+              {Array.from({ length: Math.max(0, 10 - rentalCharges.length - extraCosts.length - payments.length) }).map((_, i) => (
+                <tr key={`empty-${i}`} style={{ borderBottom: '1px solid #e2e8f0', height: '26px' }}>
+                  <td style={{ borderRight: '1px solid #000' }}></td>
+                  <td style={{ borderRight: '1px solid #000' }}></td>
+                  <td style={{ borderRight: '1px solid #000' }}></td>
+                  <td style={{ borderRight: '1px solid #000' }}></td>
+                  <td style={{ borderRight: '1px solid #000' }}></td>
+                  <td style={{ borderRight: '1px solid #000' }}></td>
+                  <td></td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+
+        {/* ══════════ MAIN NOTE ══════════ */}
+        {mainNote && (
+          <div style={{ borderTop: '1.5px solid #000', padding: '6px 10px', fontSize: '11px', fontWeight: '600' }}>
+            નોંધ: {mainNote}
+          </div>
+        )}
+
+        {/* ══════════ FOOTER SUMMARY SECTION (MATCHES UPLOADED IMAGE BOTTOM) ══════════ */}
+        <div style={{ borderTop: '2px solid #000', display: 'grid', gridTemplateColumns: '1fr 220px' }}>
+          {/* Left Column: Total label & Terms */}
+          <div style={{ borderRight: '2px solid #000', padding: '8px 12px', display: 'flex', flexDirection: 'column', justifyContent: 'space-between' }}>
+            <div style={{ fontSize: '14px', fontWeight: 'bold' }}>
+              કુલ રૂ.
+            </div>
+            <div style={{ fontSize: '10.5px', fontWeight: 'bold', lineHeight: 1.4, marginTop: '8px' }}>
+              <div>• સુરત ન્યાય ક્ષેત્રને આધીન</div>
+              <div>• દર રવિવારે તથા જાહેર તહેવારે ઓફિસ બંધ રહેશે.</div>
+              <div>• ભૂલ-ચૂક લેવી-દેવી.</div>
             </div>
           </div>
 
-          {/* Right: totals */}
-          <div style={{ flex: '0 0 38%' }}>
-            <table style={{ width: '100%', borderCollapse: 'collapse' }}>
-              <tbody>
-                <tr>
-                  <td style={{ padding: '8px 14px', borderBottom: '1px solid #e5e7eb', fontWeight: '600', fontSize: '13.5px' }}>
-                    કુલ ભાડું:
-                  </td>
-                  <td style={{ padding: '8px 14px', borderBottom: '1px solid #e5e7eb', textAlign: 'right', fontWeight: '700', fontSize: '14.5px' }}>
-                    {formatIndianCurrency(Math.round(summary.totalRent))}
-                  </td>
-                </tr>
-                {summary.serviceCharge > 0 && (
-                  <tr>
-                    <td style={{ padding: '8px 14px', borderBottom: '1px solid #e5e7eb', fontWeight: '600', fontSize: '13.5px' }}>
-                      સર્વિસ ચાર્જ:
-                    </td>
-                    <td style={{ padding: '8px 14px', borderBottom: '1px solid #e5e7eb', textAlign: 'right', fontWeight: '700', fontSize: '14.5px' }}>
-                      {formatIndianCurrency(Math.round(summary.serviceCharge))}
-                    </td>
-                  </tr>
-                )}
-                {summary.totalExtraCosts > 0 && (
-                  <tr>
-                    <td style={{ padding: '8px 14px', borderBottom: '1px solid #e5e7eb', fontWeight: '600', fontSize: '13.5px' }}>
-                      વધારાનો ખર્ચ:
-                    </td>
-                    <td style={{ padding: '8px 14px', borderBottom: '1px solid #e5e7eb', textAlign: 'right', fontWeight: '700', fontSize: '14.5px' }}>
-                      {formatIndianCurrency(Math.round(summary.totalExtraCosts))}
-                    </td>
-                  </tr>
-                )}
-                {(summary.totalExtraCosts > 0 || (summary.serviceCharge || 0) > 0) && (
-                  <tr style={{ backgroundColor: '#f3f4f6' }}>
-                    <td style={{ padding: '8px 14px', borderBottom: '1px solid #d1d5db', fontWeight: '700', fontSize: '13.5px' }}>
-                      પેટા કુલ:
-                    </td>
-                    <td style={{ padding: '8px 14px', borderBottom: '1px solid #d1d5db', textAlign: 'right', fontWeight: '800', fontSize: '14.5px' }}>
-                      {formatIndianCurrency(Math.round(summary.totalRent + (summary.serviceCharge || 0) + summary.totalExtraCosts))}
-                    </td>
-                  </tr>
-                )}
-                {(summary.totalDeposit || 0) > 0 && (
-                  <tr>
-                    <td style={{ padding: '8px 14px', borderBottom: '1px solid #e5e7eb', fontWeight: '600', fontSize: '13.5px', color: '#1d4ed8' }}>
-                      ડિપોઝિટ જમા:
-                    </td>
-                    <td style={{ padding: '8px 14px', borderBottom: '1px solid #e5e7eb', textAlign: 'right', fontWeight: '700', fontSize: '14.5px', color: '#1d4ed8' }}>
-                      -{formatIndianCurrency(Math.round(summary.totalDeposit!))}
-                    </td>
-                  </tr>
-                )}
-                {(summary.discounts - (summary.totalDeposit || 0)) > 0 && (
-                  <tr>
-                    <td style={{ padding: '11px 14px', borderBottom: '1px solid #e5e7eb', fontWeight: '600', fontSize: '14px' }}>
-                      કસર:
-                    </td>
-                    <td style={{ padding: '11px 14px', borderBottom: '1px solid #e5e7eb', textAlign: 'right', fontWeight: '700', fontSize: '15px', color: '#b45309' }}>
-                      -{formatIndianCurrency(Math.round(summary.discounts - (summary.totalDeposit || 0)))}
-                    </td>
-                  </tr>
-                )}
-                <tr style={{ backgroundColor: '#f9fafb' }}>
-                  <td style={{ padding: '10px 14px', borderBottom: '1.5px solid #111', fontWeight: '700', fontSize: '14px' }}>
-                    કુલ રકમ:
-                  </td>
-                  <td style={{ padding: '10px 14px', borderBottom: '1.5px solid #111', textAlign: 'right', fontWeight: '800', fontSize: '15.5px' }}>
-                    {formatIndianCurrency(Math.round(summary.grandTotal))}
-                  </td>
-                </tr>
-                {summary.totalPaid > 0 && (
-                  <tr>
-                    <td style={{ padding: '11px 14px', borderBottom: '1px solid #e5e7eb', fontWeight: '600', fontSize: '14px', color: '#15803d' }}>
-                      ચુકવેલ:
-                    </td>
-                    <td style={{ padding: '11px 14px', borderBottom: '1px solid #e5e7eb', textAlign: 'right', fontWeight: '700', fontSize: '15px', color: '#15803d' }}>
-                      -{formatIndianCurrency(Math.round(summary.totalPaid))}
-                    </td>
-                  </tr>
-                )}
-                <tr style={{ backgroundColor: '#fee2e2' }}>
-                  <td style={{ padding: '13px 14px', borderTop: '2.5px solid #111', fontWeight: '900', fontSize: '18px', color: '#b91c1c' }}>
-                    બાકી:
-                  </td>
-                  <td style={{ padding: '13px 14px', borderTop: '2.5px solid #111', textAlign: 'right', fontWeight: '900', fontSize: '21px', color: '#b91c1c' }}>
-                    {formatIndianCurrency(Math.round(summary.duePayment))}
-                  </td>
-                </tr>
-              </tbody>
-            </table>
+          {/* Right Column: TOTAL Box & Signature */}
+          <div style={{ display: 'flex', flexDirection: 'column', justifyContent: 'space-between', padding: '0' }}>
+            {/* TOTAL Header & Amount */}
+            <div style={{ borderBottom: '2px solid #000', padding: '6px 10px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <span style={{ fontSize: '14px', fontWeight: '900' }}>TOTAL</span>
+              <span style={{ fontSize: '16px', fontWeight: '900' }}>
+                {(() => {
+                  const finalDue = summary.duePayment < 0 ? Math.abs(summary.duePayment) : summary.duePayment;
+                  return formatIndianCurrency(Math.round(finalDue));
+                })()}
+              </span>
+            </div>
+
+            {/* Signature Area */}
+            <div style={{ padding: '8px 10px', textAlign: 'right', display: 'flex', flexDirection: 'column', alignItems: 'flex-end', justifyContent: 'flex-end', flex: 1 }}>
+              <div style={{ fontSize: '13px', fontWeight: '900' }}>
+                ફોર, માવાણી
+              </div>
+              <div style={{ height: '25px' }}></div>
+              <div style={{ fontSize: '10px', fontWeight: 'bold', borderTop: '1px dotted #000', paddingTop: '2px', width: '110px', textAlign: 'center' }}>
+                Authorized Signature
+              </div>
+            </div>
           </div>
         </div>
 
-      </div>
-
-      {/* Promo line */}
-      <div style={{ textAlign: 'center', marginTop: '3px', fontSize: '11px', color: '#9ca3af' }}>
-        Custom billing software → 8866471567
       </div>
     </div>
   );
 };
 
-export default memo(BillInvoiceTemplate);
+export default BillInvoiceTemplate;

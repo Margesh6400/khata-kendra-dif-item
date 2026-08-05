@@ -132,10 +132,14 @@ export function getChallanTotalPlates(challan: any): number {
   const row = Array.isArray(raw) ? (raw[0] || {}) : (raw || {});
 
   if (row.items && Array.isArray(row.items)) {
-    return row.items.reduce((sum: number, item: any) => sum + (item.qty || 0) + (item.borrowed || 0) + (item.lost || 0) + (item.damaged || 0), 0);
+    return row.items.reduce((sum: number, item: any) => {
+      if (item.size_id === 2 || item.size_id === 3 || item.size_id === 6) return sum;
+      return sum + (item.qty || 0) + (item.borrowed || 0) + (item.lost || 0) + (item.damaged || 0);
+    }, 0);
   } else {
     let total = 0;
     for (let i = 1; i <= 50; i++) {
+      if (i === 2 || i === 3 || i === 6) continue; // Morla (2), Machine (3), and Custom (6) don't count towards zula quantity
       total += (row[`size_${i}_qty`] || 0) + (row[`size_${i}_borrowed`] || 0) + (row[`size_${i}_lost`] || 0) + (row[`size_${i}_damaged`] || 0);
     }
     return total;
@@ -172,12 +176,16 @@ export function createCombinedEntryList(
   jamaReturns.forEach(jama => {
     const totalPlates = getChallanTotalPlates(jama);
 
-    // JAMA FIRST: Plates leave the balance on the SAME DAY they are returned.
-    //   → Client is NOT charged for the return day itself. Lower rent.
-    //
-    // STANDARD:   Plates leave the balance the DAY AFTER return.
-    //   → Client IS charged for the return day. Standard practice.
-    const effectiveDate = jamaFirst
+    // Morning vs Evening check for Jama return:
+    // Morning ('day'/'morning'/'savar'): balance drops on jama_date (return day is NOT charged)
+    // Evening ('night'/'evening'/'sanj'): balance drops on jama_date + 1 (return day IS charged)
+    const tod = String(jama.time_of_day || jama.timeOfDay || '').toLowerCase();
+    const isMorning = tod === 'day' || tod === 'morning' || tod === 'savar';
+    const isNight = tod === 'night' || tod === 'evening' || tod === 'sanj';
+
+    const isSameDay = isMorning || (!isNight && jamaFirst);
+
+    const effectiveDate = isSameDay
       ? jama.jama_date
       : format(addDays(parseISO(jama.jama_date), 1), 'yyyy-MM-dd');
 
@@ -288,9 +296,7 @@ export function calculateBillingPeriodsFIFO(
         const days = differenceInDays(parseISO(endDate), parseISO(startDate)) + 1;
 
         // Rent calculation
-        const rateInPaise = Math.round(dailyRate * 100);
-        const rentInPaise = matchQty * days * rateInPaise;
-        const rent = Math.round(rentInPaise) / 100;
+        const rent = Math.round(matchQty * days * dailyRate * 100) / 100;
 
         periods.push({
           startDate,
@@ -324,9 +330,7 @@ export function calculateBillingPeriodsFIFO(
       const days = differenceInDays(parseISO(endDate), parseISO(startDate)) + 1;
 
       // Rent calculation
-      const rateInPaise = Math.round(dailyRate * 100);
-      const rentInPaise = delivery.remainingQty * days * rateInPaise;
-      const rent = Math.round(rentInPaise) / 100;
+      const rent = Math.round(delivery.remainingQty * days * dailyRate * 100) / 100;
 
       periods.push({
         startDate,
@@ -517,9 +521,7 @@ export function calculateBillingPeriods(
           let finalDays = periodData.days;
 
           // Recalculate rent with corrected days
-          const rateInPaise = Math.round(dailyRate * 100);
-          const rentInPaise = currentBalance * finalDays * rateInPaise;
-          const rent = Math.round(rentInPaise) / 100;
+          const rent = Math.round(currentBalance * finalDays * dailyRate * 100) / 100;
 
           console.log('Period txnQty:', txnQty, 'udharQty:', udharQty, 'jamaQty:', jamaQty, 'from date:', currentDate);
 
@@ -665,6 +667,7 @@ export function calculateBill(
       udharChallans.forEach(ch => {
         let qty = 0;
         shutteringSizes.forEach(ps => {
+          if (ps.id === 2 || ps.id === 3) return; // Morla (2) and Machine (3) don't count towards zula quantity
           const d = getQtyForSize(ch, ps.id);
           qty += d.qty + d.borrowed;
         });
@@ -682,6 +685,7 @@ export function calculateBill(
       jamaReturns.forEach(ch => {
         let qty = 0;
         shutteringSizes.forEach(ps => {
+          if (ps.id === 2 || ps.id === 3) return; // Morla (2) and Machine (3) don't count towards zula quantity
           const d = getQtyForSize(ch, ps.id);
           qty += d.qty + d.borrowed + d.lost + d.damaged;
         });
@@ -772,7 +776,7 @@ export function calculateBill(
       }
 
       const newStartDate = fromDate;
-      const rateInPaise = Math.round((period.rate || dailyRate) * 100);
+      const rate = period.rate || dailyRate;
 
       const rawDiff = differenceInDays(parseISO(period.endDate), parseISO(period.startDate));
       const isInclusiveEnd = period.days > rawDiff;
@@ -781,8 +785,7 @@ export function calculateBill(
       const newDays = isInclusiveEnd ? newDiff + 1 : newDiff;
 
       if (newDays > 0) {
-        const rentInPaise = period.plateCount * newDays * rateInPaise;
-        const newRent = Math.round(rentInPaise) / 100;
+        const newRent = Math.round(period.plateCount * newDays * rate * 100) / 100;
 
         clampedPeriods.push({
           ...period,

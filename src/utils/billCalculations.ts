@@ -77,8 +77,8 @@ export const calculateRentForSize = (
   const validDays = Number(days) || 0;
   const validDailyRent = Number(dailyRent) || 0;
 
-  // Calculate with decimal precision
-  return Math.round((validPieces * validDays * validDailyRent) * 100) / 100;
+  // Calculate with decimal precision (dailyRent is rate per 100 plates)
+  return Math.round(validPieces * validDays * validDailyRent) / 100;
 };
 
 export const calculateTotalPlates = (sizeBalances: Record<string, SizeBalance>): {

@@ -1181,6 +1181,7 @@ export default function CreateBill() {
       fromDate: billData.fromDate || "",
       toDate: billData.toDate,
       dailyRent: billData.dailyRent,
+      category: activeCategory || client?.category,
     },
     clientDetails: {
       name: client?.client_name || "",
@@ -1609,6 +1610,11 @@ export default function CreateBill() {
                           const rate = (period as any).rate || billData.dailyRent;
                           const amount = period.rent;
 
+                          const catName = (activeCategory || (period as any).sizeName || client?.category || '').toLowerCase();
+                          const unitLabel = (catName.includes('zula') || catName.includes('jhula') || catName.includes('ઝૂલા')) ? 'ઝૂલા' :
+                                            (catName.includes('pharma') || catName.includes('ફર્મા')) ? 'ફર્મા' :
+                                            (catName.includes('jack') || catName.includes('જેક')) ? 'જેક' : 'પ્લેટ';
+
                           return (
                             <tr
                               key={index}
@@ -1644,7 +1650,7 @@ export default function CreateBill() {
                               <td className="px-4 py-3">{period.days}</td>
                               {showCalculation && (
                                 <td className="px-4 py-3">
-                                  {period.plateCount} નંગ × {period.days} દિવસો
+                                  {period.plateCount} {unitLabel} × {period.days} દિવસો
                                   × ₹{rate}
                                 </td>
                               )}
