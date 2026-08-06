@@ -108,6 +108,118 @@ export const SettingsProvider: React.FC<{ children: ReactNode }> = ({ children }
     return ['/udhar-challan', '/jama-challan', '/client-ledger', '/stock', '/clients', '/challan-book', '/billing', '/bill-book', '/settings'];
   });
 
+  // Helper to push setting updates to Supabase app_settings
+  const syncAppSetting = (key: string, value: string) => {
+    supabase
+      .from('app_settings')
+      .upsert({ key, value, updated_at: new Date().toISOString() })
+      .then(({ error }) => {
+        if (error) console.error(`Failed to sync ${key} to app_settings:`, error);
+      });
+  };
+
+  useEffect(() => {
+    const applySettingKV = (key: string, value: string) => {
+      if (value === undefined || value === null) return;
+      switch (key) {
+        case 'date_sorting_method':
+          if (value === 'jamaFirst' || value === 'standard') {
+            setDateSortingMethodState(value);
+            localStorage.setItem('dateSortingMethod', value);
+          }
+          break;
+        case 'default_ledger_download_format':
+          if (value === 'detailed' || value === 'simple' || value === 'split') {
+            setDefaultLedgerDownloadFormatState(value);
+            localStorage.setItem('defaultLedgerDownloadFormat', value);
+          }
+          break;
+        case 'app_font_size': {
+          const parsed = parseInt(value, 10);
+          if (!isNaN(parsed)) {
+            const clamped = Math.min(MAX_FONT_SIZE, Math.max(MIN_FONT_SIZE, parsed));
+            setFontSizeState(clamped);
+            localStorage.setItem('appFontSize', String(clamped));
+          }
+          break;
+        }
+        case 'show_driver_details': {
+          const val = value === 'true';
+          setShowDriverDetailsState(val);
+          localStorage.setItem('showDriverDetails', String(val));
+          break;
+        }
+        case 'show_extra_cost': {
+          const val = value !== 'false';
+          setShowExtraCostState(val);
+          localStorage.setItem('showExtraCost', String(val));
+          break;
+        }
+        case 'share_bill_mode':
+          if (value === 'text' || value === 'image') {
+            setShareBillModeState(value);
+            localStorage.setItem('shareBillMode', value);
+          }
+          break;
+        case 'enable_category_separation': {
+          const val = value === 'true';
+          setEnableCategorySeparationState(val);
+          localStorage.setItem('enableCategorySeparation', String(val));
+          break;
+        }
+        case 'enable_category_client_separation': {
+          const val = value === 'true';
+          setEnableCategoryClientSeparationState(val);
+          localStorage.setItem('enableCategoryClientSeparation', String(val));
+          break;
+        }
+        case 'quick_actions_sort_method':
+          if (value === 'default' || value === 'alphabetical' || value === 'mostUsed') {
+            setQuickActionsSortMethodState(value);
+            localStorage.setItem('quickActionsSortMethod', value);
+          }
+          break;
+        case 'visible_quick_actions':
+          try {
+            const parsed = JSON.parse(value);
+            if (Array.isArray(parsed)) {
+              setVisibleQuickActionsState(parsed);
+              localStorage.setItem('visibleQuickActions', JSON.stringify(parsed));
+            }
+          } catch (e) {
+            // ignore JSON error
+          }
+          break;
+      }
+    };
+
+    const fetchRemoteSettings = async () => {
+      try {
+        const { data, error } = await supabase.from('app_settings').select('key, value');
+        if (error || !data) return;
+        data.forEach(({ key, value }) => applySettingKV(key, value));
+      } catch (e) {
+        console.warn('Failed to fetch app settings:', e);
+      }
+    };
+
+    fetchRemoteSettings();
+
+    const channel = supabase
+      .channel('app_settings_realtime')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'app_settings' }, (payload) => {
+        const { key, value } = (payload.new || {}) as { key?: string; value?: string };
+        if (key && value !== undefined) {
+          applySettingKV(key, value);
+        }
+      })
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, []);
+
   useEffect(() => {
     localStorage.setItem('dateSortingMethod', dateSortingMethod);
   }, [dateSortingMethod]);
@@ -164,54 +276,71 @@ export const SettingsProvider: React.FC<{ children: ReactNode }> = ({ children }
 
   const setDateSortingMethod = (method: DateSortingMethod) => {
     setDateSortingMethodState(method);
-    // Sync to DB so server-side jobs (monthly bill cron) use the same
-    // bill-calculation setting as the app. Fire-and-forget.
-    supabase
-      .from('app_settings')
-      .upsert({ key: 'date_sorting_method', value: method, updated_at: new Date().toISOString() })
-      .then(({ error }) => {
-        if (error) console.error('Failed to sync date_sorting_method to app_settings:', error);
-      });
+    localStorage.setItem('dateSortingMethod', method);
+    syncAppSetting('date_sorting_method', method);
   };
 
   const setDefaultLedgerDownloadFormat = (format: LedgerDownloadFormat) => {
     setDefaultLedgerDownloadFormatState(format);
+    localStorage.setItem('defaultLedgerDownloadFormat', format);
+    syncAppSetting('default_ledger_download_format', format);
   };
 
   const setFontSize = (size: number) => {
-    setFontSizeState(Math.min(MAX_FONT_SIZE, Math.max(MIN_FONT_SIZE, size)));
+    const clamped = Math.min(MAX_FONT_SIZE, Math.max(MIN_FONT_SIZE, size));
+    setFontSizeState(clamped);
+    localStorage.setItem('appFontSize', String(clamped));
+    syncAppSetting('app_font_size', String(clamped));
   };
 
   const increaseFontSize = () => {
-    setFontSizeState(prev => Math.min(MAX_FONT_SIZE, prev + 1));
+    const next = Math.min(MAX_FONT_SIZE, fontSize + 1);
+    setFontSizeState(next);
+    localStorage.setItem('appFontSize', String(next));
+    syncAppSetting('app_font_size', String(next));
   };
 
   const decreaseFontSize = () => {
-    setFontSizeState(prev => Math.max(MIN_FONT_SIZE, prev - 1));
+    const next = Math.max(MIN_FONT_SIZE, fontSize - 1);
+    setFontSizeState(next);
+    localStorage.setItem('appFontSize', String(next));
+    syncAppSetting('app_font_size', String(next));
   };
 
   const resetFontSize = () => {
     setFontSizeState(DEFAULT_FONT_SIZE);
+    localStorage.setItem('appFontSize', String(DEFAULT_FONT_SIZE));
+    syncAppSetting('app_font_size', String(DEFAULT_FONT_SIZE));
   };
 
   const setShowDriverDetails = (show: boolean) => {
     setShowDriverDetailsState(show);
+    localStorage.setItem('showDriverDetails', String(show));
+    syncAppSetting('show_driver_details', String(show));
   };
 
   const setShowExtraCost = (show: boolean) => {
     setShowExtraCostState(show);
+    localStorage.setItem('showExtraCost', String(show));
+    syncAppSetting('show_extra_cost', String(show));
   };
 
   const setShareBillMode = (mode: ShareBillMode) => {
     setShareBillModeState(mode);
+    localStorage.setItem('shareBillMode', mode);
+    syncAppSetting('share_bill_mode', mode);
   };
 
   const setRequireLoginPassword = (val: boolean) => {
     setRequireLoginPasswordState(val);
+    localStorage.setItem('requireLoginPassword', String(val));
+    // Require Login Password is part of App Security & Lock Settings, so it is kept strictly local
   };
 
   const setEnableCategorySeparation = (val: boolean) => {
     setEnableCategorySeparationState(val);
+    localStorage.setItem('enableCategorySeparation', String(val));
+    syncAppSetting('enable_category_separation', String(val));
   };
 
   const [enableCategoryClientSeparation, setEnableCategoryClientSeparationState] = useState<boolean>(() => {
@@ -225,6 +354,8 @@ export const SettingsProvider: React.FC<{ children: ReactNode }> = ({ children }
 
   const setEnableCategoryClientSeparation = (val: boolean) => {
     setEnableCategoryClientSeparationState(val);
+    localStorage.setItem('enableCategoryClientSeparation', String(val));
+    syncAppSetting('enable_category_client_separation', String(val));
   };
 
   const setActiveCategory = (category: BusinessCategory | null) => {
@@ -233,10 +364,14 @@ export const SettingsProvider: React.FC<{ children: ReactNode }> = ({ children }
 
   const setQuickActionsSortMethod = (method: QuickActionsSortMethod) => {
     setQuickActionsSortMethodState(method);
+    localStorage.setItem('quickActionsSortMethod', method);
+    syncAppSetting('quick_actions_sort_method', method);
   };
 
   const setVisibleQuickActions = (actions: string[]) => {
     setVisibleQuickActionsState(actions);
+    localStorage.setItem('visibleQuickActions', JSON.stringify(actions));
+    syncAppSetting('visible_quick_actions', JSON.stringify(actions));
   };
 
   return (

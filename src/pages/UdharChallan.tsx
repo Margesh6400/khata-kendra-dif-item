@@ -21,6 +21,7 @@ import {
 import { fetchUdharChallansForClient, fetchJamaChallansForClient } from '../utils/challanFetching';
 import { naturalSort } from '../utils/sortingUtils';
 import ClientForm, { ClientFormData } from '../components/ClientForm';
+import { checkDuplicateClient } from '../utils/clientUtils';
 import ItemsTable, { ItemsData } from '../components/ItemsTable';
 import { usePlateSizes } from '../hooks/usePlateSizes';
 import { mapRecordToArray } from '../utils/challanOperations';
@@ -868,21 +869,25 @@ const UdharChallan: React.FC = () => {
 
   const handleQuickAddClient = async (clientData: ClientFormData) => {
     const loadingToast = toast.loading(t('creatingClient'));
+    const clientCategory = clientData.category || activeCategory || 'shuttering';
 
     // Check for duplicate sort name
-    const { data: existingClient } = await supabase
-      .from('clients')
-      .select('id')
-      .eq('client_nic_name', clientData.client_nic_name)
-      .single();
+    const isDuplicate = await checkDuplicateClient(
+      clientData.client_nic_name,
+      clientCategory,
+      enableCategoryClientSeparation
+    );
 
-    if (existingClient) {
+    if (isDuplicate) {
       toast.dismiss(loadingToast);
-      toast.error(t('clientExists'));
+      toast.error(
+        enableCategoryClientSeparation
+          ? (language === 'gu' ? 'આ ક્રમાંક/નામ ધરાવતો ગ્રાહક આ વિભાગમાં પહેલાથી જ છે' : 'A client with this sort name already exists in this category')
+          : t('clientExists')
+      );
       return;
     }
 
-    const clientCategory = clientData.category || activeCategory || 'shuttering';
     const { data, error } = await supabase
       .from('clients')
       .insert({

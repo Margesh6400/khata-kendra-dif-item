@@ -1,5 +1,6 @@
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import { translations, Language, TranslationKey } from '../utils/translations';
+import { supabase } from '../utils/supabase';
 
 interface LanguageContextType {
   language: Language;
@@ -19,8 +20,30 @@ export const LanguageProvider: React.FC<{ children: ReactNode }> = ({ children }
     localStorage.setItem('language', language);
   }, [language]);
 
+  useEffect(() => {
+    supabase
+      .from('app_settings')
+      .select('value')
+      .eq('key', 'app_language')
+      .maybeSingle()
+      .then(({ data, error }) => {
+        if (error || !data) return;
+        if (data.value === 'gu' || data.value === 'en') {
+          setLanguageState(data.value);
+          localStorage.setItem('language', data.value);
+        }
+      });
+  }, []);
+
   const setLanguage = (lang: Language) => {
     setLanguageState(lang);
+    localStorage.setItem('language', lang);
+    supabase
+      .from('app_settings')
+      .upsert({ key: 'app_language', value: lang, updated_at: new Date().toISOString() })
+      .then(({ error }) => {
+        if (error) console.error('Failed to sync app_language:', error);
+      });
   };
 
   const t = (key: TranslationKey): string => {

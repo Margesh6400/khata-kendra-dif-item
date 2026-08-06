@@ -19,6 +19,7 @@ import {
 } from 'lucide-react';
 import { naturalSort } from '../utils/sortingUtils';
 import ClientForm from '../components/ClientForm';
+import { checkDuplicateClient } from '../utils/clientUtils';
 import ItemsTable, { ItemsData } from '../components/ItemsTable';
 import { usePlateSizes } from '../hooks/usePlateSizes';
 import { mapRecordToArray } from '../utils/challanOperations';
@@ -918,22 +919,26 @@ const JamaChallan: React.FC = () => {
 
   const handleQuickAddClient = async (clientData: ClientFormData) => {
     const loadingToast = toast.loading(t('creatingClient'));
+    const clientCategory = clientData.category || activeCategory || 'shuttering';
 
     // Check for duplicate sort name
-    const { data: existingClient } = await supabase
-      .from('clients')
-      .select('id')
-      .eq('client_nic_name', clientData.client_nic_name)
-      .single();
+    const isDuplicate = await checkDuplicateClient(
+      clientData.client_nic_name,
+      clientCategory,
+      enableCategoryClientSeparation
+    );
 
-    if (existingClient) {
+    if (isDuplicate) {
       toast.dismiss(loadingToast);
-      toast.error('A client with this sort name already exists');
+      toast.error(
+        enableCategoryClientSeparation
+          ? (language === 'gu' ? 'આ ક્રમાંક/નામ ધરાવતો ગ્રાહક આ વિભાગમાં પહેલાથી જ છે' : 'A client with this sort name already exists in this category')
+          : (language === 'gu' ? 'આ ક્રમાંક/નામ ધરાવતો ગ્રાહક પહેલાથી જ છે' : 'A client with this sort name already exists')
+      );
       return;
     }
 
     try {
-      const clientCategory = clientData.category || activeCategory || 'shuttering';
       const { data, error } = await supabase
         .from('clients')
         .insert([{ ...clientData, category: clientCategory }])

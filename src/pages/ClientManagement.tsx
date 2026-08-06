@@ -11,6 +11,7 @@ import {
 
 type SortOption = 'nameAZ' | 'nameZA';
 import ClientForm, { ClientFormData } from '../components/ClientForm';
+import { checkDuplicateClient } from '../utils/clientUtils';
 
 // Natural sort function for client names
 const naturalSort = (a: string, b: string): number => {
@@ -205,22 +206,26 @@ const ClientManagement: React.FC = () => {
     const loadingToast = toast.loading(editingClient?.id ? 'Updating client...' : 'Creating client...');
 
     if (editingClient?.id) {
-      // Check for duplicate sort name (only if name changed)
-      if (data.client_nic_name !== editingClient.client_nic_name) {
-        const { data: existingClient } = await supabase
-          .from('clients')
-          .select('id')
-          .eq('client_nic_name', data.client_nic_name)
-          .maybeSingle();
+      const clientCategory = data.category || editingClient?.category || activeCategory || 'shuttering';
+      
+      // Check for duplicate sort name
+      const isDuplicate = await checkDuplicateClient(
+        data.client_nic_name,
+        clientCategory,
+        enableCategoryClientSeparation,
+        editingClient.id
+      );
 
-        if (existingClient) {
-          toast.dismiss(loadingToast);
-          toast.error('A client with this sort name already exists');
-          return;
-        }
+      if (isDuplicate) {
+        toast.dismiss(loadingToast);
+        toast.error(
+          enableCategoryClientSeparation
+            ? (language === 'gu' ? 'આ ક્રમાંક/નામ ધરાવતો ગ્રાહક આ વિભાગમાં પહેલાથી જ છે' : 'A client with this sort name already exists in this category')
+            : (language === 'gu' ? 'આ ક્રમાંક/નામ ધરાવતો ગ્રાહક પહેલાથી જ છે' : 'A client with this sort name already exists')
+        );
+        return;
       }
 
-      const clientCategory = data.category || editingClient?.category || activeCategory || 'shuttering';
       const updatePayload: any = {
         client_nic_name: data.client_nic_name,
         client_name: data.client_name,
@@ -250,20 +255,25 @@ const ClientManagement: React.FC = () => {
         fetchClients();
       }
     } else {
-      // Check for duplicate sort name when creating
-      const { data: existingClient } = await supabase
-        .from('clients')
-        .select('id')
-        .eq('client_nic_name', data.client_nic_name)
-        .maybeSingle();
+      const clientCategory = data.category || activeCategory || 'shuttering';
 
-      if (existingClient) {
+      // Check for duplicate sort name when creating
+      const isDuplicate = await checkDuplicateClient(
+        data.client_nic_name,
+        clientCategory,
+        enableCategoryClientSeparation
+      );
+
+      if (isDuplicate) {
         toast.dismiss(loadingToast);
-        toast.error('A client with this sort name already exists');
+        toast.error(
+          enableCategoryClientSeparation
+            ? (language === 'gu' ? 'આ ક્રમાંક/નામ ધરાવતો ગ્રાહક આ વિભાગમાં પહેલાથી જ છે' : 'A client with this sort name already exists in this category')
+            : (language === 'gu' ? 'આ ક્રમાંક/નામ ધરાવતો ગ્રાહક પહેલાથી જ છે' : 'A client with this sort name already exists')
+        );
         return;
       }
 
-      const clientCategory = data.category || activeCategory || 'shuttering';
       const { error } = await supabase
         .from('clients')
         .insert({
