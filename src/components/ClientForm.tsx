@@ -243,57 +243,70 @@ const ClientForm: React.FC<ClientFormProps> = ({ initialData, onSubmit, onCancel
           </div>
         )}
 
-        {plateSizes.length > 0 && (
-          <div className="pt-3 border-t border-gray-200 space-y-4">
-            <h4 className="block text-sm font-bold text-gray-800">
-              {t('customDailyRents')}
-            </h4>
-            
-            {Object.entries(groupedSizes).map(([category, sizes]) => {
-              if (sizes.length === 0) return null;
-              
-              const categoryLabel = t(category as any) || category.charAt(0).toUpperCase() + category.slice(1);
-              
-              return (
-                <div key={category} className="space-y-2">
-                  <h5 className="text-xs font-bold text-gray-500 uppercase tracking-wider">
-                    {categoryLabel}
-                  </h5>
-                  <div className="grid grid-cols-2 gap-3 pl-2 border-l-2 border-gray-100">
-                    {sizes.map((size) => {
-                      const currentRent = formData.jack_rents?.[size.id] ?? '';
-                      return (
-                        <div key={size.id}>
-                          <label className="block mb-1 text-xs font-semibold text-gray-600">
-                            {size.name} {t('rate') || 'Rate'}
-                          </label>
-                          <input
-                            type="number"
-                            value={currentRent}
-                            placeholder={`${formData.daily_rent_price ?? 1} (${t('defaultWord') || 'Default'})`}
-                            onChange={(e) => {
-                              const val = parseFloat(e.target.value);
-                              const nextRents = { ...(formData.jack_rents || {}) };
-                              if (isNaN(val)) {
-                                delete nextRents[size.id];
-                              } else {
-                                nextRents[size.id] = val;
-                              }
-                              setFormData({ ...formData, jack_rents: nextRents });
-                            }}
-                            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm"
-                            min={0}
-                            step="any"
-                          />
-                        </div>
-                      );
-                    })}
+        {(() => {
+          const selectedCategory = formData.category || activeCategory;
+          const visibleCategoryEntries = Object.entries(groupedSizes).filter(([category, sizes]) => {
+            if (!sizes || sizes.length === 0) return false;
+            // When separate client lists per category is ON, show only the active/selected category
+            if (enableCategoryClientSeparation && selectedCategory) {
+              return category === selectedCategory;
+            }
+            // When separate client lists per category is OFF, show all custom rent categories (Jack, Cuplock, Other)
+            return true;
+          });
+
+          if (visibleCategoryEntries.length === 0) return null;
+
+          return (
+            <div className="pt-3 border-t border-gray-200 space-y-4">
+              <h4 className="block text-sm font-bold text-gray-800">
+                {t('customDailyRents')}
+              </h4>
+
+              {visibleCategoryEntries.map(([category, sizes]) => {
+                const categoryLabel = t(category as any) || category.charAt(0).toUpperCase() + category.slice(1);
+
+                return (
+                  <div key={category} className="space-y-2">
+                    <h5 className="text-xs font-bold text-gray-500 uppercase tracking-wider">
+                      {categoryLabel}
+                    </h5>
+                    <div className="grid grid-cols-2 gap-3 pl-2 border-l-2 border-gray-100">
+                      {sizes.map((size) => {
+                        const currentRent = formData.jack_rents?.[size.id] ?? '';
+                        return (
+                          <div key={size.id}>
+                            <label className="block mb-1 text-xs font-semibold text-gray-600">
+                              {size.name} {t('rate') || 'Rate'}
+                            </label>
+                            <input
+                              type="number"
+                              value={currentRent}
+                              placeholder={`${formData.daily_rent_price ?? 1} (${t('defaultWord') || 'Default'})`}
+                              onChange={(e) => {
+                                const val = parseFloat(e.target.value);
+                                const nextRents = { ...(formData.jack_rents || {}) };
+                                if (isNaN(val)) {
+                                  delete nextRents[size.id];
+                                } else {
+                                  nextRents[size.id] = val;
+                                }
+                                setFormData({ ...formData, jack_rents: nextRents });
+                              }}
+                              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm"
+                              min={0}
+                              step="any"
+                            />
+                          </div>
+                        );
+                      })}
+                    </div>
                   </div>
-                </div>
-              );
-            })}
-          </div>
-        )}
+                );
+              })}
+            </div>
+          );
+        })()}
       </div>
 
       <div className="flex gap-3">

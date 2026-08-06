@@ -131,7 +131,7 @@ export default function CreateBill() {
   const editBillNumber = searchParams.get("edit");
   const isEditMode = !!editBillNumber;
   const { t, language } = useLanguage();
-  const { dateSortingMethod, enableCategorySeparation, activeCategory, showExtraCost } = useSettings();
+  const { dateSortingMethod, enableCategorySeparation, enableCategoryClientSeparation, activeCategory, showExtraCost } = useSettings();
   const { sizes: rawPlateSizes } = usePlateSizes();
   const plateSizes = useMemo(() => {
     if (enableCategorySeparation && activeCategory) {
@@ -1457,49 +1457,67 @@ export default function CreateBill() {
             {/* Custom size rents collapsible accordion section */}
             {showCustomRents && (
               <div className="border-t border-gray-150 pt-3 mt-1 p-3 bg-gray-50 rounded-xl space-y-4">
-                {Object.entries(groupedSizes).map(([category, sizes]) => {
-                  if (sizes.length === 0 || category === 'shuttering') return null;
-                  const categoryLabel = category === 'jack' ? (language === 'gu' ? 'જેક' : 'Jack') :
-                                       category === 'cuplock' ? (language === 'gu' ? 'કપલોક' : 'Cuplock') :
-                                       (language === 'gu' ? 'અન્ય' : 'Other');
-                  return (
-                    <div key={category} className="space-y-2">
-                      <h5 className="text-xs font-bold text-gray-500 uppercase tracking-wider">
-                        {categoryLabel}
-                      </h5>
-                      <div className="grid grid-cols-2 gap-3 pl-2 border-l-2 border-gray-200 sm:grid-cols-4">
-                        {sizes.map((size) => {
-                          const currentRent = client?.jack_rents?.[size.id] ?? '';
-                          return (
-                            <div key={size.id} className="space-y-1">
-                              <label className="block text-xs font-semibold text-gray-600 truncate">
-                                  {size.name}
-                              </label>
-                              <input
-                                type="number"
-                                value={currentRent}
-                                placeholder={`${billData.dailyRent} (${language === 'gu' ? 'ડિફોલ્ટ' : 'Default'})`}
-                                onChange={(e) => {
-                                  const val = parseFloat(e.target.value);
-                                  const nextRents = { ...(client?.jack_rents || {}) };
-                                  if (isNaN(val)) {
-                                    delete nextRents[size.id];
-                                  } else {
-                                    nextRents[size.id] = val;
-                                  }
-                                  setClient(prev => prev ? { ...prev, jack_rents: nextRents } : null);
-                                }}
-                                className="w-full px-2 py-1 text-xs border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white font-medium text-center"
-                                min={0}
-                                step="any"
-                              />
-                            </div>
-                          );
-                        })}
+                {(() => {
+                  const selectedCategory = activeCategory || client?.category;
+                  const visibleEntries = Object.entries(groupedSizes).filter(([category, sizes]) => {
+                    if (!sizes || sizes.length === 0 || category === 'shuttering') return false;
+                    if (enableCategoryClientSeparation && selectedCategory) {
+                      return category === selectedCategory;
+                    }
+                    return true;
+                  });
+
+                  if (visibleEntries.length === 0) {
+                    return (
+                      <p className="text-xs text-gray-500 text-center py-2">
+                        {language === 'gu' ? 'આ વિભાગ માટે કોઈ કસ્ટમ કદ ભાડું નથી' : 'No custom size rents for this category'}
+                      </p>
+                    );
+                  }
+
+                  return visibleEntries.map(([category, sizes]) => {
+                    const categoryLabel = category === 'jack' ? (language === 'gu' ? 'જેક' : 'Jack') :
+                                         category === 'cuplock' ? (language === 'gu' ? 'કપલોક' : 'Cuplock') :
+                                         (language === 'gu' ? 'અન્ય' : 'Other');
+                    return (
+                      <div key={category} className="space-y-2">
+                        <h5 className="text-xs font-bold text-gray-500 uppercase tracking-wider">
+                          {categoryLabel}
+                        </h5>
+                        <div className="grid grid-cols-2 gap-3 pl-2 border-l-2 border-gray-200 sm:grid-cols-4">
+                          {sizes.map((size) => {
+                            const currentRent = client?.jack_rents?.[size.id] ?? '';
+                            return (
+                              <div key={size.id} className="space-y-1">
+                                <label className="block text-xs font-semibold text-gray-600 truncate">
+                                    {size.name}
+                                </label>
+                                <input
+                                  type="number"
+                                  value={currentRent}
+                                  placeholder={`${billData.dailyRent} (${language === 'gu' ? 'ડિફોલ્ટ' : 'Default'})`}
+                                  onChange={(e) => {
+                                    const val = parseFloat(e.target.value);
+                                    const nextRents = { ...(client?.jack_rents || {}) };
+                                    if (isNaN(val)) {
+                                      delete nextRents[size.id];
+                                    } else {
+                                      nextRents[size.id] = val;
+                                    }
+                                    setClient(prev => prev ? { ...prev, jack_rents: nextRents } : null);
+                                  }}
+                                  className="w-full px-2 py-1 text-xs border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white font-medium text-center"
+                                  min={0}
+                                  step="any"
+                                />
+                              </div>
+                            );
+                          })}
+                        </div>
                       </div>
-                    </div>
-                  );
-                })}
+                    );
+                  });
+                })()}
                 <div className="flex justify-end pt-2 border-t border-gray-200">
                   <button
                     type="button"
