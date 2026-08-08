@@ -648,7 +648,7 @@ const JamaChallan: React.FC = () => {
   const location = useLocation();
   const { t } = useLanguage();
   const { sizes: plateSizes } = usePlateSizes();
-  const { enableCategorySeparation, enableCategoryClientSeparation, activeCategory } = useSettings();
+  const { enableCategorySeparation, enableCategoryClientSeparation, enableCategoryChallanSeparation, activeCategory } = useSettings();
 
 
   // Step management
@@ -675,11 +675,16 @@ const JamaChallan: React.FC = () => {
 
   const generateNextChallanNumber = async () => {
     try {
-      const { data, error } = await supabase
+      let query = supabase
         .from("jama_challans")
         .select("jama_challan_number")
-        .order('created_at', { ascending: false })
-        .limit(1);
+        .order('created_at', { ascending: false });
+
+      if ((enableCategoryChallanSeparation || enableCategoryClientSeparation || enableCategorySeparation) && activeCategory) {
+        query = query.eq('category', activeCategory);
+      }
+
+      const { data, error } = await query.limit(1);
 
 
       if (error) throw error;
@@ -772,7 +777,7 @@ const JamaChallan: React.FC = () => {
       }
     };
     init();
-  }, []);
+  }, [location, enableCategorySeparation, enableCategoryClientSeparation, enableCategoryChallanSeparation, activeCategory]);
 
   useEffect(() => {
     // Check if client was preselected from navigation
@@ -1043,11 +1048,16 @@ const JamaChallan: React.FC = () => {
       if (!selectedClient?.id) return;
 
 
-      const { data: existingChallan } = await supabase
+      let dupQuery = supabase
         .from('jama_challans')
         .select('jama_challan_number')
-        .eq('jama_challan_number', challanNumber)
-        .maybeSingle();
+        .eq('jama_challan_number', challanNumber);
+
+      if ((enableCategoryChallanSeparation || enableCategoryClientSeparation || enableCategorySeparation) && activeCategory) {
+        dupQuery = dupQuery.eq('category', activeCategory);
+      }
+
+      const { data: existingChallan } = await dupQuery.maybeSingle();
 
 
       if (existingChallan) {

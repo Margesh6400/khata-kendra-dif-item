@@ -30,6 +30,8 @@ const Settings: React.FC = () => {
     setEnableCategorySeparation,
     enableCategoryClientSeparation,
     setEnableCategoryClientSeparation,
+    enableCategoryChallanSeparation,
+    setEnableCategoryChallanSeparation,
     quickActionsSortMethod,
     setQuickActionsSortMethod,
     visibleQuickActions,
@@ -744,6 +746,31 @@ const Settings: React.FC = () => {
                   <div className={`relative inline-flex h-7 w-12 flex-shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-300 ease-in-out shadow-inner ${enableCategoryClientSeparation ? 'bg-blue-600' : 'bg-gray-300'}`}>
                     <span
                       className={`pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow-md ring-0 transition duration-300 ease-in-out ${enableCategoryClientSeparation ? 'translate-x-5' : 'translate-x-0'}`}
+                    />
+                  </div>
+                </button>
+
+                {/* Separate Challan / Jalan Numbers per Category */}
+                <button
+                  onClick={() => setEnableCategoryChallanSeparation(!enableCategoryChallanSeparation)}
+                  className={`w-full flex items-center justify-between p-4 rounded-xl border text-left transition-all ${enableCategoryChallanSeparation
+                      ? 'border-blue-600 bg-blue-50/40 ring-1 ring-blue-500'
+                      : 'border-gray-200 hover:border-gray-300 bg-white'
+                    }`}
+                >
+                  <div className="pr-4">
+                    <span className="font-bold text-sm sm:text-base text-gray-900 block mb-1">
+                      {language === 'gu' ? 'દરેક વિભાગ માટે અલગ ચલણ (Jalan) નંબર સિક્વન્સ (Separate Jalan/Challan Numbers per Category)' : 'Separate Jalan/Challan Numbers for Business Categories'}
+                    </span>
+                    <p className="text-xs text-gray-500 leading-relaxed">
+                      {language === 'gu'
+                        ? 'જ્યારે વિભાગ બદલો (શટરિંગ / જેક / કપલોક), ત્યારે તે વિભાગ માટે ૧ થી શરૂ કરીને અલગ ચલણ (Jalan) નંબર સિક્વન્સ જનરેટ કરો.'
+                        : 'Generate separate auto-incrementing challan/jalan number sequences for each business category (Shuttering, Jack, Cuplock, Other).'}
+                    </p>
+                  </div>
+                  <div className={`relative inline-flex h-7 w-12 flex-shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-300 ease-in-out shadow-inner ${enableCategoryChallanSeparation ? 'bg-blue-600' : 'bg-gray-300'}`}>
+                    <span
+                      className={`pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow-md ring-0 transition duration-300 ease-in-out ${enableCategoryChallanSeparation ? 'translate-x-5' : 'translate-x-0'}`}
                     />
                   </div>
                 </button>

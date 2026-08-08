@@ -687,7 +687,7 @@ const UdharChallan: React.FC = () => {
   const location = useLocation();
   const { t } = useLanguage();
   const { sizes: plateSizes } = usePlateSizes();
-  const { enableCategorySeparation, enableCategoryClientSeparation, activeCategory } = useSettings();
+  const { enableCategorySeparation, enableCategoryClientSeparation, enableCategoryChallanSeparation, activeCategory } = useSettings();
 
   // Step management
   const [currentStep, setCurrentStep] = useState<Step>('client-selection');
@@ -721,11 +721,16 @@ const UdharChallan: React.FC = () => {
 
   const generateNextChallanNumber = async () => {
     try {
-      const { data, error } = await supabase
+      let query = supabase
         .from("udhar_challans")
         .select("udhar_challan_number")
-        .order('created_at', { ascending: false })
-        .limit(1);
+        .order('created_at', { ascending: false });
+
+      if ((enableCategoryChallanSeparation || enableCategoryClientSeparation || enableCategorySeparation) && activeCategory) {
+        query = query.eq('category', activeCategory);
+      }
+
+      const { data, error } = await query.limit(1);
 
       if (error) throw error;
 
@@ -843,7 +848,7 @@ const UdharChallan: React.FC = () => {
       }
     };
     init();
-  }, [location]);
+  }, [location, enableCategorySeparation, enableCategoryClientSeparation, enableCategoryChallanSeparation, activeCategory]);
 
   const fetchClients = async () => {
     const { data, error } = await supabase
@@ -959,11 +964,16 @@ const UdharChallan: React.FC = () => {
       }
     }
 
-    const { data: existingChallan } = await supabase
+    let dupQuery = supabase
       .from('udhar_challans')
       .select('udhar_challan_number')
-      .eq('udhar_challan_number', challanNumber)
-      .maybeSingle();
+      .eq('udhar_challan_number', challanNumber);
+
+    if ((enableCategoryChallanSeparation || enableCategoryClientSeparation || enableCategorySeparation) && activeCategory) {
+      dupQuery = dupQuery.eq('category', activeCategory);
+    }
+
+    const { data: existingChallan } = await dupQuery.maybeSingle();
 
     if (existingChallan) {
       toast.error(t('duplicateChallan'));

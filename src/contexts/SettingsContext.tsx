@@ -33,6 +33,8 @@ interface SettingsContextType {
   setEnableCategorySeparation: (val: boolean) => void;
   enableCategoryClientSeparation: boolean;
   setEnableCategoryClientSeparation: (val: boolean) => void;
+  enableCategoryChallanSeparation: boolean;
+  setEnableCategoryChallanSeparation: (val: boolean) => void;
   activeCategory: BusinessCategory | null;
   setActiveCategory: (category: BusinessCategory | null) => void;
   quickActionsSortMethod: QuickActionsSortMethod;
@@ -171,6 +173,12 @@ export const SettingsProvider: React.FC<{ children: ReactNode }> = ({ children }
           const val = value === 'true';
           setEnableCategoryClientSeparationState(val);
           localStorage.setItem('enableCategoryClientSeparation', String(val));
+          break;
+        }
+        case 'enable_category_challan_separation': {
+          const val = value === 'true';
+          setEnableCategoryChallanSeparationState(val);
+          localStorage.setItem('enableCategoryChallanSeparation', String(val));
           break;
         }
         case 'quick_actions_sort_method':
@@ -358,6 +366,21 @@ export const SettingsProvider: React.FC<{ children: ReactNode }> = ({ children }
     syncAppSetting('enable_category_client_separation', String(val));
   };
 
+  const [enableCategoryChallanSeparation, setEnableCategoryChallanSeparationState] = useState<boolean>(() => {
+    const saved = localStorage.getItem('enableCategoryChallanSeparation');
+    return saved === 'true';
+  });
+
+  useEffect(() => {
+    localStorage.setItem('enableCategoryChallanSeparation', String(enableCategoryChallanSeparation));
+  }, [enableCategoryChallanSeparation]);
+
+  const setEnableCategoryChallanSeparation = (val: boolean) => {
+    setEnableCategoryChallanSeparationState(val);
+    localStorage.setItem('enableCategoryChallanSeparation', String(val));
+    syncAppSetting('enable_category_challan_separation', String(val));
+  };
+
   const setActiveCategory = (category: BusinessCategory | null) => {
     setActiveCategoryState(category);
   };
@@ -397,6 +420,8 @@ export const SettingsProvider: React.FC<{ children: ReactNode }> = ({ children }
       setEnableCategorySeparation,
       enableCategoryClientSeparation,
       setEnableCategoryClientSeparation,
+      enableCategoryChallanSeparation,
+      setEnableCategoryChallanSeparation,
       activeCategory,
       setActiveCategory,
       quickActionsSortMethod,
