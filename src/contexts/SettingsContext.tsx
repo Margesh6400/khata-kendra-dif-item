@@ -368,7 +368,7 @@ export const SettingsProvider: React.FC<{ children: ReactNode }> = ({ children }
 
   const [enableCategoryChallanSeparation, setEnableCategoryChallanSeparationState] = useState<boolean>(() => {
     const saved = localStorage.getItem('enableCategoryChallanSeparation');
-    return saved === 'true';
+    return saved !== null ? saved === 'true' : true;
   });
 
   useEffect(() => {

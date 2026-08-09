@@ -723,36 +723,43 @@ const UdharChallan: React.FC = () => {
     try {
       let query = supabase
         .from("udhar_challans")
-        .select("udhar_challan_number")
-        .order('created_at', { ascending: false });
+        .select("udhar_challan_number");
 
-      if ((enableCategoryChallanSeparation || enableCategoryClientSeparation || enableCategorySeparation) && activeCategory) {
+      if (enableCategoryChallanSeparation && activeCategory) {
         query = query.eq('category', activeCategory);
       }
 
-      const { data, error } = await query.limit(1);
+      const { data, error } = await query;
 
       if (error) throw error;
 
-      let nextNumber = "1";
+      let maxNumber = 0;
+      let formatPrefix = "";
+      let padLen = 0;
 
       if (data && data.length > 0) {
-        const lastChallanNumber = data[0].udhar_challan_number;
-        const match = lastChallanNumber.match(/(\d+)$/);
-
-        if (match) {
-          const currentNumber = match[0];
-          const prefix = lastChallanNumber.slice(0, -currentNumber.length);
-          const lastNumber = parseInt(currentNumber);
-          const incrementedNumber = lastNumber + 1;
-          const paddedNumber = incrementedNumber.toString().padStart(currentNumber.length, '0');
-          nextNumber = prefix + paddedNumber;
-        } else {
-          nextNumber = lastChallanNumber + "1";
+        for (const row of data) {
+          const numStr = row.udhar_challan_number;
+          if (!numStr) continue;
+          const match = numStr.match(/(\d+)$/);
+          if (match) {
+            const currentNum = parseInt(match[1], 10);
+            if (currentNum > maxNumber) {
+              maxNumber = currentNum;
+              formatPrefix = numStr.slice(0, -match[1].length);
+              padLen = match[1].length;
+            }
+          }
         }
       }
 
-      setChallanNumber(nextNumber);
+      if (maxNumber > 0) {
+        const incrementedNumber = maxNumber + 1;
+        const paddedNumber = incrementedNumber.toString().padStart(padLen, '0');
+        setChallanNumber(formatPrefix + paddedNumber);
+      } else {
+        setChallanNumber("1");
+      }
 
     } catch (error) {
       console.error("Error generating challan number:", error);
@@ -969,7 +976,7 @@ const UdharChallan: React.FC = () => {
       .select('udhar_challan_number')
       .eq('udhar_challan_number', challanNumber);
 
-    if ((enableCategoryChallanSeparation || enableCategoryClientSeparation || enableCategorySeparation) && activeCategory) {
+    if (enableCategoryChallanSeparation && activeCategory) {
       dupQuery = dupQuery.eq('category', activeCategory);
     }
 
@@ -996,7 +1003,7 @@ const UdharChallan: React.FC = () => {
       vehicle_rent: vehicleRent ? parseFloat(vehicleRent) || 0 : 0,
       deposit: deposit ? parseFloat(deposit) || 0 : 0,
     };
-    if (enableCategorySeparation) {
+    if (enableCategorySeparation || activeCategory) {
       insertPayload.category = activeCategory || 'shuttering';
     }
 
@@ -1011,13 +1018,18 @@ const UdharChallan: React.FC = () => {
       return;
     }
 
+    const itemsPayload: any = {
+      udhar_challan_number: challanNumber,
+      items: mapRecordToArray(items),
+      main_note: items.main_note || null,
+    };
+    if (enableCategorySeparation || activeCategory) {
+      itemsPayload.category = activeCategory || 'shuttering';
+    }
+
     const { error: itemsError } = await supabase
       .from('udhar_items')
-      .insert({
-        udhar_challan_number: challanNumber,
-        items: mapRecordToArray(items),
-        main_note: items.main_note || null,
-      });
+      .insert(itemsPayload);
 
     if (itemsError) {
       toast.dismiss(loadingToast);
