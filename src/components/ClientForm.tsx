@@ -202,7 +202,9 @@ const ClientForm: React.FC<ClientFormProps> = ({ initialData, onSubmit, onCancel
             {t('primaryPhone')} *
           </label>
           <input
-            type="text"
+            type="tel"
+            inputMode="tel"
+            autoComplete="tel"
             value={formData.primary_phone_number}
             onChange={(e) => setFormData({ ...formData, primary_phone_number: e.target.value })}
             className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm"

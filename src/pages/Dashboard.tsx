@@ -15,6 +15,7 @@ import {
 } from 'lucide-react';
 import { useLanguage } from '../contexts/LanguageContext';
 import { useSettings } from '../contexts/SettingsContext';
+import { getBusinessInfo } from '../utils/businessInfo';
 import Navbar from '../components/Navbar';
 import { Toaster } from 'react-hot-toast';
 import { format } from 'date-fns';
@@ -25,7 +26,18 @@ import JournalSection from '../components/JournalSection';
 const Dashboard: React.FC = () => {
   const navigate = useNavigate();
   const { t, language } = useLanguage();
-  const { quickActionsSortMethod, visibleQuickActions } = useSettings();
+  const {
+    quickActionsSortMethod,
+    visibleQuickActions,
+    useCustomBusinessInfo,
+    businessName,
+    businessPhone,
+    businessAddress,
+  } = useSettings();
+  const businessInfo = getBusinessInfo(
+    { useCustomBusinessInfo, businessName, businessPhone, businessAddress },
+    language
+  );
   const [greeting, setGreeting] = useState('');
 
   useEffect(() => {
@@ -377,7 +389,7 @@ const Dashboard: React.FC = () => {
                 <p className="text-xs font-medium text-blue-100 sm:text-sm lg:text-base"><span className="waving-hand">👋</span> {greeting}!</p>
               </div>
               <h1 className="mb-1 sm:mb-1.5 text-xl sm:text-2xl lg:text-4xl font-bold leading-tight">
-                {t('appName')}
+                {businessInfo.name}
               </h1>
               <p className="mb-2 text-xs text-blue-100 sm:text-sm lg:text-base sm:mb-0">{t('Manage_your')}</p>
 

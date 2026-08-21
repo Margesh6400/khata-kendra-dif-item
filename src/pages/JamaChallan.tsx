@@ -496,7 +496,8 @@ const ChallanDetailsStep: React.FC<ChallanDetailsStepProps> = ({
                     {t('driverPhone') || 'Driver Mobile'}
                   </label>
                   <input
-                    type="text"
+                    type="tel"
+                    inputMode="tel"
                     value={driverPhone}
                     onChange={(e) => setDriverPhone(e.target.value)}
                     placeholder={t('optional')}

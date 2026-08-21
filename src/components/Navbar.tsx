@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useSettings } from '../contexts/SettingsContext';
+import { getBusinessInfo } from '../utils/businessInfo';
 import {
   UserPlus,
   FileText,
@@ -31,8 +32,19 @@ const Navbar: React.FC = () => {
   const navigate = useNavigate();
   const location = useLocation();
   const { t, language } = useLanguage();
-  const { logout } = useAuth();
-  const { enableCategorySeparation, activeCategory, setActiveCategory } = useSettings();
+  const {
+    enableCategorySeparation,
+    activeCategory,
+    setActiveCategory,
+    useCustomBusinessInfo,
+    businessName,
+    businessPhone,
+    businessAddress,
+  } = useSettings();
+  const businessInfo = getBusinessInfo(
+    { useCustomBusinessInfo, businessName, businessPhone, businessAddress },
+    language
+  );
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [dropdownOpen, setDropdownOpen] = useState(false);
   const [mobileDropdownOpen, setMobileDropdownOpen] = useState(false);
@@ -84,7 +96,8 @@ const Navbar: React.FC = () => {
   useEffect(() => {
     const mainContent = document.querySelector('main');
     if (mainContent) {
-      mainContent.style.paddingTop = '72px';  // 56px + 8px + 8px
+      // 56px header + 8px + 8px, plus the iOS notch/status-bar inset when installed standalone
+      mainContent.style.paddingTop = 'calc(72px + env(safe-area-inset-top))';
     }
     return () => {
       if (mainContent) {
@@ -225,7 +238,7 @@ const Navbar: React.FC = () => {
             />
           </div>
           <div className="truncate">
-            <h1 className="text-base font-bold text-white leading-tight truncate">{t('appName')}</h1>
+            <h1 className="text-base font-bold text-white leading-tight truncate">{businessInfo.name}</h1>
             <p className="text-[11px] truncate text-slate-400 font-medium">{t('Rental_Management')}</p>
           </div>
         </div>
@@ -408,7 +421,7 @@ const Navbar: React.FC = () => {
   return (
     <>
       {/* Desktop Sidebar */}
-      <nav className="fixed top-0 left-0 z-50 flex-col hidden h-screen lg:flex border-r border-slate-800/80 shadow-2xl shadow-black/30" style={{ width: '250px', backgroundColor: '#0f172a', borderRadius: '0 24px 24px 0' }}>
+      <nav className="fixed top-0 left-0 z-50 flex-col hidden h-screen lg:flex border-r border-slate-800/80 shadow-2xl shadow-black/30" style={{ width: '250px', backgroundColor: '#0f172a', borderRadius: '0 24px 24px 0', paddingTop: 'env(safe-area-inset-top)', paddingBottom: 'env(safe-area-inset-bottom)' }}>
         {renderSidebarContent()}
       </nav>
 
@@ -417,7 +430,7 @@ const Navbar: React.FC = () => {
         className="fixed left-0 right-0 z-50 flex items-center justify-between px-3.5 bg-white/95 backdrop-blur-md border border-slate-200/80 shadow-md shadow-slate-200/50 lg:hidden"
         style={{
           height: '56px',
-          top: '10px',
+          top: 'calc(10px + env(safe-area-inset-top))',
           margin: '0 12px',
           borderRadius: '16px'
         }}
@@ -534,7 +547,9 @@ const Navbar: React.FC = () => {
               width: '280px',
               backgroundColor: '#0f172a',
               borderRadius: '0 24px 24px 0',
-              transition: 'transform 0.3s ease'
+              transition: 'transform 0.3s ease',
+              paddingTop: 'env(safe-area-inset-top)',
+              paddingBottom: 'env(safe-area-inset-bottom)'
             }}
           >
             {renderSidebarContent()}

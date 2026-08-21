@@ -5,6 +5,7 @@ import { LanguageProvider } from './contexts/LanguageContext';
 
 import { SettingsProvider } from './contexts/SettingsContext';
 import LockScreen from './components/LockScreen';
+import PWAStatus from './components/PWAStatus';
 
 // Lazy-load every page so the initial bundle only contains the shell + auth logic
 const Login = lazy(() => import('./pages/Login'));
@@ -46,6 +47,7 @@ function App() {
   return (
     <AuthProvider>
       <LanguageProvider>
+        <PWAStatus />
         <SettingsProvider>
           <LockScreen>
             <Router>

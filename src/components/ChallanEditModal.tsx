@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { X, Download } from 'lucide-react';
+import toast from 'react-hot-toast';
 import { useLanguage } from '../contexts/LanguageContext';
 import { format } from 'date-fns';
 import { usePlateSizes } from '../hooks/usePlateSizes';
@@ -116,7 +117,7 @@ const ChallanEditModal: React.FC<ChallanEditModalProps> = ({
 
   const handleSave = async () => {
     if (!challan?.clientId) {
-      alert(t('clientIdNotFound'));
+      toast.error(t('clientIdNotFound'));
       return;
     }
 
@@ -182,7 +183,7 @@ const ChallanEditModal: React.FC<ChallanEditModalProps> = ({
       const rpcFailed = data && typeof data === 'object' && 'success' in data && !data.success;
 
       if (rpcFailed) {
-        alert(`Error: ${(data as any).message}`);
+        toast.error(`Error: ${(data as any).message}`);
       } else {
         // Keep stock_history in sync with the lost_stock/damaged_stock deltas the RPC applied
         if (type === 'jama') {
@@ -214,13 +215,13 @@ const ChallanEditModal: React.FC<ChallanEditModalProps> = ({
             }
           }
         }
-        alert(t('challanUpdated'));
+        toast.success(t('challanUpdated'));
         onSave();
         onClose();
       }
     } catch (error) {
       console.error('Error updating challan:', error);
-      alert(t('errorUpdatingChallan'));
+      toast.error(t('errorUpdatingChallan'));
     } finally {
       setLoading(false);
     }
@@ -278,7 +279,8 @@ const ChallanEditModal: React.FC<ChallanEditModalProps> = ({
                     {t('driverPhone') || 'Driver Mobile'}
                   </label>
                   <input
-                    type="text"
+                    type="tel"
+                    inputMode="tel"
                     value={driverMobile}
                     onChange={(e) => setDriverMobile(e.target.value)}
                     className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
@@ -304,7 +306,8 @@ const ChallanEditModal: React.FC<ChallanEditModalProps> = ({
                     {t('secondaryPhone')}
                   </label>
                   <input
-                    type="text"
+                    type="tel"
+                    inputMode="tel"
                     value={secondaryPhone}
                     onChange={(e) => setSecondaryPhone(e.target.value)}
                     className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"

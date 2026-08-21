@@ -221,7 +221,8 @@ const ClientSelectionStep: React.FC<ClientSelectionStepProps> = ({
       {!isFormOpen && (
         <button
           onClick={onAddNewClick}
-          className="fixed z-50 flex items-center justify-center transition-all shadow-lg sm:hidden bottom-6 right-4 w-14 h-14 bg-gradient-to-br from-green-600 to-green-700 rounded-2xl hover:shadow-2xl active:scale-90 touch-manipulation"
+          className="fixed z-50 flex items-center justify-center transition-all shadow-lg sm:hidden right-4 w-14 h-14 bg-gradient-to-br from-green-600 to-green-700 rounded-2xl hover:shadow-2xl active:scale-90 touch-manipulation"
+          style={{ bottom: 'calc(1.5rem + env(safe-area-inset-bottom))' }}
           aria-label="Add new client"
         >
           <Plus className="text-white w-7 h-7" strokeWidth={2.5} />
@@ -400,7 +401,8 @@ const ChallanDetailsStep: React.FC<ChallanDetailsStepProps> = ({
                   {t('secondaryPhone')}
                 </label>
                 <input
-                  type="text"
+                  type="tel"
+                  inputMode="tel"
                   value={secondaryPhone}
                   onChange={(e) => setSecondaryPhone(e.target.value)}
                   placeholder={t('optional')}
@@ -524,7 +526,8 @@ const ChallanDetailsStep: React.FC<ChallanDetailsStepProps> = ({
                     {t('driverPhone') || 'Driver Mobile'}
                   </label>
                   <input
-                    type="text"
+                    type="tel"
+                    inputMode="tel"
                     value={driverPhone}
                     onChange={(e) => setDriverPhone(e.target.value)}
                     placeholder={t('optional')}
