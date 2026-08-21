@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { BookOpen, Calendar, ChevronDown, ChevronUp, FileText } from 'lucide-react';
+import { BookOpen, Calendar, ChevronDown, ChevronUp, ChevronLeft, ChevronRight, FileText } from 'lucide-react';
 import { useLanguage } from '../contexts/LanguageContext';
 import { fetchDailyChallans } from '../utils/challanFetching';
 import { calculateTotalFromItems } from '../utils/challanFetching';
@@ -341,24 +341,22 @@ const JournalSection: React.FC = () => {
                         className="px-2 py-1 text-xs font-medium text-gray-700 bg-white border border-gray-300 rounded-lg shadow-sm sm:px-3 sm:py-1.5 sm:text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
                     />
 
-                    {/* Up/Down Arrow Buttons - Side by Side */}
+                    {/* Previous/Next Day Buttons */}
                     <div className="flex flex-row gap-0.5">
-                        {/* Previous Day Button (Down Arrow) */}
                         <button
                             onClick={goToPreviousDay}
-                            className="p-1 text-gray-600 bg-white border border-gray-300 rounded-l-lg shadow-sm hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                            className="flex items-center justify-center w-9 h-9 text-gray-600 bg-white border border-gray-300 rounded-l-lg shadow-sm hover:bg-gray-50 active:bg-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-500"
                             aria-label="Previous day"
                         >
-                            <ChevronDown className="w-3 h-3 sm:w-4 sm:h-4" />
+                            <ChevronLeft className="w-4 h-4" />
                         </button>
 
-                        {/* Next Day Button (Up Arrow) */}
                         <button
                             onClick={goToNextDay}
-                            className="p-1 text-gray-600 bg-white border border-gray-300 rounded-r-lg shadow-sm hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                            className="flex items-center justify-center w-9 h-9 text-gray-600 bg-white border border-gray-300 rounded-r-lg shadow-sm hover:bg-gray-50 active:bg-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-500"
                             aria-label="Next day"
                         >
-                            <ChevronUp className="w-3 h-3 sm:w-4 sm:h-4" />
+                            <ChevronRight className="w-4 h-4" />
                         </button>
                     </div>
                 </div>
@@ -427,7 +425,7 @@ const JournalSection: React.FC = () => {
                                                             }`}>
                                                             #{challan.challanNumber}
                                                         </span>
-                                                        <span className={`text-[10px] font-medium uppercase tracking-wide sm:text-xs ${isUdhar ? 'text-red-600' : 'text-green-600'
+                                                        <span className={`text-xs font-medium uppercase tracking-wide sm:text-xs ${isUdhar ? 'text-red-600' : 'text-green-600'
                                                             }`}>
                                                             {isUdhar ? t('udhar') : t('jama')}
                                                         </span>
@@ -466,7 +464,7 @@ const JournalSection: React.FC = () => {
                                                                         </span>
                                                                     </div>
                                                                     {detail.borrowed > 0 && (
-                                                                        <div className="mt-1 text-[10px] text-gray-500 sm:text-xs">
+                                                                        <div className="mt-1 text-xs text-gray-500 sm:text-xs">
                                                                             {t('mainStock')}: {detail.qty} | {t('borrowed')}: {detail.borrowed}
                                                                         </div>
                                                                     )}
@@ -522,7 +520,7 @@ const JournalSection: React.FC = () => {
                                             <div className="text-xl font-bold text-gray-900 sm:text-2xl">
                                                 {stock.closing}
                                             </div>
-                                            <div className="mt-1 text-[10px] text-gray-500 sm:text-xs">
+                                            <div className="mt-1 text-xs text-gray-500 sm:text-xs">
                                                 <span className="text-red-600">-{stock.udhar}</span>
                                                 {' | '}
                                                 <span className="text-green-600">+{stock.jama}</span>
@@ -540,7 +538,7 @@ const JournalSection: React.FC = () => {
                         <div className="grid grid-cols-3 gap-2 mb-2">
                             {/* Final Stock */}
                             <div className="p-2 bg-gradient-to-br from-blue-50 to-blue-100 rounded-lg border border-blue-200">
-                                <div className="text-[10px] font-medium text-blue-700 mb-0.5">
+                                <div className="text-xs font-medium text-blue-700 mb-0.5">
                                     📈 {t('finalStock') || 'Final'}
                                 </div>
                                 <div className="text-xl font-bold text-blue-900">
@@ -550,7 +548,7 @@ const JournalSection: React.FC = () => {
 
                             {/* Total Udhar */}
                             <div className="p-2 bg-gradient-to-br from-red-50 to-red-100 rounded-lg border border-red-200">
-                                <div className="text-[10px] font-medium text-red-700 mb-0.5">
+                                <div className="text-xs font-medium text-red-700 mb-0.5">
                                     📤 {t('udhar') || 'Udhar'}
                                 </div>
                                 <div className="text-xl font-bold text-red-800">
@@ -560,7 +558,7 @@ const JournalSection: React.FC = () => {
 
                             {/* Total Jama */}
                             <div className="p-2 bg-gradient-to-br from-green-50 to-green-100 rounded-lg border border-green-200">
-                                <div className="text-[10px] font-medium text-green-700 mb-0.5">
+                                <div className="text-xs font-medium text-green-700 mb-0.5">
                                     📥 {t('jama') || 'Jama'}
                                 </div>
                                 <div className="text-xl font-bold text-green-800">

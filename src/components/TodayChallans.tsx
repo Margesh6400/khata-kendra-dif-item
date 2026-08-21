@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Package, Calendar, MapPin, ArrowUpRight, Receipt, ChevronDown, ChevronUp } from 'lucide-react';
+import { Package, Calendar, MapPin, ArrowUpRight, Receipt, ChevronLeft, ChevronRight } from 'lucide-react';
 import { useLanguage } from '../contexts/LanguageContext';
 import { fetchDailyChallans } from '../utils/challanFetching';
 import { useNavigate } from 'react-router-dom';
@@ -164,17 +164,17 @@ const TodayChallans: React.FC = () => {
                             <div className="flex flex-row gap-0.5">
                                 <button
                                     onClick={goToPreviousDay}
-                                    className="p-1 text-gray-600 bg-white border border-gray-300 rounded-l-lg shadow-sm hover:bg-gray-50"
+                                    className="flex items-center justify-center w-9 h-9 text-gray-600 bg-white border border-gray-300 rounded-l-lg shadow-sm hover:bg-gray-50 active:bg-gray-100"
                                     aria-label="Previous day"
                                 >
-                                    <ChevronDown className="w-3 h-3" />
+                                    <ChevronLeft className="w-4 h-4" />
                                 </button>
                                 <button
                                     onClick={goToNextDay}
-                                    className="p-1 text-gray-600 bg-white border border-gray-300 rounded-r-lg shadow-sm hover:bg-gray-50"
+                                    className="flex items-center justify-center w-9 h-9 text-gray-600 bg-white border border-gray-300 rounded-r-lg shadow-sm hover:bg-gray-50 active:bg-gray-100"
                                     aria-label="Next day"
                                 >
-                                    <ChevronUp className="w-3 h-3" />
+                                    <ChevronRight className="w-4 h-4" />
                                 </button>
                             </div>
                         </div>
@@ -193,17 +193,17 @@ const TodayChallans: React.FC = () => {
                             <div className="flex flex-row gap-0.5">
                                 <button
                                     onClick={goToPreviousDay}
-                                    className="p-1 text-gray-600 bg-white border border-gray-300 rounded-l-lg shadow-sm hover:bg-gray-50"
+                                    className="flex items-center justify-center w-9 h-9 text-gray-600 bg-white border border-gray-300 rounded-l-lg shadow-sm hover:bg-gray-50 active:bg-gray-100"
                                     aria-label="Previous day"
                                 >
-                                    <ChevronDown className="w-4 h-4" />
+                                    <ChevronLeft className="w-4 h-4" />
                                 </button>
                                 <button
                                     onClick={goToNextDay}
-                                    className="p-1 text-gray-600 bg-white border border-gray-300 rounded-r-lg shadow-sm hover:bg-gray-50"
+                                    className="flex items-center justify-center w-9 h-9 text-gray-600 bg-white border border-gray-300 rounded-r-lg shadow-sm hover:bg-gray-50 active:bg-gray-100"
                                     aria-label="Next day"
                                 >
-                                    <ChevronUp className="w-4 h-4" />
+                                    <ChevronRight className="w-4 h-4" />
                                 </button>
                             </div>
                         </div>
@@ -249,7 +249,7 @@ const TodayChallans: React.FC = () => {
                                             }`}>
                                             #{challan.challanNumber}
                                         </span>
-                                        <span className={`text-[10px] font-semibold uppercase tracking-wider ${challan.type === 'udhar' ? 'text-red-600'
+                                        <span className={`text-xs font-semibold uppercase tracking-wider ${challan.type === 'udhar' ? 'text-red-600'
                                             : challan.type === 'jama' ? 'text-green-600' : 'text-blue-600'
                                             }`}>
                                             {challan.type === 'udhar' ? t('udhar') : challan.type === 'jama' ? t('jama') : t('bill' as any) || 'Bill'}
@@ -258,12 +258,12 @@ const TodayChallans: React.FC = () => {
 
                                     {/* Item Count or Amount */}
                                     {challan.type === 'bill' ? (
-                                        <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full text-[10px] font-bold border bg-white text-blue-700 border-blue-100">
+                                        <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full text-xs font-bold border bg-white text-blue-700 border-blue-100">
                                             <Receipt className="w-3 h-3" />
                                             ₹{(challan.amount || 0).toLocaleString('en-IN')}
                                         </span>
                                     ) : (
-                                        <span className={`inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full text-[10px] font-medium border ${challan.type === 'udhar'
+                                        <span className={`inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full text-xs font-medium border ${challan.type === 'udhar'
                                             ? 'bg-white text-red-700 border-red-100'
                                             : 'bg-white text-green-700 border-green-100'
                                             }`}>
