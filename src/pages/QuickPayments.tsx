@@ -505,47 +505,41 @@ ${businessInfo.name}`;
           </button>
         </div>
 
-        {/* Top Summary Metrics Cards */}
-        <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 sm:gap-4 mb-5">
+        {/* Top Summary Metrics — compact strip */}
+        <div className="grid grid-cols-3 gap-2 sm:gap-3 mb-5">
 
-          <div className="p-3 sm:p-4 bg-white border border-emerald-100 rounded-xl shadow-sm bg-gradient-to-br from-emerald-50/50 to-white">
-            <div className="flex items-center justify-between mb-1">
-              <span className="text-[11px] sm:text-xs font-semibold text-emerald-800 uppercase tracking-wider">
-                {isGu ? 'આજનું કલેક્શન' : "Today"}
+          <div className="p-2 sm:p-3 bg-white border border-emerald-100 rounded-lg shadow-sm">
+            <div className="flex items-center gap-1 mb-0.5 text-emerald-700">
+              <CheckCircle className="w-3 h-3 shrink-0" />
+              <span className="text-[9px] sm:text-[11px] font-semibold uppercase tracking-wide truncate">
+                {isGu ? 'આજે' : 'Today'}
               </span>
-              <div className="p-1.5 bg-emerald-100 text-emerald-700 rounded-md shrink-0">
-                <CheckCircle className="w-4 h-4" />
-              </div>
             </div>
-            <p className="text-xl sm:text-2xl font-extrabold text-emerald-950 truncate">
+            <p className="text-sm sm:text-lg font-extrabold text-emerald-950 truncate">
               ₹{stats.todayCollected.toLocaleString('en-IN')}
             </p>
           </div>
 
-          <div className="p-3 sm:p-4 bg-white border border-blue-100 rounded-xl shadow-sm bg-gradient-to-br from-blue-50/50 to-white">
-            <div className="flex items-center justify-between mb-1">
-              <span className="text-[11px] sm:text-xs font-semibold text-blue-800 uppercase tracking-wider">
-                {isGu ? 'આ મહિને' : 'This Month'}
+          <div className="p-2 sm:p-3 bg-white border border-blue-100 rounded-lg shadow-sm">
+            <div className="flex items-center gap-1 mb-0.5 text-blue-700">
+              <TrendingUp className="w-3 h-3 shrink-0" />
+              <span className="text-[9px] sm:text-[11px] font-semibold uppercase tracking-wide truncate">
+                {isGu ? 'આ મહિને' : 'Month'}
               </span>
-              <div className="p-1.5 bg-blue-100 text-blue-700 rounded-md shrink-0">
-                <TrendingUp className="w-4 h-4" />
-              </div>
             </div>
-            <p className="text-xl sm:text-2xl font-extrabold text-blue-950 truncate">
+            <p className="text-sm sm:text-lg font-extrabold text-blue-950 truncate">
               ₹{stats.monthCollected.toLocaleString('en-IN')}
             </p>
           </div>
 
-          <div className="col-span-2 sm:col-span-1 p-3 sm:p-4 bg-white border border-amber-100 rounded-xl shadow-sm bg-gradient-to-br from-amber-50/50 to-white">
-            <div className="flex items-center justify-between mb-1">
-              <span className="text-[11px] sm:text-xs font-semibold text-amber-800 uppercase tracking-wider">
-                {isGu ? 'કુલ બાકી લેણી રકમ' : 'Total Pending Due'}
+          <div className="p-2 sm:p-3 bg-white border border-amber-100 rounded-lg shadow-sm">
+            <div className="flex items-center gap-1 mb-0.5 text-amber-700">
+              <Clock className="w-3 h-3 shrink-0" />
+              <span className="text-[9px] sm:text-[11px] font-semibold uppercase tracking-wide truncate">
+                {isGu ? 'બાકી' : 'Due'}
               </span>
-              <div className="p-1.5 bg-amber-100 text-amber-700 rounded-md shrink-0">
-                <Clock className="w-4 h-4" />
-              </div>
             </div>
-            <p className="text-2xl font-extrabold text-amber-950">
+            <p className="text-sm sm:text-lg font-extrabold text-amber-950 truncate">
               ₹{stats.totalOutstanding.toLocaleString('en-IN')}
             </p>
           </div>
@@ -654,95 +648,75 @@ ${businessInfo.name}`;
                 </p>
               </div>
             ) : (
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2.5 sm:gap-3">
                 {filteredClients.map((c) => {
                   const hasDue = c.due_payment > 0;
 
                   return (
                     <div
                       key={c.id}
-                      className={`bg-white border rounded-xl shadow-sm hover:shadow-md transition-shadow p-4 flex flex-col justify-between ${
+                      className={`bg-white border rounded-xl shadow-sm hover:shadow-md transition-shadow p-3 ${
                         hasDue ? 'border-amber-200' : 'border-gray-200'
                       }`}
                     >
-                      <div>
-                        {/* Header: Name + ID */}
-                        <div className="flex items-start justify-between gap-2 mb-3">
-                          <div className="flex items-center gap-3">
-                            <div className={`w-10 h-10 rounded-full flex items-center justify-center font-bold text-sm ${
-                              hasDue ? 'bg-amber-100 text-amber-800' : 'bg-emerald-100 text-emerald-800'
-                            }`}>
-                              {c.client_name.charAt(0).toUpperCase()}
-                            </div>
-                            <div>
-                              <h3 className="text-sm font-bold text-gray-900 leading-tight">
-                                {c.client_name}
-                              </h3>
-                              <span className="inline-block px-1.5 py-0.5 mt-0.5 text-xs font-semibold bg-gray-100 text-gray-700 rounded">
-                                ID: {c.client_nic_name}
-                              </span>
-                            </div>
+                      {/* Header: Avatar + Name + ID + Call */}
+                      <div className="flex items-center justify-between gap-2 mb-2">
+                        <div className="flex items-center gap-2 min-w-0">
+                          <div className={`w-8 h-8 shrink-0 rounded-full flex items-center justify-center font-bold text-xs ${
+                            hasDue ? 'bg-amber-100 text-amber-800' : 'bg-emerald-100 text-emerald-800'
+                          }`}>
+                            {c.client_name.charAt(0).toUpperCase()}
                           </div>
-
-                          {/* Phone Badge */}
-                          {c.primary_phone_number && (
-                            <a
-                              href={`tel:${c.primary_phone_number}`}
-                              className="p-1.5 text-gray-500 hover:text-emerald-600 hover:bg-emerald-50 rounded-lg transition-colors"
-                              title="Call Client"
-                            >
-                              <Phone className="w-4 h-4" />
-                            </a>
-                          )}
+                          <div className="min-w-0">
+                            <h3 className="text-sm font-bold text-gray-900 leading-tight truncate">
+                              {c.client_name}
+                            </h3>
+                            <span className="text-[11px] text-gray-500">ID: {c.client_nic_name}</span>
+                          </div>
                         </div>
 
-                        {/* Details */}
-                        <div className="space-y-1.5 text-xs text-gray-600 mb-4 border-t border-gray-100 pt-3">
-                          {c.site && (
-                            <div className="flex items-center gap-1.5">
-                              <MapPin className="w-3.5 h-3.5 text-gray-400 shrink-0" />
-                              <span className="truncate">{c.site}</span>
-                            </div>
-                          )}
-                          {c.primary_phone_number && (
-                            <div className="flex items-center gap-1.5">
-                              <Phone className="w-3.5 h-3.5 text-gray-400 shrink-0" />
-                              <span>{c.primary_phone_number}</span>
-                            </div>
-                          )}
-                        </div>
+                        {c.primary_phone_number && (
+                          <a
+                            href={`tel:${c.primary_phone_number}`}
+                            className="flex items-center justify-center w-8 h-8 shrink-0 text-gray-500 hover:text-emerald-600 hover:bg-emerald-50 rounded-lg transition-colors"
+                            title="Call Client"
+                          >
+                            <Phone className="w-4 h-4" />
+                          </a>
+                        )}
+                      </div>
 
-                        {/* Balance Due Display */}
-                        <div className={`p-3 rounded-lg flex items-center justify-between mb-4 ${
-                          hasDue ? 'bg-amber-50 border border-amber-200' : 'bg-emerald-50 border border-emerald-200'
-                        }`}>
-                          <div>
-                            <p className="text-[11px] font-medium uppercase tracking-wider text-gray-600">
-                              {isGu ? 'બાકી રકમ (Balance Due)' : 'Pending Balance'}
-                            </p>
-                            <p className={`text-base font-extrabold ${hasDue ? 'text-amber-950' : 'text-emerald-950'}`}>
-                              ₹{c.due_payment.toLocaleString('en-IN')}
-                            </p>
-                          </div>
-                          {hasDue ? (
-                            <span className="px-2 py-1 bg-amber-200/80 text-amber-900 text-xs font-bold rounded">
-                              {isGu ? 'બાકી' : 'Due'}
-                            </span>
-                          ) : (
-                            <span className="px-2 py-1 bg-emerald-200/80 text-emerald-900 text-xs font-bold rounded flex items-center gap-1">
-                              <Check className="w-3 h-3" /> {isGu ? 'ચૂકવાયેલ' : 'Paid'}
-                            </span>
-                          )}
+                      {/* Site • Phone — one line */}
+                      {(c.site || c.primary_phone_number) && (
+                        <div className="flex items-center gap-1 text-[11px] text-gray-500 truncate mb-2">
+                          {c.site && <span className="truncate">{c.site}</span>}
+                          {c.site && c.primary_phone_number && <span>•</span>}
+                          {c.primary_phone_number && <span className="shrink-0">{c.primary_phone_number}</span>}
+                        </div>
+                      )}
+
+                      {/* Balance Due — compact */}
+                      <div className={`px-2.5 py-1.5 rounded-lg flex items-center justify-between mb-2 ${
+                        hasDue ? 'bg-amber-50 border border-amber-200' : 'bg-emerald-50 border border-emerald-200'
+                      }`}>
+                        <span className="text-[10px] font-medium uppercase tracking-wide text-gray-600">
+                          {hasDue ? (isGu ? 'બાકી' : 'Due') : (isGu ? 'ચૂકવાયેલ' : 'Paid')}
+                        </span>
+                        <div className="flex items-center gap-1.5">
+                          <span className={`text-sm font-extrabold ${hasDue ? 'text-amber-950' : 'text-emerald-950'}`}>
+                            ₹{c.due_payment.toLocaleString('en-IN')}
+                          </span>
+                          {!hasDue && <Check className="w-3.5 h-3.5 text-emerald-700" />}
                         </div>
                       </div>
 
                       {/* Card Action Button */}
                       <button
                         onClick={() => handleOpenPayModal(c)}
-                        className="w-full py-2.5 px-4 bg-emerald-600 hover:bg-emerald-700 active:scale-[0.98] text-white font-semibold text-xs sm:text-sm rounded-lg flex items-center justify-center gap-2 transition-all shadow-sm"
+                        className="w-full py-2 px-3 bg-emerald-600 hover:bg-emerald-700 active:scale-[0.98] text-white font-semibold text-xs rounded-lg flex items-center justify-center gap-1.5 transition-all shadow-sm"
                       >
-                        <Plus className="w-4 h-4" />
-                        {isGu ? 'ચૂકવણી જમા કરો (Add Payment)' : 'Record Payment'}
+                        <Plus className="w-3.5 h-3.5" />
+                        {isGu ? 'ચૂકવણી જમા કરો' : 'Record Payment'}
                       </button>
                     </div>
                   );
