@@ -29,27 +29,27 @@ const ClientCard: React.FC<ClientCardProps> = ({ client, balance, onClick }) => 
           <h4 className="text-sm font-semibold text-gray-900 truncate transition-colors sm:text-base lg:text-lg group-hover:text-blue-600">
             {client.client_nic_name}
             {client.is_hidden && (
-              <span className="ml-2 px-1.5 py-0.5 text-[10px] font-medium text-gray-500 bg-gray-100 rounded">
+              <span className="ml-2 px-1.5 py-0.5 text-xs font-medium text-gray-500 bg-gray-100 rounded">
                 Hidden
               </span>
             )}
           </h4>
-          <p className="text-[10px] sm:text-xs lg:text-sm text-gray-600 truncate">{client.client_name}</p>
+          <p className="text-xs sm:text-xs lg:text-sm text-gray-600 truncate">{client.client_name}</p>
         </div>
         {balance !== undefined && balance > 0 && (
           <div className="text-right mr-2">
-            <span className="block text-[10px] text-gray-400 font-medium uppercase tracking-wider">{t('payable')}</span>
-            <span className="text-xs font-bold text-red-600 sm:text-sm">₹{balance.toLocaleString('en-IN')}</span>
+            <span className="block text-[11px] text-gray-400 font-medium uppercase tracking-wider">{t('payable')}</span>
+            <span className="text-sm font-bold text-red-600 sm:text-base">₹{balance.toLocaleString('en-IN')}</span>
           </div>
         )}
         <ChevronRight className="flex-shrink-0 w-4 h-4 text-gray-400 transition-transform sm:w-5 sm:h-5 group-hover:translate-x-1" />
       </div>
       <div className="pt-2 mt-2 space-y-1 border-t border-gray-100 sm:pt-3 sm:mt-3 sm:space-y-1.5 lg:space-y-2">
-        <div className="flex items-center gap-1.5 sm:gap-2 text-[10px] sm:text-xs lg:text-sm text-gray-600">
+        <div className="flex items-center gap-1.5 sm:gap-2 text-xs sm:text-xs lg:text-sm text-gray-600">
           <MapPin className="flex-shrink-0 w-3 h-3 text-gray-400 sm:w-3.5 sm:h-3.5" />
           <span className="truncate">{client.site}</span>
         </div>
-        <div className="flex items-center gap-1.5 sm:gap-2 text-[10px] sm:text-xs lg:text-sm text-gray-600">
+        <div className="flex items-center gap-1.5 sm:gap-2 text-xs sm:text-xs lg:text-sm text-gray-600">
           <Phone className="flex-shrink-0 w-3 h-3 text-gray-400 sm:w-3.5 sm:h-3.5" />
           <span className="truncate">{client.primary_phone_number}</span>
         </div>
@@ -263,7 +263,7 @@ export default function Billing() {
 
             {searchQuery && (
               <div className="px-3 py-1.5 sm:px-4 sm:py-2 border border-blue-200 rounded-lg bg-blue-50">
-                <p className="text-[10px] sm:text-xs lg:text-sm text-blue-700">
+                <p className="text-xs sm:text-xs lg:text-sm text-blue-700">
                   {t('clientsFound')}: <span className="font-semibold">{filteredClients.length}</span>
                 </p>
               </div>
@@ -275,7 +275,7 @@ export default function Billing() {
                   <User className="w-6 h-6 text-gray-400 sm:w-7 sm:h-7 lg:w-8 lg:h-8" />
                 </div>
                 <h3 className="mb-2 text-sm font-semibold text-gray-900 sm:text-base lg:text-lg">{t('noClientsFound')}</h3>
-                <p className="mb-3 text-[10px] sm:text-xs lg:text-sm text-gray-500 sm:mb-4">
+                <p className="mb-3 text-xs sm:text-xs lg:text-sm text-gray-500 sm:mb-4">
                   {t('tryAdjustingSearch')}
                 </p>
                 <button
@@ -357,7 +357,7 @@ export default function Billing() {
                       <span className="block text-sm font-semibold text-gray-900 truncate">
                         {client.client_nic_name}
                         {client.is_hidden && (
-                          <span className="ml-2 px-1.5 py-0.5 text-[10px] font-medium text-gray-500 bg-gray-100 rounded">Hidden</span>
+                          <span className="ml-2 px-1.5 py-0.5 text-xs font-medium text-gray-500 bg-gray-100 rounded">Hidden</span>
                         )}
                       </span>
                       <span className="block text-xs text-gray-500 truncate">{client.client_name} · {client.site}</span>
