@@ -682,7 +682,7 @@ ${businessInfo.name}`;
                               <h3 className="text-sm font-bold text-gray-900 leading-tight">
                                 {c.client_name}
                               </h3>
-                              <span className="inline-block px-1.5 py-0.5 mt-0.5 text-[10px] font-semibold bg-gray-100 text-gray-700 rounded">
+                              <span className="inline-block px-1.5 py-0.5 mt-0.5 text-xs font-semibold bg-gray-100 text-gray-700 rounded">
                                 ID: {c.client_nic_name}
                               </span>
                             </div>
@@ -721,7 +721,7 @@ ${businessInfo.name}`;
                           hasDue ? 'bg-amber-50 border border-amber-200' : 'bg-emerald-50 border border-emerald-200'
                         }`}>
                           <div>
-                            <p className="text-[10px] font-medium uppercase tracking-wider text-gray-600">
+                            <p className="text-[11px] font-medium uppercase tracking-wider text-gray-600">
                               {isGu ? 'બાકી રકમ (Balance Due)' : 'Pending Balance'}
                             </p>
                             <p className={`text-base font-extrabold ${hasDue ? 'text-amber-950' : 'text-emerald-950'}`}>
@@ -729,11 +729,11 @@ ${businessInfo.name}`;
                             </p>
                           </div>
                           {hasDue ? (
-                            <span className="px-2 py-1 bg-amber-200/80 text-amber-900 text-[10px] font-bold rounded">
+                            <span className="px-2 py-1 bg-amber-200/80 text-amber-900 text-xs font-bold rounded">
                               {isGu ? 'બાકી' : 'Due'}
                             </span>
                           ) : (
-                            <span className="px-2 py-1 bg-emerald-200/80 text-emerald-900 text-[10px] font-bold rounded flex items-center gap-1">
+                            <span className="px-2 py-1 bg-emerald-200/80 text-emerald-900 text-xs font-bold rounded flex items-center gap-1">
                               <Check className="w-3 h-3" /> {isGu ? 'ચૂકવાયેલ' : 'Paid'}
                             </span>
                           )}
@@ -814,8 +814,58 @@ ${businessInfo.name}`;
 
             </div>
 
-            {/* Ledger Table */}
-            <div className="bg-white border border-gray-200 rounded-xl shadow-sm overflow-hidden">
+            {/* Ledger — Mobile Card List (a 7-column table is unreadable on a phone) */}
+            <div className="md:hidden bg-white border border-gray-200 rounded-xl shadow-sm overflow-hidden">
+              {filteredLedger.length === 0 ? (
+                <div className="px-4 py-12 text-center text-gray-500 text-sm">
+                  {isGu ? 'કોઈ ચૂકવણી હિસાબ મળ્યો નથી' : 'No payment records found'}
+                </div>
+              ) : (
+                <div className="divide-y divide-gray-200">
+                  {filteredLedger.map((rec) => (
+                    <div key={rec.id} className="p-3.5 flex items-start justify-between gap-3">
+                      <div className="min-w-0 flex-1">
+                        <div className="flex flex-wrap items-center gap-x-2 gap-y-1 mb-1">
+                          <span className="font-bold text-gray-900 text-sm truncate">{rec.client_name}</span>
+                          <span className="shrink-0 px-1.5 py-0.5 text-[10px] font-bold bg-emerald-50 text-emerald-800 rounded uppercase">
+                            {rec.payment_method}
+                          </span>
+                        </div>
+                        <div className="text-xs text-gray-500 mb-1">
+                          {formatLocalDate(rec.date, 'dd/MM/yyyy')} • #{rec.bill_number}
+                        </div>
+                        {rec.note && (
+                          <div className="text-xs text-gray-600 truncate">{rec.note}</div>
+                        )}
+                      </div>
+                      <div className="flex flex-col items-end gap-2 shrink-0">
+                        <span className="font-extrabold text-emerald-700 text-base whitespace-nowrap">
+                          +₹{rec.amount.toLocaleString('en-IN')}
+                        </span>
+                        <button
+                          onClick={() => handleDeletePayment(rec)}
+                          aria-label={isGu ? 'એન્ટ્રી રદ કરો' : 'Delete Record'}
+                          className="flex items-center justify-center w-9 h-9 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors active:bg-red-100"
+                        >
+                          <Trash2 className="w-4 h-4" />
+                        </button>
+                      </div>
+                    </div>
+                  ))}
+                  <div className="p-3.5 bg-emerald-50/80 border-t-2 border-emerald-200 flex items-center justify-between">
+                    <span className="text-sm font-extrabold text-emerald-950">
+                      {isGu ? 'કુલ કલેક્શન રકમ:' : 'Total:'}
+                    </span>
+                    <span className="text-lg font-extrabold text-emerald-900">
+                      ₹{totalLedgerAmount.toLocaleString('en-IN')}
+                    </span>
+                  </div>
+                </div>
+              )}
+            </div>
+
+            {/* Ledger — Desktop Table */}
+            <div className="hidden md:block bg-white border border-gray-200 rounded-xl shadow-sm overflow-hidden">
               <div className="overflow-x-auto">
                 <table className="w-full text-left text-xs sm:text-sm border-collapse">
                   <thead className="bg-gray-100 border-b border-gray-200">
@@ -899,11 +949,11 @@ ${businessInfo.name}`;
 
       {/* QUICK PAYMENT ENTRY MODAL */}
       {showPayModal && selectedClient && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs animate-fadeIn">
-          <div className="bg-white w-full max-w-md rounded-2xl shadow-2xl overflow-hidden border border-gray-200">
-            
+        <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/60 backdrop-blur-xs animate-fadeIn">
+          <div className="bg-white w-full sm:max-w-md rounded-t-2xl sm:rounded-2xl shadow-2xl border border-gray-200 flex flex-col max-h-[92vh] sm:max-h-[88vh]">
+
             {/* Modal Header */}
-            <div className="p-4 bg-emerald-600 text-white flex items-center justify-between">
+            <div className="p-4 bg-emerald-600 text-white flex items-center justify-between shrink-0">
               <div className="flex items-center gap-2">
                 <Wallet className="w-5 h-5" />
                 <h3 className="text-base font-bold">
@@ -912,15 +962,16 @@ ${businessInfo.name}`;
               </div>
               <button
                 onClick={() => setShowPayModal(false)}
-                className="p-1 text-emerald-100 hover:text-white rounded-lg hover:bg-emerald-700 transition-colors"
+                aria-label={isGu ? 'બંધ કરો' : 'Close'}
+                className="flex items-center justify-center w-9 h-9 text-emerald-100 hover:text-white rounded-full hover:bg-emerald-700 transition-colors"
               >
                 <X className="w-5 h-5" />
               </button>
             </div>
 
-            {/* Form */}
-            <form onSubmit={handleSavePayment} className="p-4 space-y-4">
-              
+            {/* Form — scrolls internally so the Confirm button is always reachable, even with the keyboard open */}
+            <form onSubmit={handleSavePayment} className="p-4 space-y-4 overflow-y-auto">
+
               {/* Client Info Summary */}
               <div className="p-3 bg-gray-50 border border-gray-200 rounded-xl space-y-1">
                 <p className="text-sm font-bold text-gray-900">{selectedClient.client_name}</p>
@@ -985,7 +1036,7 @@ ${businessInfo.name}`;
                       key={m.id}
                       type="button"
                       onClick={() => setPaymentMethod(m.id as any)}
-                      className={`py-2 px-2 text-xs font-bold rounded-lg border transition-all ${
+                      className={`py-2.5 px-2 min-h-[44px] text-xs sm:text-sm font-bold rounded-lg border transition-all active:scale-95 ${
                         paymentMethod === m.id
                           ? 'bg-emerald-600 text-white border-emerald-600 shadow'
                           : 'bg-white text-gray-700 border-gray-300 hover:bg-gray-50'
@@ -1012,18 +1063,18 @@ ${businessInfo.name}`;
               </div>
 
               {/* Buttons */}
-              <div className="flex gap-3 pt-2">
+              <div className="flex gap-3 pt-2" style={{ paddingBottom: 'env(safe-area-inset-bottom)' }}>
                 <button
                   type="button"
                   onClick={() => setShowPayModal(false)}
-                  className="flex-1 py-2.5 px-4 bg-gray-100 hover:bg-gray-200 text-gray-700 font-semibold text-xs sm:text-sm rounded-xl transition-colors"
+                  className="flex-1 py-3 px-4 bg-gray-100 hover:bg-gray-200 text-gray-700 font-semibold text-sm rounded-xl transition-colors active:scale-95"
                 >
                   {isGu ? 'રદ કરો' : 'Cancel'}
                 </button>
                 <button
                   type="submit"
                   disabled={savingPayment}
-                  className="flex-1 py-2.5 px-4 bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs sm:text-sm rounded-xl transition-all shadow-md active:scale-[0.98]"
+                  className="flex-1 py-3 px-4 bg-emerald-600 hover:bg-emerald-700 disabled:opacity-60 text-white font-bold text-sm rounded-xl transition-all shadow-md active:scale-[0.98]"
                 >
                   {savingPayment ? (isGu ? 'જમા થઈ રહ્યું છે...' : 'Saving...') : (isGu ? 'ચૂકવણી જમા કરો' : 'Confirm Payment')}
                 </button>
