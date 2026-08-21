@@ -522,9 +522,9 @@ const Settings: React.FC = () => {
                   <div className="grid grid-cols-4 gap-2">
                     {[
                       { label: 'A', size: 13, name: t('small') || 'Small' },
-                      { label: 'A', size: 15, name: t('medium') || 'Normal' },
-                      { label: 'A', size: 17, name: t('large') || 'Large' },
-                      { label: 'A', size: 20, name: t('xlarge') || 'X-Large' },
+                      { label: 'A', size: 16, name: t('medium') || 'Normal' },
+                      { label: 'A', size: 18, name: t('large') || 'Large' },
+                      { label: 'A', size: 21, name: t('xlarge') || 'X-Large' },
                     ].map((preset) => (
                       <button
                         key={preset.size}

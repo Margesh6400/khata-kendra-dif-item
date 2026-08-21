@@ -8,6 +8,7 @@ import { translations } from '../utils/translations';
 import TransactionTable from './TransactionTable';
 import ClientLedgerDownload from './ClientLedgerDownload';
 import { generateClientLedgerJPEG } from '../utils/generateLedgerJPEG';
+import { formatIndianCurrency } from '../utils/currencyFormat';
 import toast from 'react-hot-toast';
 
 interface ClientLedgerCardProps {
@@ -129,7 +130,7 @@ export default function ClientLedgerCard({ ledger }: ClientLedgerCardProps) {
               <h3 className="text-base font-bold text-gray-900 truncate">
                 {ledger.clientNicName}
                 {ledger.is_hidden && (
-                  <span className="ml-2 px-1.5 py-0.5 text-[10px] font-medium text-gray-500 bg-gray-100 rounded">
+                  <span className="ml-2 px-1.5 py-0.5 text-xs font-medium text-gray-500 bg-gray-100 rounded">
                     Hidden
                   </span>
                 )}
@@ -152,10 +153,10 @@ export default function ClientLedgerCard({ ledger }: ClientLedgerCardProps) {
 
           <div className="flex items-center gap-4">
             <div className="flex flex-col items-end">
-              <span className="text-xs text-gray-500">કુલ બહાર</span>
+              <span className="text-xs font-medium text-gray-500">કુલ બહાર</span>
               {ledger.transactionsLoaded ? (
-                <span className={`text-sm font-semibold ${(ledger.currentBalance?.grandTotal ?? 0) > 0 ? 'text-amber-600' : 'text-green-600'} `}>
-                  {ledger.currentBalance?.grandTotal ?? 0}
+                <span className={`text-lg font-bold tabular-nums ${(ledger.currentBalance?.grandTotal ?? 0) > 0 ? 'text-amber-600' : 'text-green-600'} `}>
+                  {formatIndianCurrency(ledger.currentBalance?.grandTotal ?? 0)}
                 </span>
               ) : (
                 <Loader2 className="w-5 h-5 animate-spin text-gray-400" />
@@ -207,21 +208,21 @@ export default function ClientLedgerCard({ ledger }: ClientLedgerCardProps) {
               <h4 className="text-base font-bold text-gray-900 truncate">
                 {ledger.clientNicName}
                 {ledger.is_hidden && (
-                  <span className="ml-2 px-1 py-0.5 text-[8px] font-medium text-gray-500 bg-gray-100 rounded">
+                  <span className="ml-2 px-1.5 py-0.5 text-[11px] font-medium text-gray-500 bg-gray-100 rounded">
                     Hidden
                   </span>
                 )}
               </h4>
-              <p className="text-[10px] sm:text-xs text-gray-600 truncate">
+              <p className="text-xs text-gray-600 truncate">
                 {ledger.clientFullName}
               </p>
             </div>
             <div className="flex items-center gap-3">
               <div className="flex flex-col items-end">
-                <span className="text-[10px] text-gray-500">કુલ બહાર</span>
+                <span className="text-[11px] font-medium text-gray-500">કુલ બહાર</span>
                 {ledger.transactionsLoaded ? (
-                  <span className={`text-sm font-semibold ${(ledger.currentBalance?.grandTotal ?? 0) > 0 ? 'text-amber-600' : 'text-green-600'} `}>
-                    {ledger.currentBalance?.grandTotal ?? 0}
+                  <span className={`text-base font-bold tabular-nums ${(ledger.currentBalance?.grandTotal ?? 0) > 0 ? 'text-amber-600' : 'text-green-600'} `}>
+                    {formatIndianCurrency(ledger.currentBalance?.grandTotal ?? 0)}
                   </span>
                 ) : (
                   <Loader2 className="w-4 h-4 animate-spin text-gray-400" />
@@ -254,25 +255,25 @@ export default function ClientLedgerCard({ ledger }: ClientLedgerCardProps) {
               </div>
             </div>
           </div>
-          <div className="flex items-center justify-between text-[10px] sm:text-xs text-gray-600">
+          <div className="flex items-center justify-between text-xs text-gray-600">
             <div className="flex items-center flex-1 gap-2 min-w-0">
               <span className="flex items-center gap-1 min-w-0">
-                <MapPin className="w-3 h-3 sm:w-3.5 sm:h-3.5 flex-shrink-0" />
+                <MapPin className="w-3.5 h-3.5 flex-shrink-0" />
                 <span className="truncate">{ledger.clientSite}</span>
               </span>
               <span className="flex items-center gap-1 flex-shrink-0">
-                <Phone className="w-3 h-3 sm:w-3.5 sm:h-3.5 flex-shrink-0" />
+                <Phone className="w-3.5 h-3.5 flex-shrink-0" />
                 <span>{ledger.clientPhone}</span>
               </span>
             </div>
             <button
-              className="flex-shrink-0 ml-1 text-gray-600"
+              className="flex items-center justify-center flex-shrink-0 w-8 h-8 -mr-1 ml-1 text-gray-500 rounded-full active:bg-gray-200"
               aria-label={isExpanded ? "Collapse" : "Expand"}
             >
               {isExpanded ? (
-                <ChevronUp className="w-2.5 h-2.5" />
+                <ChevronUp className="w-4 h-4" />
               ) : (
-                <ChevronDown className="w-2.5 h-2.5" />
+                <ChevronDown className="w-4 h-4" />
               )}
             </button>
           </div>

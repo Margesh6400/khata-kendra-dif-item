@@ -52,6 +52,7 @@ const Dashboard: React.FC = () => {
       path: '/quick-payments',
       gradient: 'from-emerald-500 to-emerald-700',
       hoverGradient: 'hover:from-emerald-600 hover:to-emerald-800',
+      shadowColor: 'rgba(5,150,105,0.38)',
     },
     {
       title: t('udharChallan'),
@@ -60,6 +61,7 @@ const Dashboard: React.FC = () => {
       path: '/udhar-challan',
       gradient: 'from-red-500 to-red-700',
       hoverGradient: 'hover:from-red-600 hover:to-red-800',
+      shadowColor: 'rgba(220,38,38,0.38)',
     },
     {
       title: t('jamaChallan'),
@@ -68,6 +70,7 @@ const Dashboard: React.FC = () => {
       path: '/jama-challan',
       gradient: 'from-green-500 to-green-700',
       hoverGradient: 'hover:from-green-600 hover:to-green-800',
+      shadowColor: 'rgba(22,163,74,0.38)',
     },
     {
       title: t('clientLedger'),
@@ -76,6 +79,7 @@ const Dashboard: React.FC = () => {
       path: '/client-ledger',
       gradient: 'from-indigo-500 to-indigo-700',
       hoverGradient: 'hover:from-indigo-600 hover:to-indigo-800',
+      shadowColor: 'rgba(79,70,229,0.38)',
     },
     {
       title: t('stockManagement'),
@@ -84,6 +88,7 @@ const Dashboard: React.FC = () => {
       path: '/stock',
       gradient: 'from-purple-500 to-purple-700',
       hoverGradient: 'hover:from-purple-600 hover:to-purple-800',
+      shadowColor: 'rgba(147,51,234,0.38)',
     },
     {
       title: t('addClient'),
@@ -92,6 +97,7 @@ const Dashboard: React.FC = () => {
       path: '/clients',
       gradient: 'from-blue-500 to-blue-700',
       hoverGradient: 'hover:from-blue-600 hover:to-blue-800',
+      shadowColor: 'rgba(37,99,235,0.38)',
     },
     {
       title: t('challanBook'),
@@ -99,7 +105,8 @@ const Dashboard: React.FC = () => {
       icon: ClipboardList,
       path: '/challan-book',
       gradient: 'from-teal-500 to-teal-700',
-      hoverGradient: 'hover:from-teal-600 hover:to-teal-800'
+      hoverGradient: 'hover:from-teal-600 hover:to-teal-800',
+      shadowColor: 'rgba(13,148,136,0.38)',
     },
     {
       title: t('createBill'),
@@ -107,7 +114,8 @@ const Dashboard: React.FC = () => {
       icon: Receipt,
       path: '/billing',
       gradient: 'from-amber-500 to-amber-700',
-      hoverGradient: 'hover:from-amber-600 hover:to-amber-800'
+      hoverGradient: 'hover:from-amber-600 hover:to-amber-800',
+      shadowColor: 'rgba(217,119,6,0.38)',
     },
     {
       title: t('billBook'),
@@ -115,7 +123,8 @@ const Dashboard: React.FC = () => {
       icon: Files,
       path: '/bill-book',
       gradient: 'from-cyan-500 to-cyan-700',
-      hoverGradient: 'hover:from-cyan-600 hover:to-cyan-800'
+      hoverGradient: 'hover:from-cyan-600 hover:to-cyan-800',
+      shadowColor: 'rgba(8,145,178,0.38)',
     },
     {
       title: t('settings'),
@@ -123,7 +132,8 @@ const Dashboard: React.FC = () => {
       icon: SettingsIcon,
       path: '/settings',
       gradient: 'from-slate-600 to-slate-800',
-      hoverGradient: 'hover:from-slate-700 hover:to-slate-900'
+      hoverGradient: 'hover:from-slate-700 hover:to-slate-900',
+      shadowColor: 'rgba(51,65,85,0.38)',
     }
   ];
 
@@ -363,7 +373,7 @@ const Dashboard: React.FC = () => {
       <main className="flex-1 w-full ml-0 overflow-auto lg:ml-64 pt-[56px] lg:pt-0">
         <div className="w-full px-3 pt-1 pb-3 mx-auto sm:px-4 sm:py-5 lg:px-8 lg:pt-1 lg:pb-8 max-w-7xl">
           {/* Welcome Section - Compact Mobile */}
-          <div className="relative p-3 mb-3 overflow-hidden text-white rounded-lg shadow-lg sm:p-5 sm:mb-5 lg:p-8 lg:mb-8 bg-gradient-to-r from-blue-600 to-indigo-700 sm:rounded-xl lg:rounded-2xl">
+          <div className="relative p-3 mb-3 overflow-hidden text-white rounded-2xl shadow-lg sm:p-5 sm:mb-5 lg:p-8 lg:mb-8 bg-gradient-to-r from-blue-600 to-indigo-700 sm:rounded-2xl lg:rounded-2xl">
             <img 
               src="/greenting_bg.png" 
               alt="" 
@@ -436,7 +446,7 @@ const Dashboard: React.FC = () => {
               {/* Desktop Date Display */}
               <div className="absolute items-center hidden gap-3 overflow-visible top-3 right-3 sm:flex sm:top-4 sm:right-4 lg:top-6 lg:right-6">
                 <div className="text-right">
-                  <p className="mb-0.5 text-[10px] sm:text-xs text-blue-100">{t('Todays_Date')}</p>
+                  <p className="mb-0.5 text-xs text-blue-100">{t('Todays_Date')}</p>
                   <p className="text-sm font-semibold sm:text-base lg:text-xl">{format(new Date(), 'yyyy')}</p>
                 </div>
                 <div className="calendar-flip-container">
@@ -484,23 +494,29 @@ const Dashboard: React.FC = () => {
               <Activity className="w-4 h-4 text-gray-700 sm:w-5 sm:h-5 lg:w-6 lg:h-6" />
               <h2 className="text-base font-bold text-gray-900 sm:text-lg lg:text-2xl">{t('Quick_Actions')}</h2>
             </div>
-            <div className="grid grid-cols-2 gap-2 sm:gap-3 lg:grid-cols-3 lg:gap-5">
+            <div className="grid grid-cols-2 gap-2.5 sm:gap-3.5 lg:grid-cols-3 lg:gap-5">
               {sortedQuickActions.map((action) => (
                 <button
                   key={action.path}
                   onClick={() => handleActionClick(action.path)}
-                  className={`group relative overflow-hidden bg-gradient-to-br ${action.gradient} ${action.hoverGradient} rounded-lg sm:rounded-xl shadow-md sm:shadow-lg p-3 sm:p-4 lg:p-5 text-white transition-all transform active:scale-[0.97] sm:hover:scale-105 hover:shadow-2xl touch-manipulation`}
+                  style={{ boxShadow: `0 10px 24px -8px ${action.shadowColor}, 0 2px 5px rgba(0,0,0,0.08)` }}
+                  className={`group relative overflow-hidden bg-gradient-to-br ${action.gradient} ${action.hoverGradient} rounded-2xl border border-white/10 p-3.5 sm:p-4 lg:p-5 text-white transition-all duration-200 transform active:scale-[0.96] sm:hover:-translate-y-0.5 touch-manipulation`}
                 >
-                  <div className="absolute top-0 right-0 w-20 h-20 transition-transform bg-white rounded-bl-full sm:w-24 sm:h-24 lg:w-28 lg:h-28 opacity-10 group-hover:scale-110"></div>
+                  {/* Glass sheen across the top half */}
+                  <div className="absolute inset-x-0 top-0 h-1/2 bg-gradient-to-b from-white/15 to-transparent pointer-events-none" />
+                  {/* Decorative blobs, echoing the hero banner's circles */}
+                  <div className="absolute top-0 right-0 w-20 h-20 transition-transform duration-300 bg-white rounded-bl-full sm:w-24 sm:h-24 lg:w-28 lg:h-28 opacity-10 group-hover:scale-110"></div>
+                  <div className="absolute bottom-0 left-0 w-14 h-14 -mb-6 -ml-6 bg-white rounded-full sm:w-20 sm:h-20 opacity-[0.07] pointer-events-none"></div>
+
                   <div className="relative">
-                    <div className="flex items-start justify-between mb-2 sm:mb-3">
-                      <div className="p-1.5 sm:p-2 lg:p-2.5 bg-white rounded-md sm:rounded-lg bg-opacity-20 backdrop-blur-sm">
-                        <action.icon className="w-5 h-5 sm:w-6 sm:h-6 lg:w-7 lg:h-7" />
+                    <div className="flex items-start justify-between mb-2.5 sm:mb-3.5">
+                      <div className="p-1.5 sm:p-2 lg:p-2.5 bg-white/25 rounded-xl backdrop-blur-sm ring-1 ring-white/30 shadow-sm">
+                        <action.icon className="w-5 h-5 sm:w-6 sm:h-6 lg:w-7 lg:h-7" strokeWidth={2.25} />
                       </div>
-                      <ArrowUpRight className="hidden w-4 h-4 transition-opacity opacity-0 sm:block sm:w-4 sm:h-4 lg:w-5 lg:h-5 group-hover:opacity-100" />
+                      <ArrowUpRight className="w-4 h-4 transition-all duration-200 opacity-60 sm:w-4 sm:h-4 lg:w-5 lg:h-5 group-hover:opacity-100 group-hover:translate-x-0.5 group-hover:-translate-y-0.5" />
                     </div>
-                    <h3 className="mb-1 text-sm font-bold leading-tight sm:text-base lg:text-lg">{action.title}</h3>
-                    <p className="text-[10px] sm:text-xs text-white text-opacity-90 leading-snug line-clamp-1 sm:line-clamp-none">{action.description}</p>
+                    <h3 className="mb-1 text-sm font-bold tracking-tight leading-tight sm:text-base lg:text-lg">{action.title}</h3>
+                    <p className="text-xs text-white text-opacity-90 leading-snug line-clamp-1 sm:line-clamp-none">{action.description}</p>
                   </div>
                 </button>
               ))}

@@ -9,7 +9,15 @@ export type QuickActionsSortMethod = 'default' | 'alphabetical' | 'mostUsed';
 
 const MIN_FONT_SIZE = 12;
 const MAX_FONT_SIZE = 22;
-const DEFAULT_FONT_SIZE = 16;
+// 16px is Tailwind's "no scaling" baseline for its rem-based type/spacing
+// scale, which is what document.documentElement's font-size drives (see the
+// fontSize effect below) — so this one constant nudges nearly every text
+// size and rem-based spacing in the app up together. Defaulting a bit above
+// the platform baseline makes the out-of-the-box experience easier to read
+// for users who won't discover the Settings > Font Size slider themselves;
+// anyone who already picked their own size (saved to localStorage) is
+// unaffected.
+const DEFAULT_FONT_SIZE = 18;
 
 interface SettingsContextType {
   dateSortingMethod: DateSortingMethod;
