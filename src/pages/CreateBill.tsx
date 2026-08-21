@@ -281,14 +281,22 @@ export default function CreateBill() {
         toDate: bill.to_date,
         fromDate: bill.from_date,
         dailyRent: bill.daily_rent,
-        extraCosts: (extraCosts || []).map((c: any) => ({
-          id: c.id,
-          date: c.date,
-          note: c.note,
-          pieces: c.pieces,
-          pricePerPiece: c.price_per_piece,
-          total: c.total_amount || (c.pieces * c.price_per_piece)
-        })),
+        extraCosts: (extraCosts || []).map((c: any) => {
+          let note = c.note || '';
+          if (note.includes('ભાડાની હમાલી (ઉધાર ચલણ')) {
+            note = note.replace(/ભાડાની હમાલી \(ઉધાર ચલણ/g, 'ચડાય (ઉધાર ચલણ');
+          } else if (note.includes('ભાડાની હમાલી (જમા ચલણ')) {
+            note = note.replace(/ભાડાની હમાલી \(જમા ચલણ/g, 'ઉતરાય (જમા ચલણ');
+          }
+          return {
+            id: c.id,
+            date: c.date,
+            note: note,
+            pieces: c.pieces,
+            pricePerPiece: c.price_per_piece,
+            total: c.total_amount || (c.pieces * c.price_per_piece)
+          };
+        }),
         discounts: (discounts || []).map((d: any) => ({
           id: d.id,
           date: d.date,
@@ -915,7 +923,7 @@ export default function CreateBill() {
               challanExtraCosts.push({
                 id: `udhar-${num}-loading`,
                 date: ch.udhar_date,
-                note: language === 'gu' ? `ભાડાની હમાલી (ઉધાર ચલણ #${num})` : `Loading & Unloading Charges (Udhar Challan #${num})`,
+                note: language === 'gu' ? `ચડાય (ઉધાર ચલણ #${num})` : `Loading Charges (Udhar Challan #${num})`,
                 pieces: 1,
                 pricePerPiece: loadVal,
                 total: loadVal,
@@ -956,7 +964,7 @@ export default function CreateBill() {
               challanExtraCosts.push({
                 id: `jama-${num}-loading`,
                 date: ch.jama_date,
-                note: language === 'gu' ? `ભાડાની હમાલી (જમા ચલણ #${num})` : `Loading & Unloading Charges (Jama Challan #${num})`,
+                note: language === 'gu' ? `ઉતરાય (જમા ચલણ #${num})` : `Unloading Charges (Jama Challan #${num})`,
                 pieces: 1,
                 pricePerPiece: loadVal,
                 total: loadVal,

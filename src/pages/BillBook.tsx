@@ -295,14 +295,22 @@ export default function BillBook() {
           jamaDetails: p.jamaDetails,
           sizeId: p.sizeId,
         })),
-        extraCosts: (extraCosts || []).map((c: any) => ({
-          id: c.id,
-          date: c.date,
-          description: c.note,
-          amount: c.total_amount || (c.pieces * c.price_per_piece),
-          pieces: c.pieces,
-          rate: c.price_per_piece
-        })),
+        extraCosts: (extraCosts || []).map((c: any) => {
+          let description = c.note || '';
+          if (description.includes('ભાડાની હમાલી (ઉધાર ચલણ')) {
+            description = description.replace(/ભાડાની હમાલી \(ઉધાર ચલણ/g, 'ચડાય (ઉધાર ચલણ');
+          } else if (description.includes('ભાડાની હમાલી (જમા ચલણ')) {
+            description = description.replace(/ભાડાની હમાલી \(જમા ચલણ/g, 'ઉતરાય (જમા ચલણ');
+          }
+          return {
+            id: c.id,
+            date: c.date,
+            description: description,
+            amount: c.total_amount || (c.pieces * c.price_per_piece),
+            pieces: c.pieces,
+            rate: c.price_per_piece
+          };
+        }),
         discounts: mappedDiscounts,
         payments: (payments || []).map((p: any) => ({
           id: p.id, date: p.date, method: p.payment_method, note: p.note, amount: p.amount

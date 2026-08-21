@@ -224,9 +224,17 @@ export default function Payments() {
                     txnQty: (p.txnQty !== undefined && p.txnQty !== null) ? p.txnQty : 0,
                     sizeId: p.sizeId,
                 })),
-                extraCosts: (extraCosts || []).map((c: any) => ({
-                    id: c.id, date: c.date, description: c.note, amount: c.total_amount || (c.pieces * c.price_per_piece), pieces: c.pieces, rate: c.price_per_piece
-                })),
+                extraCosts: (extraCosts || []).map((c: any) => {
+                    let description = c.note || '';
+                    if (description.includes('ભાડાની હમાલી (ઉધાર ચલણ')) {
+                        description = description.replace(/ભાડાની હમાલી \(ઉધાર ચલણ/g, 'ચડાય (ઉધાર ચલણ');
+                    } else if (description.includes('ભાડાની હમાલી (જમા ચલણ')) {
+                        description = description.replace(/ભાડાની હમાલી \(જમા ચલણ/g, 'ઉતરાય (જમા ચલણ');
+                    }
+                    return {
+                        id: c.id, date: c.date, description: description, amount: c.total_amount || (c.pieces * c.price_per_piece), pieces: c.pieces, rate: c.price_per_piece
+                    };
+                }),
                 discounts: (discounts || []).map((d: any) => ({
                     id: d.id, date: d.date, description: d.note, amount: d.total_amount || (d.pieces * d.discount_per_piece)
                 })),

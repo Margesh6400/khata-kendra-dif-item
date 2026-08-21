@@ -316,17 +316,22 @@ const BillInvoiceTemplate: React.FC<BillInvoiceProps> = ({
               })}
 
               {/* Extra Costs Rows */}
-              {extraCosts.map((cost, index) => (
-                <tr key={`extra-${index}`} style={{ borderBottom: '1px solid #000' }}>
-                  <td style={{ borderRight: '1px solid #000', padding: '4px', textAlign: 'center' }}>-</td>
-                  <td colSpan={5} style={{ borderRight: '1px solid #000', padding: '6px 8px', fontWeight: 'bold' }}>
-                    {cost.description} {cost.pieces && cost.rate ? `(${cost.pieces} × ₹${cost.rate})` : ''}
-                  </td>
-                  <td style={{ padding: '6px 8px', textAlign: 'right', fontWeight: 'bold' }}>
-                    {formatIndianCurrency(cost.amount)}
-                  </td>
-                </tr>
-              ))}
+              {extraCosts.map((cost, index) => {
+                const desc = (cost.description || '')
+                  .replace(/ભાડાની હમાલી \(ઉધાર ચલણ/g, 'ચડાય (ઉધાર ચલણ')
+                  .replace(/ભાડાની હમાલી \(જમા ચલણ/g, 'ઉતરાય (જમા ચલણ');
+                return (
+                  <tr key={`extra-${index}`} style={{ borderBottom: '1px solid #000' }}>
+                    <td style={{ borderRight: '1px solid #000', padding: '4px', textAlign: 'center' }}>-</td>
+                    <td colSpan={5} style={{ borderRight: '1px solid #000', padding: '6px 8px', fontWeight: 'bold' }}>
+                      {desc} {cost.pieces && cost.rate ? `(${cost.pieces} × ₹${cost.rate})` : ''}
+                    </td>
+                    <td style={{ padding: '6px 8px', textAlign: 'right', fontWeight: 'bold' }}>
+                      {formatIndianCurrency(cost.amount)}
+                    </td>
+                  </tr>
+                );
+              })}
 
               {/* Payments Received Rows */}
               {payments.map((payment, index) => (
