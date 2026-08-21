@@ -156,7 +156,7 @@ const ClientSelectionStep: React.FC<ClientSelectionStepProps> = ({
       {/* Results Count - Compact */}
       {searchQuery && (
         <div className="px-3 py-1.5 sm:px-4 sm:py-2 border border-blue-200 rounded-lg bg-blue-50">
-          <p className="text-[10px] sm:text-xs lg:text-sm text-blue-700">
+          <p className="text-xs sm:text-xs lg:text-sm text-blue-700">
             {t('clientsFound')}: <span className="font-semibold">{filteredClients.length}</span>
           </p>
         </div>
@@ -169,7 +169,7 @@ const ClientSelectionStep: React.FC<ClientSelectionStepProps> = ({
             <User className="w-6 h-6 text-gray-400 sm:w-7 sm:h-7 lg:w-8 lg:h-8" />
           </div>
           <h3 className="mb-2 text-sm font-semibold text-gray-900 sm:text-base lg:text-lg">{t('noClientsFound')}</h3>
-          <p className="mb-3 text-[10px] sm:text-xs lg:text-sm text-gray-500 sm:mb-4">
+          <p className="mb-3 text-xs sm:text-xs lg:text-sm text-gray-500 sm:mb-4">
             {searchQuery ? t('tryAdjustingSearch') : t('addYourFirstClient')}
           </p>
           <button
@@ -195,13 +195,13 @@ const ClientSelectionStep: React.FC<ClientSelectionStepProps> = ({
                   <h4 className="text-sm font-semibold text-gray-900 truncate transition-colors sm:text-base lg:text-lg group-hover:text-blue-600">
                     {client.client_nic_name}
                   </h4>
-                  <p className="text-[10px] sm:text-xs lg:text-sm text-gray-600 truncate">{client.client_name}</p>
+                  <p className="text-xs sm:text-xs lg:text-sm text-gray-600 truncate">{client.client_name}</p>
                 </div>
                 <ChevronRight className="flex-shrink-0 w-4 h-4 text-gray-400 transition-transform sm:w-5 sm:h-5 group-hover:translate-x-1" />
               </div>
               <div className="pt-2 mt-2 border-t border-gray-100 sm:pt-3 sm:mt-3">
                 {/* Mobile: Location and Phone in one line | Desktop: Stacked */}
-                <div className="flex items-center gap-2 text-[10px] sm:text-xs lg:text-sm text-gray-600">
+                <div className="flex items-center gap-2 text-xs sm:text-xs lg:text-sm text-gray-600">
                   <span className="flex items-center gap-1">
                     <MapPin className="flex-shrink-0 w-3 h-3 text-gray-400 sm:w-3.5 sm:h-3.5" />
                     <span className="truncate">{client.site}</span>
@@ -563,7 +563,7 @@ const ChallanDetailsStep: React.FC<ChallanDetailsStepProps> = ({
                 <h3 className="text-sm font-semibold text-gray-900 sm:text-base lg:text-lg">
                   {t('extraCostOption') || 'Extra Cost'}
                 </h3>
-                <p className="text-[10px] sm:text-xs text-gray-500">{t('optional') || 'Optional'}</p>
+                <p className="text-xs text-gray-500">{t('optional') || 'Optional'}</p>
               </div>
             </div>
             <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 sm:gap-4">
@@ -1160,7 +1160,7 @@ const UdharChallan: React.FC = () => {
             <>
               <div className="hidden mb-4 sm:block sm:mb-6 lg:mb-8">
                 <h2 className="text-xl font-bold text-gray-900 sm:text-2xl lg:text-3xl">{t('udharChallanTitle')}</h2>
-                <p className="mt-1 text-[10px] sm:text-xs lg:text-sm lg:mt-2 text-gray-600">{t('udharChallanSubtitle')}</p>
+                <p className="mt-1 text-xs sm:text-xs lg:text-sm lg:mt-2 text-gray-600">{t('udharChallanSubtitle')}</p>
               </div>
               {showQuickAdd && (
                 <>
