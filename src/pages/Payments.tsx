@@ -12,12 +12,17 @@ import toast, { Toaster } from 'react-hot-toast';
 import * as periodCalculations from "../utils/billingPeriodCalculations";
 import { usePlateSizes } from '../hooks/usePlateSizes';
 import { formatLocalDate } from '../utils/dateUtils';
+import { getBusinessInfo } from '../utils/businessInfo';
 
 type Tab = 'pending' | 'cleared';
 
 export default function Payments() {
-    const { t } = useLanguage();
-    const { dateSortingMethod, shareBillMode, enableCategorySeparation, activeCategory } = useSettings();
+    const { t, language } = useLanguage();
+    const {
+        dateSortingMethod, shareBillMode, enableCategorySeparation, activeCategory,
+        useCustomBusinessInfo, businessName, businessPhone, businessAddress,
+    } = useSettings();
+    const businessInfo = getBusinessInfo({ useCustomBusinessInfo, businessName, businessPhone, businessAddress }, language);
     const navigate = useNavigate();
     const { sizes: plateSizes } = usePlateSizes();
     const [activeTab, setActiveTab] = useState<Tab>('pending');
@@ -193,11 +198,7 @@ export default function Payments() {
 
             // 4. Construct Full Bill Object
             const fullBillData = {
-                companyDetails: {
-                    name: "ખાતા કેન્દ્ર",
-                    address: "10, Ajmaldham Society, Simada Gam, Surat.",
-                    phone: "93287 28228",
-                },
+                companyDetails: businessInfo,
                 billDetails: {
                     billNumber: bill.bill_number,
                     billDate: billDateStr,
@@ -314,7 +315,7 @@ export default function Payments() {
 બાકી રકમ: ₹${due.toLocaleString("en-IN")}
 
 આભાર,
-ખાતા કેન્દ્ર`;
+${businessInfo.name}`;
             } else {
                 message = `Dear Customer,
 Here are your bill details:
@@ -327,7 +328,7 @@ Total Amount: ₹${amount.toLocaleString("en-IN")}
 Balance Due: ₹${due.toLocaleString("en-IN")}
 
 Thank you,
-Khata Kendra`;
+${businessInfo.name}`;
             }
             
             window.open(`https://api.whatsapp.com/send?phone=${finalPhone}&text=${encodeURIComponent(message)}`, "_blank");

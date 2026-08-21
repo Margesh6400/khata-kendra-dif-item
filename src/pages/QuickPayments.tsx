@@ -30,6 +30,7 @@ import { useLanguage } from '../contexts/LanguageContext';
 import { useSettings } from '../contexts/SettingsContext';
 import toast, { Toaster } from 'react-hot-toast';
 import { formatLocalDate } from '../utils/dateUtils';
+import { getBusinessInfo } from '../utils/businessInfo';
 
 interface ClientPaymentCardData {
   id: string;
@@ -58,7 +59,11 @@ interface PaymentRecord {
 
 export default function QuickPayments() {
   const { t, language } = useLanguage();
-  const { enableCategorySeparation, enableCategoryClientSeparation, activeCategory } = useSettings();
+  const {
+    enableCategorySeparation, enableCategoryClientSeparation, activeCategory,
+    useCustomBusinessInfo, businessName, businessPhone, businessAddress,
+  } = useSettings();
+  const businessInfo = getBusinessInfo({ useCustomBusinessInfo, businessName, businessPhone, businessAddress }, language);
   const navigate = useNavigate();
 
   const [activeTab, setActiveTab] = useState<'cards' | 'ledger'>('cards');
@@ -330,7 +335,7 @@ export default function QuickPayments() {
 બાકી રકમ: ₹${Math.max(0, selectedClient.due_payment - amountNum).toLocaleString('en-IN')}
 
 આભાર,
-ખાતા કેન્દ્ર`
+${businessInfo.name}`
           : `Dear ${selectedClient.client_name},
 We have received your payment:
 
@@ -341,7 +346,7 @@ Bill #: #${targetBillNumber}
 Remaining Balance: ₹${Math.max(0, selectedClient.due_payment - amountNum).toLocaleString('en-IN')}
 
 Thank you,
-Khata Kendra`;
+${businessInfo.name}`;
 
         window.open(`https://api.whatsapp.com/send?phone=${finalPhone}&text=${encodeURIComponent(message)}`, "_blank");
       }

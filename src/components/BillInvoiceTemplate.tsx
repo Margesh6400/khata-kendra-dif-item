@@ -4,6 +4,11 @@ import { formatIndianCurrency } from '../utils/currencyFormat';
 import logoBw from '../assets/logo_bw.png';
 
 interface BillInvoiceProps {
+  companyDetails?: {
+    name: string;
+    address: string;
+    phone: string;
+  };
   billDetails: {
     billNumber: string;
     billDate: string;
@@ -83,33 +88,14 @@ const KhataKendraLogo = () => (
   </div>
 );
 
-const JackPropsSVG = () => (
-  <svg width="50" height="42" viewBox="0 0 80 65" stroke="#000" fill="none" strokeWidth="2.5">
-    <g>
-      <line x1="12" y1="12" x2="12" y2="60" />
-      <line x1="6" y1="12" x2="18" y2="12" />
-      <line x1="6" y1="60" x2="18" y2="60" />
-      <circle cx="12" cy="26" r="3.5" fill="#000" />
-
-      <line x1="30" y1="8" x2="30" y2="60" />
-      <line x1="24" y1="8" x2="36" y2="8" />
-      <line x1="24" y1="60" x2="36" y2="60" />
-      <circle cx="30" cy="22" r="3.5" fill="#000" />
-
-      <line x1="48" y1="8" x2="48" y2="60" />
-      <line x1="42" y1="8" x2="54" y2="8" />
-      <line x1="42" y1="60" x2="54" y2="60" />
-      <circle cx="48" cy="22" r="3.5" fill="#000" />
-
-      <line x1="66" y1="12" x2="66" y2="60" />
-      <line x1="60" y1="12" x2="72" y2="12" />
-      <line x1="60" y1="60" x2="72" y2="60" />
-      <circle cx="66" cy="26" r="3.5" fill="#000" />
-    </g>
-  </svg>
-);
+const DEFAULT_COMPANY_DETAILS = {
+  name: 'ખાતા કેન્દ્ર',
+  address: 'ઓફિસ-૨૩/૨૪, જે.જે. નગર, પુણાગામ, કનૈયા કોમ્પ.ની પાછળ, ઝુપડપટ્ટીની સામે, પુણા ટુ બોમ્બે માર્કેટ રોડ, સુરત.',
+  phone: '(૦) ૦૨૬૧-૨૮૫૪૩૦૭',
+};
 
 const BillInvoiceTemplate: React.FC<BillInvoiceProps> = ({
+  companyDetails,
   billDetails,
   clientDetails,
   rentalCharges,
@@ -119,16 +105,11 @@ const BillInvoiceTemplate: React.FC<BillInvoiceProps> = ({
   mainNote,
   previousBill,
 }) => {
-  const categoryTitle = (() => {
-    const cat = (billDetails.category || '').toLowerCase();
-    if (cat.includes('pharma') || cat.includes('ફર્મા')) return 'ફર્મા ભાડા બિલ';
-    if (cat.includes('khapeda') || cat.includes('ખપેડા')) return 'ખપેડા ભાડા બિલ';
-    if (cat.includes('jack') || cat.includes('જેક')) return 'જેક ભાડા બિલ';
-    if (cat.includes('cuplock') || cat.includes('કપલોક')) return 'કપલોક ભાડા બિલ';
-    if (cat.includes('shuttering') || cat.includes('શટરિંગ')) return 'શટરિંગ ભાડા બિલ';
-    if (cat.includes('zhula') || cat.includes('ઝુલા') || cat.includes('ઝૂલા')) return 'ઝૂલા ભાડા બિલ';
-    return 'અંદાજીત ભાડા બિલ';
-  })();
+  const company = {
+    name: companyDetails?.name || DEFAULT_COMPANY_DETAILS.name,
+    address: companyDetails?.address || DEFAULT_COMPANY_DETAILS.address,
+    phone: companyDetails?.phone || DEFAULT_COMPANY_DETAILS.phone,
+  };
 
   const formatLocalDate = (dateStr?: string) => {
     if (!dateStr) return '';
@@ -154,59 +135,42 @@ const BillInvoiceTemplate: React.FC<BillInvoiceProps> = ({
         {/* ══════════ TOP HEADER SECTION ══════════ */}
         <div style={{ borderBottom: '2px solid #000' }}>
           {/* Top Info Row */}
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '8px 14px', borderBottom: '1.5px solid #000' }}>
-            {/* Left Phone & Logo */}
-            <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '10px 16px', borderBottom: '1.5px solid #000' }}>
+            {/* Left: Logo */}
+            <div style={{ display: 'flex', alignItems: 'center', flex: 1 }}>
               <KhataKendraLogo />
-              <div style={{ fontSize: '11px', fontWeight: 'bold', lineHeight: 1.3 }}>
-                (૦) ૦૨૬૧-૨૮૫૪૩૦૭
-              </div>
             </div>
 
             {/* Center Religious Title & Header */}
-            <div style={{ textAlign: 'center' }}>
+            <div style={{ textAlign: 'center', flex: 2 }}>
               <div style={{ fontSize: '11px', fontWeight: 'bold', letterSpacing: '0.5px' }}>
                 ॥ શ્રી ગણેશાય નમઃ ॥
               </div>
-              <div style={{ fontSize: '38px', fontWeight: '900', lineHeight: 1.1, letterSpacing: '1px' }}>
-                ખાતા કેન્દ્ર
+              <div style={{ fontSize: '30px', fontWeight: '900', lineHeight: 1.15, letterSpacing: '0.5px', marginTop: '2px', wordBreak: 'break-word' }}>
+                {company.name}
               </div>
-              <div style={{ fontSize: '12px', fontWeight: 'bold', marginTop: '1px' }}>
+              <div style={{ fontSize: '12px', fontWeight: 'bold', marginTop: '4px' }}>
                 જેક ટેકા * સ્પેન * પ્લેટ * ઝુલા
-              </div>
-              <div style={{ fontSize: '10px', fontWeight: '600' }}>
-                (સેન્ટરીંગ સામાનવાળા)
               </div>
             </div>
 
-            {/* Right Estimate Bill Pill & Jacks Logo */}
-            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: '4px' }}>
-              <div style={{
-                backgroundColor: '#000',
-                color: '#fff',
-                padding: '4px 16px',
-                borderRadius: '6px',
-                fontWeight: 'bold',
-                fontSize: '13px',
-                letterSpacing: '0.5px',
-              }}>
-                {categoryTitle}
-              </div>
-              <JackPropsSVG />
+            {/* Right: Phone / Mobile Number */}
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', flex: 1, fontSize: '12px', fontWeight: 'bold', lineHeight: 1.3, textAlign: 'right' }}>
+              {company.phone}
             </div>
           </div>
 
           {/* Sub-Header Address Row */}
-          <div style={{ padding: '4px 10px', textAlign: 'center', fontSize: '10.5px', fontWeight: 'bold', backgroundColor: '#f8fafc', borderBottom: '1px solid #000' }}>
-            ઓફિસ-૨૩/૨૪, જે.જે. નગર, પુણાગામ, કનૈયા કોમ્પ.ની પાછળ, ઝુપડપટ્ટીની સામે, પુણા ટુ બોમ્બે માર્કેટ રોડ, સુરત.
+          <div style={{ padding: '6px 12px', textAlign: 'center', fontSize: '11px', fontWeight: 'bold', letterSpacing: '0.2px', backgroundColor: '#f8fafc', borderBottom: '1px solid #000' }}>
+            {company.address}
           </div>
         </div>
 
         {/* ══════════ CLIENT DETAILS GRID BOX ══════════ */}
-        <div style={{ padding: '8px 12px', borderBottom: '2px solid #000' }}>
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 220px', gap: '8px', fontSize: '14px', fontWeight: 'bold' }}>
+        <div style={{ padding: '10px 12px', borderBottom: '2px solid #000' }}>
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 220px', gap: '10px', fontSize: '14px', fontWeight: 'bold' }}>
             {/* Left: Client Name & Site */}
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
               <div style={{ display: 'flex', alignItems: 'baseline' }}>
                 <span style={{ whiteSpace: 'nowrap', width: '55px' }}>નામ :</span>
                 <span style={{ borderBottom: '1px dotted #000', flex: 1, paddingLeft: '4px', fontSize: '15px' }}>
@@ -222,7 +186,7 @@ const BillInvoiceTemplate: React.FC<BillInvoiceProps> = ({
             </div>
 
             {/* Right: Bill Number & Date */}
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
               <div style={{ display: 'flex', alignItems: 'baseline' }}>
                 <span style={{ whiteSpace: 'nowrap', width: '60px' }}>નંબર :</span>
                 <span style={{ borderBottom: '1px dotted #000', flex: 1, textAlign: 'center', fontSize: '15px' }}>
@@ -244,13 +208,13 @@ const BillInvoiceTemplate: React.FC<BillInvoiceProps> = ({
           <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '12.5px' }}>
             <thead>
               <tr style={{ backgroundColor: '#f1f5f9', borderBottom: '2px solid #000' }}>
-                <th style={{ borderRight: '1px solid #000', padding: '6px 4px', width: '7%', textAlign: 'center', fontWeight: 'bold' }}>નંગ</th>
-                <th style={{ borderRight: '1px solid #000', padding: '6px 4px', width: '22%', textAlign: 'center', fontWeight: 'bold' }}>આ.તારીખ</th>
-                <th style={{ borderRight: '1px solid #000', padding: '6px 4px', width: '22%', textAlign: 'center', fontWeight: 'bold' }}>જ.તારીખ</th>
-                <th style={{ borderRight: '1px solid #000', padding: '6px 4px', width: '10%', textAlign: 'center', fontWeight: 'bold' }}>ભાવ</th>
-                <th style={{ borderRight: '1px solid #000', padding: '6px 4px', width: '13%', textAlign: 'center', fontWeight: 'bold' }}>૧ દિવસનુ</th>
-                <th style={{ borderRight: '1px solid #000', padding: '6px 4px', width: '11%', textAlign: 'center', fontWeight: 'bold' }}>કુ. દિવસ</th>
-                <th style={{ padding: '6px 4px', width: '15%', textAlign: 'right', fontWeight: 'bold', paddingRight: '8px' }}>કુલ રકમ</th>
+                <th style={{ borderRight: '1px solid #000', padding: '7px 4px', width: '7%', textAlign: 'center', fontWeight: 'bold', letterSpacing: '0.2px' }}>નંગ</th>
+                <th style={{ borderRight: '1px solid #000', padding: '7px 4px', width: '22%', textAlign: 'center', fontWeight: 'bold', letterSpacing: '0.2px' }}>આ.તારીખ</th>
+                <th style={{ borderRight: '1px solid #000', padding: '7px 4px', width: '22%', textAlign: 'center', fontWeight: 'bold', letterSpacing: '0.2px' }}>જ.તારીખ</th>
+                <th style={{ borderRight: '1px solid #000', padding: '7px 4px', width: '10%', textAlign: 'center', fontWeight: 'bold', letterSpacing: '0.2px' }}>ભાવ</th>
+                <th style={{ borderRight: '1px solid #000', padding: '7px 4px', width: '13%', textAlign: 'center', fontWeight: 'bold', letterSpacing: '0.2px' }}>૧ દિવસનુ</th>
+                <th style={{ borderRight: '1px solid #000', padding: '7px 4px', width: '11%', textAlign: 'center', fontWeight: 'bold', letterSpacing: '0.2px' }}>કુ. દિવસ</th>
+                <th style={{ padding: '7px 8px', width: '15%', textAlign: 'right', fontWeight: 'bold', letterSpacing: '0.2px' }}>કુલ રકમ</th>
               </tr>
             </thead>
             <tbody>
@@ -291,40 +255,42 @@ const BillInvoiceTemplate: React.FC<BillInvoiceProps> = ({
                 const oneDayAmount = Math.round(charge.pieces * dailyRate);
                 const isZeroBalance = charge.pieces === 0 && charge.days === 0;
 
+                const rowBg = index % 2 === 1 ? '#fafcff' : undefined;
+
                 return (
-                  <tr key={`charge-${index}`} style={{ borderBottom: '1px solid #000', height: '28px' }}>
+                  <tr key={`charge-${index}`} style={{ borderBottom: '1px solid #000', height: '28px', backgroundColor: rowBg }}>
                     {/* 1. નંગ (Pieces) */}
-                    <td style={{ borderRight: '1px solid #000', padding: '4px', textAlign: 'center', fontWeight: 'bold' }}>
+                    <td style={{ borderRight: '1px solid #000', padding: '5px 4px', textAlign: 'center', fontWeight: 'bold' }}>
                       {charge.pieces}
                     </td>
 
                     {/* 2. આ.તારીખ (Udhar Date) */}
-                    <td style={{ borderRight: '1px solid #000', padding: '4px', textAlign: 'center', fontWeight: '500' }}>
+                    <td style={{ borderRight: '1px solid #000', padding: '5px 4px', textAlign: 'center', fontWeight: '500' }}>
                       {rowStartDate}
                     </td>
 
                     {/* 3. જ.તારીખ (Jama Date) */}
-                    <td style={{ borderRight: '1px solid #000', padding: '4px', textAlign: 'center', fontWeight: '500' }}>
+                    <td style={{ borderRight: '1px solid #000', padding: '5px 4px', textAlign: 'center', fontWeight: '500' }}>
                       {isZeroBalance ? '-' : `થી ${rowEndDate}`}
                     </td>
 
                     {/* 4. ભાવ (Rate) */}
-                    <td style={{ borderRight: '1px solid #000', padding: '4px', textAlign: 'center', fontWeight: '500' }}>
+                    <td style={{ borderRight: '1px solid #000', padding: '5px 4px', textAlign: 'center', fontWeight: '500' }}>
                       {isZeroBalance ? '-' : dailyRate}
                     </td>
 
                     {/* 5. ૧ દિવસનુ (1 Day Rent = Pieces * Rate) */}
-                    <td style={{ borderRight: '1px solid #000', padding: '4px', textAlign: 'center', fontWeight: '600' }}>
+                    <td style={{ borderRight: '1px solid #000', padding: '5px 4px', textAlign: 'center', fontWeight: '600' }}>
                       {isZeroBalance ? '-' : formatIndianCurrency(oneDayAmount)}
                     </td>
 
                     {/* 6. કુ. દિવસ (Total Days) */}
-                    <td style={{ borderRight: '1px solid #000', padding: '4px', textAlign: 'center', fontWeight: 'bold' }}>
+                    <td style={{ borderRight: '1px solid #000', padding: '5px 4px', textAlign: 'center', fontWeight: 'bold' }}>
                       {isZeroBalance ? '-' : charge.days}
                     </td>
 
                     {/* 7. કુલ રકમ (Total Amount) */}
-                    <td style={{ padding: '4px 8px', textAlign: 'right', fontWeight: 'bold' }}>
+                    <td style={{ padding: '5px 8px', textAlign: 'right', fontWeight: 'bold' }}>
                       {isZeroBalance ? '-' : formatIndianCurrency(Math.round(charge.amount))}
                     </td>
                   </tr>
@@ -395,13 +361,9 @@ const BillInvoiceTemplate: React.FC<BillInvoiceProps> = ({
 
         {/* ══════════ FOOTER SUMMARY SECTION (MATCHES UPLOADED IMAGE BOTTOM) ══════════ */}
         <div style={{ borderTop: '2px solid #000', display: 'grid', gridTemplateColumns: '1fr 220px' }}>
-          {/* Left Column: Total label & Terms */}
-          <div style={{ borderRight: '2px solid #000', padding: '8px 12px', display: 'flex', flexDirection: 'column', justifyContent: 'space-between' }}>
-            <div style={{ fontSize: '14px', fontWeight: 'bold' }}>
-              કુલ રૂ.
-            </div>
-            <div style={{ fontSize: '10.5px', fontWeight: 'bold', lineHeight: 1.4, marginTop: '8px' }}>
-              <div>• સુરત ન્યાય ક્ષેત્રને આધીન</div>
+          {/* Left Column: Terms */}
+          <div style={{ borderRight: '2px solid #000', padding: '8px 12px', display: 'flex', flexDirection: 'column', justifyContent: 'flex-end' }}>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', fontSize: '10.5px', fontWeight: 'bold', lineHeight: 1.4 }}>
               <div>• દર રવિવારે તથા જાહેર તહેવારે ઓફિસ બંધ રહેશે.</div>
               <div>• ભૂલ-ચૂક લેવી-દેવી.</div>
             </div>
@@ -423,7 +385,7 @@ const BillInvoiceTemplate: React.FC<BillInvoiceProps> = ({
             {/* Signature Area */}
             <div style={{ padding: '8px 10px', textAlign: 'right', display: 'flex', flexDirection: 'column', alignItems: 'flex-end', justifyContent: 'flex-end', flex: 1 }}>
               <div style={{ fontSize: '13px', fontWeight: '900' }}>
-                ફોર, ખાતા કેન્દ્ર
+                ફોર, {company.name}
               </div>
               <div style={{ height: '25px' }}></div>
               <div style={{ fontSize: '10px', fontWeight: 'bold', borderTop: '1px dotted #000', paddingTop: '2px', width: '110px', textAlign: 'center' }}>

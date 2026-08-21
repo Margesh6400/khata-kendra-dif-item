@@ -41,6 +41,14 @@ interface SettingsContextType {
   setQuickActionsSortMethod: (method: QuickActionsSortMethod) => void;
   visibleQuickActions: string[];
   setVisibleQuickActions: (actions: string[]) => void;
+  useCustomBusinessInfo: boolean;
+  setUseCustomBusinessInfo: (val: boolean) => void;
+  businessName: string;
+  setBusinessName: (name: string) => void;
+  businessPhone: string;
+  setBusinessPhone: (phone: string) => void;
+  businessAddress: string;
+  setBusinessAddress: (address: string) => void;
 }
 
 const SettingsContext = createContext<SettingsContextType | undefined>(undefined);
@@ -109,6 +117,18 @@ export const SettingsProvider: React.FC<{ children: ReactNode }> = ({ children }
     }
     return ['/udhar-challan', '/jama-challan', '/client-ledger', '/stock', '/clients', '/challan-book', '/billing', '/bill-book', '/settings'];
   });
+
+  // Business identity (name/phone/address) printed on bills and WhatsApp
+  // messages. When disabled, the app falls back to the built-in
+  // "Khata Kendra" default for the current language — see utils/businessInfo.ts.
+  const [useCustomBusinessInfo, setUseCustomBusinessInfoState] = useState<boolean>(() => {
+    const saved = localStorage.getItem('useCustomBusinessInfo');
+    return saved === 'true';
+  });
+
+  const [businessName, setBusinessNameState] = useState<string>(() => localStorage.getItem('businessName') || '');
+  const [businessPhone, setBusinessPhoneState] = useState<string>(() => localStorage.getItem('businessPhone') || '');
+  const [businessAddress, setBusinessAddressState] = useState<string>(() => localStorage.getItem('businessAddress') || '');
 
   // Helper to push setting updates to Supabase app_settings
   const syncAppSetting = (key: string, value: string) => {
@@ -197,6 +217,24 @@ export const SettingsProvider: React.FC<{ children: ReactNode }> = ({ children }
           } catch (e) {
             // ignore JSON error
           }
+          break;
+        case 'use_custom_business_info': {
+          const val = value === 'true';
+          setUseCustomBusinessInfoState(val);
+          localStorage.setItem('useCustomBusinessInfo', String(val));
+          break;
+        }
+        case 'business_name':
+          setBusinessNameState(value);
+          localStorage.setItem('businessName', value);
+          break;
+        case 'business_phone':
+          setBusinessPhoneState(value);
+          localStorage.setItem('businessPhone', value);
+          break;
+        case 'business_address':
+          setBusinessAddressState(value);
+          localStorage.setItem('businessAddress', value);
           break;
       }
     };
@@ -397,6 +435,30 @@ export const SettingsProvider: React.FC<{ children: ReactNode }> = ({ children }
     syncAppSetting('visible_quick_actions', JSON.stringify(actions));
   };
 
+  const setUseCustomBusinessInfo = (val: boolean) => {
+    setUseCustomBusinessInfoState(val);
+    localStorage.setItem('useCustomBusinessInfo', String(val));
+    syncAppSetting('use_custom_business_info', String(val));
+  };
+
+  const setBusinessName = (name: string) => {
+    setBusinessNameState(name);
+    localStorage.setItem('businessName', name);
+    syncAppSetting('business_name', name);
+  };
+
+  const setBusinessPhone = (phone: string) => {
+    setBusinessPhoneState(phone);
+    localStorage.setItem('businessPhone', phone);
+    syncAppSetting('business_phone', phone);
+  };
+
+  const setBusinessAddress = (address: string) => {
+    setBusinessAddressState(address);
+    localStorage.setItem('businessAddress', address);
+    syncAppSetting('business_address', address);
+  };
+
   return (
     <SettingsContext.Provider value={{
       dateSortingMethod,
@@ -428,6 +490,14 @@ export const SettingsProvider: React.FC<{ children: ReactNode }> = ({ children }
       setQuickActionsSortMethod,
       visibleQuickActions,
       setVisibleQuickActions,
+      useCustomBusinessInfo,
+      setUseCustomBusinessInfo,
+      businessName,
+      setBusinessName,
+      businessPhone,
+      setBusinessPhone,
+      businessAddress,
+      setBusinessAddress,
     }}>
       {children}
     </SettingsContext.Provider>

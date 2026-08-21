@@ -12,12 +12,17 @@ import { useNavigate } from "react-router-dom";
 import BillCard, { BillRecord } from "../components/BillCard";
 import { usePlateSizes } from "../hooks/usePlateSizes";
 import { formatLocalDate } from "../utils/dateUtils";
+import { getBusinessInfo } from "../utils/businessInfo";
 
 type SortOption = 'dateNewOld' | 'dateOldNew' | 'amountHighLow' | 'amountLowHigh';
 
 export default function BillBook() {
-  const { t } = useLanguage();
-  const { dateSortingMethod, shareBillMode, enableCategorySeparation, activeCategory } = useSettings();
+  const { t, language } = useLanguage();
+  const {
+    dateSortingMethod, shareBillMode, enableCategorySeparation, activeCategory,
+    useCustomBusinessInfo, businessName, businessPhone, businessAddress,
+  } = useSettings();
+  const businessInfo = getBusinessInfo({ useCustomBusinessInfo, businessName, businessPhone, businessAddress }, language);
   const navigate = useNavigate();
   const { sizes: plateSizes } = usePlateSizes();
 
@@ -260,11 +265,7 @@ export default function BillBook() {
 
       // 4. Construct Full Bill Object
       const fullBillData = {
-        companyDetails: {
-          name: "ખાતા કેન્દ્ર",
-          address: "10, Ajmaldham Society, Simada Gam, Surat.",
-          phone: "93287 28228",
-        },
+        companyDetails: businessInfo,
         billDetails: {
           billNumber: bill.bill_number,
           billDate: billDateStr,
@@ -489,7 +490,7 @@ export default function BillBook() {
 બાકી રકમ: ₹${due.toLocaleString("en-IN")}
 
 આભાર,
-ખાતા કેન્દ્ર`;
+${businessInfo.name}`;
       } else {
         message = `Dear Customer,
 Here are your bill details:
@@ -502,7 +503,7 @@ Total Amount: ₹${amount.toLocaleString("en-IN")}
 Balance Due: ₹${due.toLocaleString("en-IN")}
 
 Thank you,
-Khata Kendra`;
+${businessInfo.name}`;
       }
       
       window.open(`https://api.whatsapp.com/send?phone=${finalPhone}&text=${encodeURIComponent(message)}`, "_blank");
@@ -533,7 +534,7 @@ Khata Kendra`;
           await navigator.share({
             files: [file],
             title: `Bill #${bill.bill_number}`,
-            text: `ખાતા કેન્દ્ર બિલ #${bill.bill_number}`
+            text: `${businessInfo.name} બિલ #${bill.bill_number}`
           });
           toast.success("Shared successfully");
           return;

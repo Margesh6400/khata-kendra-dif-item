@@ -28,6 +28,7 @@ import Navbar from "../components/Navbar";
 import toast, { Toaster } from "react-hot-toast";
 import { ClientFormData } from "../components/ClientForm";
 import { usePlateSizes } from "../hooks/usePlateSizes";
+import { getBusinessInfo } from "../utils/businessInfo";
 
 
 
@@ -131,7 +132,11 @@ export default function CreateBill() {
   const editBillNumber = searchParams.get("edit");
   const isEditMode = !!editBillNumber;
   const { t, language } = useLanguage();
-  const { dateSortingMethod, enableCategorySeparation, enableCategoryClientSeparation, activeCategory, showExtraCost } = useSettings();
+  const {
+    dateSortingMethod, enableCategorySeparation, enableCategoryClientSeparation, activeCategory, showExtraCost,
+    useCustomBusinessInfo, businessName, businessPhone, businessAddress,
+  } = useSettings();
+  const businessInfo = getBusinessInfo({ useCustomBusinessInfo, businessName, businessPhone, businessAddress }, language);
   const { sizes: rawPlateSizes } = usePlateSizes();
   const plateSizes = useMemo(() => {
     if (enableCategorySeparation && activeCategory) {
@@ -1178,11 +1183,7 @@ export default function CreateBill() {
   }
 
   const invoiceProps = {
-    companyDetails: {
-      name: "ખાતા કેન્દ્ર",
-      address: "10, Ajmaldham Society, Simada Gam, Surat.",
-      phone: "93287 28228",
-    },
+    companyDetails: businessInfo,
     billDetails: {
       billNumber: billData.billNumber,
       billDate: billData.billDate,

@@ -3,9 +3,10 @@ import { useNavigate } from 'react-router-dom';
 import Navbar from '../components/Navbar';
 import { useLanguage } from '../contexts/LanguageContext';
 import { useSettings } from '../contexts/SettingsContext';
-import { Settings as SettingsIcon, Globe, Layers, CheckCircle, Download, Type, Lock, Shield, Fingerprint, Key, Share2, CalendarClock, LayoutGrid, ChevronRight } from 'lucide-react';
+import { Settings as SettingsIcon, Globe, Layers, CheckCircle, Download, Type, Lock, Shield, Fingerprint, Key, Share2, CalendarClock, LayoutGrid, ChevronRight, Building2 } from 'lucide-react';
 import toast, { Toaster } from 'react-hot-toast';
 import { supabase } from '../utils/supabase';
+import { DEFAULT_BUSINESS_INFO, getBusinessInfo } from '../utils/businessInfo';
 
 const Settings: React.FC = () => {
   const navigate = useNavigate();
@@ -36,7 +37,20 @@ const Settings: React.FC = () => {
     setQuickActionsSortMethod,
     visibleQuickActions,
     setVisibleQuickActions,
+    useCustomBusinessInfo,
+    setUseCustomBusinessInfo,
+    businessName,
+    setBusinessName,
+    businessPhone,
+    setBusinessPhone,
+    businessAddress,
+    setBusinessAddress,
   } = useSettings();
+
+  const resolvedBusinessInfo = getBusinessInfo(
+    { useCustomBusinessInfo, businessName, businessPhone, businessAddress },
+    language
+  );
 
   const [securityEnabled, setSecurityEnabled] = React.useState(() => localStorage.getItem('security_lock_enabled') === 'true');
   const [pin, setPin] = React.useState(() => localStorage.getItem('security_lock_pin') || '1234');
@@ -627,6 +641,121 @@ const Settings: React.FC = () => {
                       English
                     </button>
                   </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Business Information Settings Card */}
+            <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
+              <div className="p-4 sm:p-6 border-b border-gray-100 bg-gray-50/50 flex items-center gap-3">
+                <Building2 className="w-5 h-5 text-blue-600" />
+                <h3 className="font-bold text-gray-900 text-base sm:text-lg">
+                  {language === 'gu' ? 'વ્યવસાયની માહિતી' : 'Business Information'}
+                </h3>
+              </div>
+              <div className="p-4 sm:p-6 space-y-6">
+                <div>
+                  <label className="block text-sm font-semibold text-gray-700 mb-3">
+                    {language === 'gu' ? 'બિલ અને વોટ્સએપ સંદેશમાં કયું નામ બતાવવું?' : 'Which identity should appear on bills & WhatsApp messages?'}
+                  </label>
+                  <div className="grid gap-4 sm:grid-cols-2">
+                    {/* Default Option */}
+                    <button
+                      onClick={() => setUseCustomBusinessInfo(false)}
+                      className={`relative p-4 rounded-xl border text-left transition-all ${!useCustomBusinessInfo
+                          ? 'border-blue-600 bg-blue-50/40 ring-1 ring-blue-500'
+                          : 'border-gray-200 hover:border-gray-300 bg-white'
+                        }`}
+                    >
+                      <div className="flex justify-between items-start mb-2">
+                        <span className="font-bold text-sm sm:text-base text-gray-900">
+                          {language === 'gu' ? 'મૂળભૂત (Khata Kendra)' : 'Default (Khata Kendra)'}
+                        </span>
+                        {!useCustomBusinessInfo && (
+                          <CheckCircle className="w-5 h-5 text-blue-600" />
+                        )}
+                      </div>
+                      <p className="text-xs text-gray-500 leading-relaxed">
+                        {language === 'gu'
+                          ? 'ખાતા કેન્દ્ર, બ્લુ સિટી, સીમાડા, સુરત — 88664 71567'
+                          : 'Khata Kendra, Blue City, Simada, Surat — 88664 71567'}
+                      </p>
+                    </button>
+
+                    {/* Custom Option */}
+                    <button
+                      onClick={() => setUseCustomBusinessInfo(true)}
+                      className={`relative p-4 rounded-xl border text-left transition-all ${useCustomBusinessInfo
+                          ? 'border-blue-600 bg-blue-50/40 ring-1 ring-blue-500'
+                          : 'border-gray-200 hover:border-gray-300 bg-white'
+                        }`}
+                    >
+                      <div className="flex justify-between items-start mb-2">
+                        <span className="font-bold text-sm sm:text-base text-gray-900">
+                          {language === 'gu' ? 'મારો પોતાનો વ્યવસાય' : 'My Own Business'}
+                        </span>
+                        {useCustomBusinessInfo && (
+                          <CheckCircle className="w-5 h-5 text-blue-600" />
+                        )}
+                      </div>
+                      <p className="text-xs text-gray-500 leading-relaxed">
+                        {language === 'gu'
+                          ? 'નીચે તમારું નામ, ફોન નંબર અને સરનામું દાખલ કરો.'
+                          : 'Enter your own name, phone number, and address below.'}
+                      </p>
+                    </button>
+                  </div>
+                </div>
+
+                {useCustomBusinessInfo && (
+                  <div className="grid gap-4 sm:grid-cols-2 pt-2 border-t border-gray-100">
+                    <div className="sm:col-span-2">
+                      <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1.5">
+                        {language === 'gu' ? 'વ્યવસાયનું નામ' : 'Business Name'}
+                      </label>
+                      <input
+                        type="text"
+                        value={businessName}
+                        onChange={(e) => setBusinessName(e.target.value)}
+                        placeholder={DEFAULT_BUSINESS_INFO[language].name}
+                        className="w-full py-2.5 px-3.5 text-gray-900 border border-gray-300 rounded-xl focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 focus:outline-none"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1.5">
+                        {language === 'gu' ? 'ફોન નંબર' : 'Phone Number'}
+                      </label>
+                      <input
+                        type="text"
+                        value={businessPhone}
+                        onChange={(e) => setBusinessPhone(e.target.value)}
+                        placeholder={DEFAULT_BUSINESS_INFO[language].phone}
+                        className="w-full py-2.5 px-3.5 text-gray-900 border border-gray-300 rounded-xl focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 focus:outline-none"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1.5">
+                        {language === 'gu' ? 'સરનામું' : 'Address'}
+                      </label>
+                      <input
+                        type="text"
+                        value={businessAddress}
+                        onChange={(e) => setBusinessAddress(e.target.value)}
+                        placeholder={DEFAULT_BUSINESS_INFO[language].address}
+                        className="w-full py-2.5 px-3.5 text-gray-900 border border-gray-300 rounded-xl focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 focus:outline-none"
+                      />
+                    </div>
+                  </div>
+                )}
+
+                {/* Live preview */}
+                <div className="p-4 rounded-xl border border-dashed border-gray-200 bg-gray-50">
+                  <p className="text-[11px] text-gray-400 mb-1.5 font-medium uppercase tracking-wide">
+                    {t('preview') || 'Preview'}
+                  </p>
+                  <p className="text-sm font-bold text-gray-800 leading-snug">{resolvedBusinessInfo.name}</p>
+                  <p className="text-xs text-gray-500 mt-0.5 leading-snug">{resolvedBusinessInfo.address}</p>
+                  <p className="text-xs text-gray-500 leading-snug">{resolvedBusinessInfo.phone}</p>
                 </div>
               </div>
             </div>
