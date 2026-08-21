@@ -56,6 +56,10 @@
   box-sizing: border-box;
   margin: 0;
   padding: 0;
+  /* Native momentum scrolling inside any scrollable panel (modals, tables,
+     the app shell's <main>) on older iOS Safari versions that don't apply
+     it by default. Unknown elsewhere, so this is safe to leave unscoped. */
+  -webkit-overflow-scrolling: touch;
 }
 
 body {
@@ -68,6 +72,9 @@ body {
      scroll areas when installed as a standalone PWA. */
   overscroll-behavior-y: none;
   -webkit-tap-highlight-color: transparent;
+  /* Crisper text on Retina displays — WebKit/Gecko-only, ignored elsewhere. */
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
 }
 
 @media (max-width: 1024px) {

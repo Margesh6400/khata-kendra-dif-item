@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { 
   CreditCard, 
@@ -31,6 +31,7 @@ import { useSettings } from '../contexts/SettingsContext';
 import toast, { Toaster } from 'react-hot-toast';
 import { formatLocalDate } from '../utils/dateUtils';
 import { getBusinessInfo } from '../utils/businessInfo';
+import { isIOSDevice } from '../utils/platform';
 
 interface ClientPaymentCardData {
   id: string;
@@ -95,6 +96,38 @@ export default function QuickPayments() {
   const [showPayModal, setShowPayModal] = useState<boolean>(false);
 
   const isGu = language === 'gu';
+
+  // iOS/iPadOS-only polish: a native-style grabber handle + swipe-down-to-dismiss
+  // on the payment sheet. iOS Safari also doesn't fire :active on tap unless
+  // something in the ancestor chain is listening for touch events, so this
+  // same effect quietly makes every active:* press-state class on this page
+  // actually work on a real iPhone.
+  const [isIOS, setIsIOS] = useState(false);
+  const [sheetDragY, setSheetDragY] = useState(0);
+  const [isDraggingSheet, setIsDraggingSheet] = useState(false);
+  const sheetTouchStartY = useRef<number | null>(null);
+
+  useEffect(() => {
+    setIsIOS(isIOSDevice());
+  }, []);
+
+  const handleSheetTouchStart = (e: React.TouchEvent) => {
+    sheetTouchStartY.current = e.touches[0].clientY;
+    setIsDraggingSheet(true);
+  };
+  const handleSheetTouchMove = (e: React.TouchEvent) => {
+    if (sheetTouchStartY.current === null) return;
+    const delta = e.touches[0].clientY - sheetTouchStartY.current;
+    if (delta > 0) setSheetDragY(delta);
+  };
+  const handleSheetTouchEnd = () => {
+    setIsDraggingSheet(false);
+    if (sheetDragY > 110) {
+      setShowPayModal(false);
+    }
+    setSheetDragY(0);
+    sheetTouchStartY.current = null;
+  };
 
   // Load clients and their outstanding balances
   const loadData = async () => {
@@ -920,23 +953,42 @@ ${businessInfo.name}`;
       {/* QUICK PAYMENT ENTRY MODAL */}
       {showPayModal && selectedClient && (
         <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/60 backdrop-blur-xs animate-fadeIn">
-          <div className="bg-white w-full sm:max-w-md rounded-t-2xl sm:rounded-2xl shadow-2xl border border-gray-200 flex flex-col max-h-[92vh] sm:max-h-[88vh]">
+          <div
+            className="bg-white w-full sm:max-w-md rounded-t-2xl sm:rounded-2xl shadow-2xl border border-gray-200 flex flex-col max-h-[92vh] sm:max-h-[88vh] overflow-hidden"
+            style={{
+              transform: sheetDragY ? `translateY(${sheetDragY}px)` : undefined,
+              transition: isDraggingSheet ? 'none' : 'transform 0.25s ease-out',
+            }}
+          >
 
-            {/* Modal Header */}
-            <div className="p-4 bg-emerald-600 text-white flex items-center justify-between shrink-0">
-              <div className="flex items-center gap-2">
-                <Wallet className="w-5 h-5" />
-                <h3 className="text-base font-bold">
-                  {isGu ? 'ચૂકવણી જમા કરો' : 'Record Payment'}
-                </h3>
+            {/* Modal Header — the grabber (iOS/iPadOS only) doubles as the swipe-to-dismiss zone */}
+            <div
+              className="bg-emerald-600 text-white shrink-0"
+              onTouchStart={isIOS ? handleSheetTouchStart : undefined}
+              onTouchMove={isIOS ? handleSheetTouchMove : undefined}
+              onTouchEnd={isIOS ? handleSheetTouchEnd : undefined}
+              style={isIOS ? { touchAction: 'none' } : undefined}
+            >
+              {isIOS && (
+                <div className="flex justify-center pt-2 sm:hidden">
+                  <div className="w-10 h-1.5 rounded-full bg-white/40" />
+                </div>
+              )}
+              <div className="p-4 flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <Wallet className="w-5 h-5" />
+                  <h3 className="text-base font-bold">
+                    {isGu ? 'ચૂકવણી જમા કરો' : 'Record Payment'}
+                  </h3>
+                </div>
+                <button
+                  onClick={() => setShowPayModal(false)}
+                  aria-label={isGu ? 'બંધ કરો' : 'Close'}
+                  className="flex items-center justify-center w-9 h-9 text-emerald-100 hover:text-white rounded-full hover:bg-emerald-700 transition-colors"
+                >
+                  <X className="w-5 h-5" />
+                </button>
               </div>
-              <button
-                onClick={() => setShowPayModal(false)}
-                aria-label={isGu ? 'બંધ કરો' : 'Close'}
-                className="flex items-center justify-center w-9 h-9 text-emerald-100 hover:text-white rounded-full hover:bg-emerald-700 transition-colors"
-              >
-                <X className="w-5 h-5" />
-              </button>
             </div>
 
             {/* Form — scrolls internally so the Confirm button is always reachable, even with the keyboard open */}

@@ -9,6 +9,13 @@ import { isIOSDevice } from '../utils/platform';
  * a different point, since a single masked blur layer looks like one flat
  * band rather than a gradient. Purely decorative: pointer-events-none, and
  * renders nothing at all on non-Apple devices.
+ *
+ * Also carries a second, invisible iOS fix: Safari never fires the CSS
+ * `:active` pseudo-class on tap unless *something* in the document is
+ * listening for touch events — a long-standing WebKit quirk. Without this,
+ * every `active:scale-95` / `active:bg-*` press state used across the app
+ * (buttons, cards, FABs) silently does nothing on a real iPhone. A single
+ * no-op touchstart listener on iOS is the standard fix.
  */
 const IOSTopBlur: React.FC = () => {
   const [isIOS, setIsIOS] = useState(false);
@@ -16,6 +23,13 @@ const IOSTopBlur: React.FC = () => {
   useEffect(() => {
     setIsIOS(isIOSDevice());
   }, []);
+
+  useEffect(() => {
+    if (!isIOS) return;
+    const noop = () => {};
+    document.addEventListener('touchstart', noop, { passive: true });
+    return () => document.removeEventListener('touchstart', noop);
+  }, [isIOS]);
 
   if (!isIOS) return null;
 
