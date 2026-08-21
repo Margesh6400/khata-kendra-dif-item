@@ -574,7 +574,7 @@ const ClientManagement: React.FC = () => {
                       <h3 className="text-base font-semibold text-gray-900 sm:text-lg">
                         {editingClient ? t('editClient') : t('addNewClient')}
                       </h3>
-                      <p className="text-[10px] sm:text-xs text-gray-500">
+                      <p className="text-xs text-gray-500">
                         {editingClient ? t('editClient') : t('addNewClient')}
                       </p>
                     </div>
@@ -609,7 +609,7 @@ const ClientManagement: React.FC = () => {
               </div>
               <div>
                 <h3 className="text-sm font-semibold text-gray-900 sm:text-base lg:text-xl">{t('clientList')}</h3>
-                <p className="text-[9px] sm:text-[10px] lg:text-sm text-gray-500 leading-tight">
+                <p className="text-xs lg:text-sm text-gray-500 leading-tight">
                   {clients.length} {t('clientsWord') || 'clients'}
                 </p>
               </div>
@@ -628,7 +628,7 @@ const ClientManagement: React.FC = () => {
                   <Users className="w-5 h-5 text-gray-400 sm:w-6 sm:h-6 lg:w-8 lg:h-8" />
                 </div>
                 <h3 className="mb-1.5 text-sm font-semibold text-gray-900 sm:text-base sm:mb-2 lg:text-lg">{t('noClientsYet')}</h3>
-                <p className="mb-3 text-[10px] sm:text-xs text-gray-500 sm:mb-4 lg:text-sm lg:mb-6">{t('getStartedByAdding')}</p>
+                <p className="mb-3 text-xs sm:text-xs text-gray-500 sm:mb-4 lg:text-sm lg:mb-6">{t('getStartedByAdding')}</p>
                 <button
                   onClick={() => setShowForm(true)}
                   className="hidden lg:inline-flex items-center gap-2 px-5 py-2.5 text-sm font-medium text-white bg-blue-600 rounded-lg hover:bg-blue-700 shadow-sm hover:shadow-md"

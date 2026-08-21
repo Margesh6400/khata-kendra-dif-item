@@ -1527,7 +1527,7 @@ const StockManagement: React.FC = () => {
                               {client.notes.map((note, idx) => (
                                 <p
                                   key={idx}
-                                  className="text-[10px] text-purple-700 bg-purple-50 px-1.5 py-0.5 rounded w-fit"
+                                  className="text-xs text-purple-700 bg-purple-50 px-1.5 py-0.5 rounded w-fit"
                                 >
                                   {note}
                                 </p>

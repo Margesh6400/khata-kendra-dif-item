@@ -270,7 +270,7 @@ const ItemsTable: React.FC<ItemsTableProps> = ({
       key={ps.id}
       className={index % 2 === 0 ? "bg-white" : "bg-gray-50"}
     >
-      <td className={`sticky left-0 z-10 px-1 py-1.5 text-[10px] font-bold text-center text-gray-900 border-r-2 border-gray-300 w-12 min-w-[48px] sm:w-16 sm:min-w-[64px] sm:px-2 sm:text-sm ${index % 2 === 0 ? "bg-white" : "bg-gray-50"}`}>
+      <td className={`sticky left-0 z-10 px-1 py-1.5 text-xs font-bold text-center text-gray-900 border-r-2 border-gray-300 w-12 min-w-[48px] sm:w-16 sm:min-w-[64px] sm:px-2 sm:text-sm ${index % 2 === 0 ? "bg-white" : "bg-gray-50"}`}>
         {ps.name}
       </td>
       {outstandingBalances && (
@@ -549,7 +549,7 @@ const ItemsTable: React.FC<ItemsTableProps> = ({
               <table className="min-w-full border-collapse">
                 <thead>
                   <tr className="bg-gray-100 border-b-2 border-gray-300">
-                    <th className="sticky left-0 z-10 px-1 py-1.5 text-[10px] font-bold text-center text-gray-700 bg-gray-100 border-r-2 border-gray-300 w-12 min-w-[48px] sm:w-16 sm:min-w-[64px] sm:px-2 sm:text-xs">
+                    <th className="sticky left-0 z-10 px-1 py-1.5 text-xs font-bold text-center text-gray-700 bg-gray-100 border-r-2 border-gray-300 w-12 min-w-[48px] sm:w-16 sm:min-w-[64px] sm:px-2 sm:text-xs">
                       {t("size")}
                     </th>
                     {outstandingBalances && (
@@ -601,7 +601,7 @@ const ItemsTable: React.FC<ItemsTableProps> = ({
                         onClick={() => toggleSection('shuttering')}
                         className="font-semibold border-y select-none transition-colors bg-blue-50/70 text-blue-800 border-blue-100 cursor-pointer"
                       >
-                        <td colSpan={10} className="px-2 py-1 text-[11px] sm:text-xs font-bold sticky left-0 z-10 text-left transition-colors bg-blue-50/70">
+                        <td colSpan={10} className="px-2 py-1 text-xs font-bold sticky left-0 z-10 text-left transition-colors bg-blue-50/70">
                           <div className="flex items-center gap-1.5">
                             {collapsedSections.shuttering ? (
                               <ChevronRight className="w-3.5 h-3.5 text-blue-600" />
@@ -625,7 +625,7 @@ const ItemsTable: React.FC<ItemsTableProps> = ({
                         onClick={() => toggleSection('jack')}
                         className="font-semibold border-y select-none transition-colors bg-purple-50/70 text-purple-800 border-purple-100 cursor-pointer"
                       >
-                        <td colSpan={10} className="px-2 py-1 text-[11px] sm:text-xs font-bold sticky left-0 z-10 text-left transition-colors bg-purple-50/70">
+                        <td colSpan={10} className="px-2 py-1 text-xs font-bold sticky left-0 z-10 text-left transition-colors bg-purple-50/70">
                           <div className="flex items-center gap-1.5">
                             {collapsedSections.jack ? (
                               <ChevronRight className="w-3.5 h-3.5 text-purple-600" />
@@ -649,7 +649,7 @@ const ItemsTable: React.FC<ItemsTableProps> = ({
                         onClick={() => toggleSection('cuplock')}
                         className="font-semibold border-y select-none transition-colors bg-orange-50/70 text-orange-800 border-orange-100 cursor-pointer"
                       >
-                        <td colSpan={10} className="px-2 py-1 text-[11px] sm:text-xs font-bold sticky left-0 z-10 text-left transition-colors bg-orange-50/70">
+                        <td colSpan={10} className="px-2 py-1 text-xs font-bold sticky left-0 z-10 text-left transition-colors bg-orange-50/70">
                           <div className="flex items-center gap-1.5">
                             {collapsedSections.cuplock ? (
                               <ChevronRight className="w-3.5 h-3.5 text-orange-600" />
@@ -673,7 +673,7 @@ const ItemsTable: React.FC<ItemsTableProps> = ({
                         onClick={() => toggleSection('other')}
                         className="font-semibold border-y select-none transition-colors bg-green-50/70 text-green-800 border-green-100 cursor-pointer"
                       >
-                        <td colSpan={10} className="px-2 py-1 text-[11px] sm:text-xs font-bold sticky left-0 z-10 text-left transition-colors bg-green-50/70">
+                        <td colSpan={10} className="px-2 py-1 text-xs font-bold sticky left-0 z-10 text-left transition-colors bg-green-50/70">
                           <div className="flex items-center gap-1.5">
                             {collapsedSections.other ? (
                               <ChevronRight className="w-3.5 h-3.5 text-green-600" />
