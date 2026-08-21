@@ -554,7 +554,7 @@ Khata Kendra`;
                     <div className="relative bg-white rounded-lg shadow-xl w-full max-w-5xl h-[90vh] flex flex-col">
                         <div className="flex items-center justify-between p-4 border-b">
                             <h3 className="text-lg font-medium text-gray-900 truncate pr-2">
-                                View Bill: {selectedBill.billDetails.billNumber}
+                                {t("viewBill") || "બિલ જુઓ"}: {selectedBill.billDetails.billNumber}
                             </h3>
                             <div className="flex gap-2 shrink-0">
                                 <button
@@ -567,16 +567,16 @@ Khata Kendra`;
                                             document.body.appendChild(link);
                                             link.click();
                                             document.body.removeChild(link);
-                                            toast.success("Bill downloaded successfully");
+                                            toast.success(t("challanDownloadSuccess") || "બિલ ડાઉનલોડ થઈ ગયું");
                                         } catch (e) {
                                             console.error(e);
-                                            toast.error("Failed to download");
+                                            toast.error(t("challanDownloadError") || "ડાઉનલોડ કરવામાં ભૂલ આવી");
                                         }
                                     }}
                                     className="p-2 text-green-600 hover:bg-green-50 rounded-lg flex items-center gap-1"
                                 >
                                     <Download className="w-5 h-5" />
-                                    <span className="text-sm font-medium hidden sm:inline">Download</span>
+                                    <span className="text-sm font-medium hidden sm:inline">{t("download") || "ડાઉનલોડ"}</span>
                                 </button>
                                 <button
                                     onClick={() => setShowModal(false)}

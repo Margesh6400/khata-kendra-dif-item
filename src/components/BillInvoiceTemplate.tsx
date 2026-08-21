@@ -1,6 +1,7 @@
 import React from 'react';
 import { format } from 'date-fns';
 import { formatIndianCurrency } from '../utils/currencyFormat';
+import logoBw from '../assets/logo_bw.png';
 
 interface BillInvoiceProps {
   billDetails: {
@@ -67,13 +68,18 @@ interface BillInvoiceProps {
   };
 }
 
-const MavaniLogoSVG = () => (
-  <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
-    <svg width="55" height="35" viewBox="0 0 100 65" fill="#000">
-      <path d="M10,55 L28,15 L45,45 L62,15 L80,55 L70,55 L53,28 L45,42 L37,28 L20,55 Z" />
-      <path d="M5,22 C35,2 75,18 90,28 C65,12 35,10 15,32 Z" opacity="0.85" />
-    </svg>
-    <div style={{ fontSize: '12px', fontWeight: '900', letterSpacing: '1px', marginTop: '2px', color: '#000' }}>MAVANI</div>
+const KhataKendraLogo = () => (
+  <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center' }}>
+    <img
+      src={logoBw}
+      alt="Khata Kendra Logo"
+      style={{
+        width: '52px',
+        height: '52px',
+        objectFit: 'contain',
+        display: 'block',
+      }}
+    />
   </div>
 );
 
@@ -119,8 +125,9 @@ const BillInvoiceTemplate: React.FC<BillInvoiceProps> = ({
     if (cat.includes('khapeda') || cat.includes('ખપેડા')) return 'ખપેડા ભાડા બિલ';
     if (cat.includes('jack') || cat.includes('જેક')) return 'જેક ભાડા બિલ';
     if (cat.includes('cuplock') || cat.includes('કપલોક')) return 'કપલોક ભાડા બિલ';
-    if (cat.includes('shuttering')) return 'શટરિંગ ભાડા બિલ';
-    return 'ઝૂલા ભાડા બિલ';
+    if (cat.includes('shuttering') || cat.includes('શટરિંગ')) return 'શટરિંગ ભાડા બિલ';
+    if (cat.includes('zhula') || cat.includes('ઝુલા') || cat.includes('ઝૂલા')) return 'ઝૂલા ભાડા બિલ';
+    return 'અંદાજીત ભાડા બિલ';
   })();
 
   const formatLocalDate = (dateStr?: string) => {
@@ -150,7 +157,7 @@ const BillInvoiceTemplate: React.FC<BillInvoiceProps> = ({
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '8px 14px', borderBottom: '1.5px solid #000' }}>
             {/* Left Phone & Logo */}
             <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-              <MavaniLogoSVG />
+              <KhataKendraLogo />
               <div style={{ fontSize: '11px', fontWeight: 'bold', lineHeight: 1.3 }}>
                 (૦) ૦૨૬૧-૨૮૫૪૩૦૭
               </div>
@@ -162,7 +169,7 @@ const BillInvoiceTemplate: React.FC<BillInvoiceProps> = ({
                 ॥ શ્રી ગણેશાય નમઃ ॥
               </div>
               <div style={{ fontSize: '38px', fontWeight: '900', lineHeight: 1.1, letterSpacing: '1px' }}>
-                માવાણી
+                ખાતા કેન્દ્ર
               </div>
               <div style={{ fontSize: '12px', fontWeight: 'bold', marginTop: '1px' }}>
                 જેક ટેકા * સ્પેન * પ્લેટ * ઝુલા
@@ -250,7 +257,16 @@ const BillInvoiceTemplate: React.FC<BillInvoiceProps> = ({
               {/* Category Subtitle Row */}
               <tr style={{ borderBottom: '1px solid #000', backgroundColor: '#fafafa' }}>
                 <td colSpan={7} style={{ padding: '4px 8px', fontWeight: 'bold', fontSize: '13px', fontStyle: 'italic' }}>
-                  ઝુલા
+                  {(() => {
+                    const cat = (billDetails.category || '').toLowerCase();
+                    if (cat.includes('pharma') || cat.includes('ફર્મા')) return 'ફર્મા';
+                    if (cat.includes('khapeda') || cat.includes('ખપેડા')) return 'ખપેડા';
+                    if (cat.includes('jack') || cat.includes('જેક')) return 'જેક';
+                    if (cat.includes('cuplock') || cat.includes('કપલોક')) return 'કપલોક';
+                    if (cat.includes('shuttering') || cat.includes('શટરિંગ')) return 'શટરિંગ / પ્લેટ';
+                    if (cat.includes('zhula') || cat.includes('ઝુલા') || cat.includes('ઝૂલા')) return 'ઝૂલા';
+                    return 'સેન્ટિંગ / ભાડા સામાન';
+                  })()}
                 </td>
               </tr>
 
@@ -334,17 +350,25 @@ const BillInvoiceTemplate: React.FC<BillInvoiceProps> = ({
               })}
 
               {/* Payments Received Rows */}
-              {payments.map((payment, index) => (
-                <tr key={`pay-${index}`} style={{ borderBottom: '1px solid #000' }}>
-                  <td style={{ borderRight: '1px solid #000', padding: '4px', textAlign: 'center' }}>-</td>
-                  <td colSpan={5} style={{ borderRight: '1px solid #000', padding: '6px 8px', fontWeight: 'bold' }}>
-                    ચુકવણી મળી ({formatLocalDate(payment.date)} - {payment.method} {payment.note ? `[${payment.note}]` : ''})
-                  </td>
-                  <td style={{ padding: '6px 8px', textAlign: 'right', fontWeight: 'bold' }}>
-                    -{formatIndianCurrency(payment.amount)}
-                  </td>
-                </tr>
-              ))}
+              {payments.map((payment, index) => {
+                const methodLabel =
+                  payment.method === 'cash' ? 'રોકડ' :
+                  payment.method === 'bank' ? 'બેંક' :
+                  payment.method === 'cheque' ? 'ચેક' :
+                  payment.method === 'online' ? 'ઓનલાઇન' :
+                  payment.method;
+                return (
+                  <tr key={`pay-${index}`} style={{ borderBottom: '1px solid #000' }}>
+                    <td style={{ borderRight: '1px solid #000', padding: '4px', textAlign: 'center' }}>-</td>
+                    <td colSpan={5} style={{ borderRight: '1px solid #000', padding: '6px 8px', fontWeight: 'bold' }}>
+                      ચુકવણી મળી ({formatLocalDate(payment.date)} - {methodLabel} {payment.note ? `[${payment.note}]` : ''})
+                    </td>
+                    <td style={{ padding: '6px 8px', textAlign: 'right', fontWeight: 'bold' }}>
+                      -{formatIndianCurrency(payment.amount)}
+                    </td>
+                  </tr>
+                );
+              })}
 
               {/* Empty Rows Padding to match physical printed slip layout */}
               {Array.from({ length: Math.max(0, 10 - rentalCharges.length - extraCosts.length - payments.length) }).map((_, i) => (
@@ -387,7 +411,7 @@ const BillInvoiceTemplate: React.FC<BillInvoiceProps> = ({
           <div style={{ display: 'flex', flexDirection: 'column', justifyContent: 'space-between', padding: '0' }}>
             {/* TOTAL Header & Amount */}
             <div style={{ borderBottom: '2px solid #000', padding: '6px 10px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-              <span style={{ fontSize: '14px', fontWeight: '900' }}>TOTAL</span>
+              <span style={{ fontSize: '14px', fontWeight: '900' }}>કુલ રકમ</span>
               <span style={{ fontSize: '16px', fontWeight: '900' }}>
                 {(() => {
                   const finalDue = summary.duePayment < 0 ? Math.abs(summary.duePayment) : summary.duePayment;
@@ -399,11 +423,11 @@ const BillInvoiceTemplate: React.FC<BillInvoiceProps> = ({
             {/* Signature Area */}
             <div style={{ padding: '8px 10px', textAlign: 'right', display: 'flex', flexDirection: 'column', alignItems: 'flex-end', justifyContent: 'flex-end', flex: 1 }}>
               <div style={{ fontSize: '13px', fontWeight: '900' }}>
-                ફોર, માવાણી
+                ફોર, ખાતા કેન્દ્ર
               </div>
               <div style={{ height: '25px' }}></div>
               <div style={{ fontSize: '10px', fontWeight: 'bold', borderTop: '1px dotted #000', paddingTop: '2px', width: '110px', textAlign: 'center' }}>
-                Authorized Signature
+                અધિકૃત સહી
               </div>
             </div>
           </div>
