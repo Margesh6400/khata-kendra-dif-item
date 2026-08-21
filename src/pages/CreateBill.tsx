@@ -210,15 +210,15 @@ export default function CreateBill() {
     }
   }, [clientId, isEditMode, editBillNumber]);
 
-  // Auto-calculate bill when parameters change, if ledger is already shown
+  // Auto-calculate bill when parameters change
   useEffect(() => {
-    if (showLedger && billData.toDate && billData.dailyRent) {
+    if (billData.toDate && billData.dailyRent) {
       const timer = setTimeout(() => {
         calculateBill();
-      }, 500);
+      }, 400);
       return () => clearTimeout(timer);
     }
-  }, [billData.toDate, billData.dailyRent, JSON.stringify(client?.jack_rents)]);
+  }, [billData.toDate, billData.fromDate, billData.dailyRent, JSON.stringify(client?.jack_rents)]);
 
   const fetchBillForEdit = async (billNumber: string) => {
     setIsLoading(true);
@@ -851,7 +851,7 @@ export default function CreateBill() {
     setIsLoading(true);
     try {
       // Fetch Udhar challans with their items & extra costs
-      const { data: udharChallans, error: udharError } = await supabase
+      let udharQuery = supabase
         .from("udhar_challans")
         .select(
           `
@@ -862,14 +862,20 @@ export default function CreateBill() {
           loading_unloading_charges,
           vehicle_rent,
           deposit,
+          category,
           items:udhar_items (
             items,
             main_note
           )
         `
         )
-        .eq("client_id", clientId)
-        .order("udhar_date", { ascending: true });
+        .eq("client_id", clientId);
+
+      if (enableCategorySeparation && activeCategory) {
+        udharQuery = udharQuery.eq("category", activeCategory);
+      }
+
+      const { data: udharChallans, error: udharError } = await udharQuery.order("udhar_date", { ascending: true });
 
       console.log("Udhar Challans:", udharChallans);
 
@@ -879,7 +885,7 @@ export default function CreateBill() {
       }
 
       // Fetch Jama challans with their items & extra costs
-      const { data: rawJamaChallans, error: jamaError } = await supabase
+      let jamaQuery = supabase
         .from("jama_challans")
         .select(
           `
@@ -891,111 +897,133 @@ export default function CreateBill() {
           loading_unloading_charges,
           vehicle_rent,
           deposit,
+          category,
           items:jama_items (
             items,
             main_note
           )
         `
         )
-        .eq("client_id", clientId)
-        .order("jama_date", { ascending: true });
+        .eq("client_id", clientId);
+
+      if (enableCategorySeparation && activeCategory) {
+        jamaQuery = jamaQuery.eq("category", activeCategory);
+      }
+
+      const { data: rawJamaChallans, error: jamaError } = await jamaQuery.order("jama_date", { ascending: true });
 
       if (jamaError) throw jamaError;
 
       const jamaChallans = rawJamaChallans;
       console.log("Jama Challans:", jamaChallans);
 
-      if (udharChallans && udharChallans.length > 0) {
-        // Extract extra costs & deposit discounts from challans in billing period if showExtraCost setting is enabled
+      if ((udharChallans && udharChallans.length > 0) || (jamaChallans && jamaChallans.length > 0)) {
+        // Extract extra costs & deposit discounts from challans in billing period
         const challanExtraCosts: typeof billData.extraCosts = [];
         const challanDiscounts: typeof billData.discounts = [];
-        if (showExtraCost) {
-          const filterDate = (d: string) => {
-            if (!d) return true;
-            if (billData.fromDate && d < billData.fromDate) return false;
-            if (billData.toDate && d > billData.toDate) return false;
-            return true;
-          };
 
-          (udharChallans || []).forEach((ch: any) => {
-            if (!filterDate(ch.udhar_date)) return;
-            const num = ch.udhar_challan_number;
-            const loadVal = Number(ch.loading_unloading_charges || 0);
-            const rentVal = Number(ch.vehicle_rent || 0);
-            const depVal = Number(ch.deposit || 0);
+        const filterDate = (d: string) => {
+          if (!d) return true;
+          const dStr = String(d).split('T')[0];
+          const fromStr = billData.fromDate ? String(billData.fromDate).split('T')[0] : '';
+          const toStr = billData.toDate ? String(billData.toDate).split('T')[0] : '';
+          if (fromStr && dStr < fromStr) return false;
+          if (toStr && dStr > toStr) return false;
+          return true;
+        };
 
-            if (loadVal > 0) {
-              challanExtraCosts.push({
-                id: `udhar-${num}-loading`,
-                date: ch.udhar_date,
-                note: language === 'gu' ? `ચડાય (ઉધાર ચલણ #${num})` : `Loading Charges (Udhar Challan #${num})`,
-                pieces: 1,
-                pricePerPiece: loadVal,
-                total: loadVal,
-                isFromChallan: true,
-              } as any);
-            }
-            if (rentVal > 0) {
-              challanExtraCosts.push({
-                id: `udhar-${num}-rent`,
-                date: ch.udhar_date,
-                note: language === 'gu' ? `વાહન ભાડું (ઉધાર ચલણ #${num})` : `Vehicle Rent (Udhar Challan #${num})`,
-                pieces: 1,
-                pricePerPiece: rentVal,
-                total: rentVal,
-                isFromChallan: true,
-              } as any);
-            }
-            if (depVal > 0) {
-              challanDiscounts.push({
-                id: `udhar-${num}-deposit`,
-                date: ch.udhar_date,
-                note: language === 'gu' ? `ડિપોઝિટ જમા (ઉધાર ચલણ #${num})` : `Deposit Credit (Udhar Challan #${num})`,
-                pieces: 1,
-                discountPerPiece: depVal,
-                total: depVal,
-                isFromChallan: true,
-              } as any);
-            }
-          });
+        (udharChallans || []).forEach((ch: any) => {
+          if (!filterDate(ch.udhar_date)) return;
+          const num = ch.udhar_challan_number;
+          const loadVal = parseFloat(String(ch.loading_unloading_charges || 0)) || 0;
+          const rentVal = parseFloat(String(ch.vehicle_rent || 0)) || 0;
+          const depVal = parseFloat(String(ch.deposit || 0)) || 0;
+          const dateStr = ch.udhar_date ? String(ch.udhar_date).split('T')[0] : '';
 
-          (jamaChallans || []).forEach((ch: any) => {
-            if (!filterDate(ch.jama_date)) return;
-            const num = ch.jama_challan_number;
-            const loadVal = Number(ch.loading_unloading_charges || 0);
-            const rentVal = Number(ch.vehicle_rent || 0);
+          if (loadVal > 0) {
+            challanExtraCosts.push({
+              id: `udhar-${num}-loading`,
+              date: dateStr,
+              note: language === 'gu' ? `ચડાય (ઉધાર ચલણ #${num})` : `Loading Charges (Udhar Challan #${num})`,
+              pieces: 1,
+              pricePerPiece: loadVal,
+              total: loadVal,
+              isFromChallan: true,
+            } as any);
+          }
+          if (rentVal > 0) {
+            challanExtraCosts.push({
+              id: `udhar-${num}-rent`,
+              date: dateStr,
+              note: language === 'gu' ? `વાહન ભાડું (ઉધાર ચલણ #${num})` : `Vehicle Rent (Udhar Challan #${num})`,
+              pieces: 1,
+              pricePerPiece: rentVal,
+              total: rentVal,
+              isFromChallan: true,
+            } as any);
+          }
+          if (depVal > 0) {
+            challanDiscounts.push({
+              id: `udhar-${num}-deposit`,
+              date: dateStr,
+              note: language === 'gu' ? `ડિપોઝિટ જમા (ઉધાર ચલણ #${num})` : `Deposit Credit (Udhar Challan #${num})`,
+              pieces: 1,
+              discountPerPiece: depVal,
+              total: depVal,
+              isFromChallan: true,
+            } as any);
+          }
+        });
 
-            if (loadVal > 0) {
-              challanExtraCosts.push({
-                id: `jama-${num}-loading`,
-                date: ch.jama_date,
-                note: language === 'gu' ? `ઉતરાય (જમા ચલણ #${num})` : `Unloading Charges (Jama Challan #${num})`,
-                pieces: 1,
-                pricePerPiece: loadVal,
-                total: loadVal,
-                isFromChallan: true,
-              } as any);
-            }
-            if (rentVal > 0) {
-              challanExtraCosts.push({
-                id: `jama-${num}-rent`,
-                date: ch.jama_date,
-                note: language === 'gu' ? `વાહન ભાડું (જમા ચલણ #${num})` : `Vehicle Rent (Jama Challan #${num})`,
-                pieces: 1,
-                pricePerPiece: rentVal,
-                total: rentVal,
-                isFromChallan: true,
-              } as any);
-            }
-          });
-        }
+        (jamaChallans || []).forEach((ch: any) => {
+          if (!filterDate(ch.jama_date)) return;
+          const num = ch.jama_challan_number;
+          const loadVal = parseFloat(String(ch.loading_unloading_charges || 0)) || 0;
+          const rentVal = parseFloat(String(ch.vehicle_rent || 0)) || 0;
+          const depVal = parseFloat(String(ch.deposit || 0)) || 0;
+          const dateStr = ch.jama_date ? String(ch.jama_date).split('T')[0] : '';
+
+          if (loadVal > 0) {
+            challanExtraCosts.push({
+              id: `jama-${num}-loading`,
+              date: dateStr,
+              note: language === 'gu' ? `ઉતરાય (જમા ચલણ #${num})` : `Unloading Charges (Jama Challan #${num})`,
+              pieces: 1,
+              pricePerPiece: loadVal,
+              total: loadVal,
+              isFromChallan: true,
+            } as any);
+          }
+          if (rentVal > 0) {
+            challanExtraCosts.push({
+              id: `jama-${num}-rent`,
+              date: dateStr,
+              note: language === 'gu' ? `વાહન ભાડું (જમા ચલણ #${num})` : `Vehicle Rent (Jama Challan #${num})`,
+              pieces: 1,
+              pricePerPiece: rentVal,
+              total: rentVal,
+              isFromChallan: true,
+            } as any);
+          }
+          if (depVal > 0) {
+            challanDiscounts.push({
+              id: `jama-${num}-deposit`,
+              date: dateStr,
+              note: language === 'gu' ? `ડિપોઝિટ જમા (જમા ચલણ #${num})` : `Deposit Credit (Jama Challan #${num})`,
+              pieces: 1,
+              discountPerPiece: depVal,
+              total: depVal,
+              isFromChallan: true,
+            } as any);
+          }
+        });
 
         // Combine challan extra costs and discounts with manually entered items
-        const manualCosts = billData.extraCosts.filter((c: any) => !c.isFromChallan);
-        const combinedExtraCosts = showExtraCost ? [...challanExtraCosts, ...manualCosts] : manualCosts;
+        const manualCosts = billData.extraCosts.filter((c: any) => !c.isFromChallan && !c.id?.startsWith('udhar-') && !c.id?.startsWith('jama-'));
+        const combinedExtraCosts = [...challanExtraCosts, ...manualCosts];
 
-        const manualDiscounts = billData.discounts.filter((d: any) => !d.isFromChallan);
-        const combinedDiscounts = showExtraCost ? [...challanDiscounts, ...manualDiscounts] : manualDiscounts;
+        const manualDiscounts = billData.discounts.filter((d: any) => !d.isFromChallan && !d.id?.startsWith('udhar-') && !d.id?.startsWith('jama-'));
+        const combinedDiscounts = [...challanDiscounts, ...manualDiscounts];
 
         // Update billData if changed
         setBillData((prev) => ({

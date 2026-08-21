@@ -8,6 +8,14 @@
 .no-scrollbar::-webkit-scrollbar { display: none; }
 .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
 
+/* Safe-area helpers for the notch / status bar / home-indicator when the app
+   runs standalone (installed PWA) on iOS. env() resolves to 0 on devices
+   without an inset, so these are harmless everywhere else. */
+.safe-top { padding-top: env(safe-area-inset-top); }
+.safe-bottom { padding-bottom: env(safe-area-inset-bottom); }
+.safe-left { padding-left: env(safe-area-inset-left); }
+.safe-right { padding-right: env(safe-area-inset-right); }
+
 :root {
   --primary-blue: #2563eb;
   --primary-hover: #1d4ed8;
@@ -56,6 +64,10 @@ body {
   color: var(--text-dark);
   background-color: var(--bg-secondary);
   line-height: 1.5;
+  /* Stop the rubber-band pull-to-refresh gesture from fighting the app's own
+     scroll areas when installed as a standalone PWA. */
+  overscroll-behavior-y: none;
+  -webkit-tap-highlight-color: transparent;
 }
 
 @media (max-width: 1024px) {
