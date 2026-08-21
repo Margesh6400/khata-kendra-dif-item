@@ -333,11 +333,11 @@ const ChallanEditModal: React.FC<ChallanEditModalProps> = ({
                     <label className="block text-xs font-semibold text-amber-900 sm:text-sm">
                       {t('extraCostOption') || 'Extra Cost'}
                     </label>
-                    <span className="text-[10px] text-gray-500">{t('optional') || 'Optional'}</span>
+                    <span className="text-xs text-gray-500">{t('optional') || 'Optional'}</span>
                   </div>
                   <div className={`grid grid-cols-1 ${type === 'jama' ? 'sm:grid-cols-2' : 'sm:grid-cols-3'} gap-3`}>
                     <div>
-                      <label className="block mb-1 text-[11px] font-medium text-gray-700 sm:text-xs">
+                      <label className="block mb-1 text-xs font-medium text-gray-700">
                         1. {type === 'udhar' ? (t('loadingUnloadingChargesUdhar') || 'Loading') : (t('loadingUnloadingChargesJama') || 'Unloading')}
                       </label>
                       <div className="relative">
@@ -354,7 +354,7 @@ const ChallanEditModal: React.FC<ChallanEditModalProps> = ({
                       </div>
                     </div>
                     <div>
-                      <label className="block mb-1 text-[11px] font-medium text-gray-700 sm:text-xs">
+                      <label className="block mb-1 text-xs font-medium text-gray-700">
                         2. {t('vehicleRent') || 'Vehicle Rent'}
                       </label>
                       <div className="relative">
@@ -372,7 +372,7 @@ const ChallanEditModal: React.FC<ChallanEditModalProps> = ({
                     </div>
                     {type !== 'jama' && (
                       <div>
-                        <label className="block mb-1 text-[11px] font-medium text-gray-700 sm:text-xs">
+                        <label className="block mb-1 text-xs font-medium text-gray-700">
                           3. {t('deposit') || 'Deposit'}
                         </label>
                         <div className="relative">
@@ -499,26 +499,26 @@ const ChallanEditModal: React.FC<ChallanEditModalProps> = ({
                     <table className="min-w-full border-collapse">
                       <thead>
                         <tr className="bg-gray-100 border-b-2 border-gray-300">
-                          <th className="sticky left-0 z-5 px-1 py-1.5 text-[10px] font-bold text-center text-gray-700 bg-gray-100 border-r-2 border-gray-300 w-12 sm:px-2 sm:text-xs">
+                          <th className="sticky left-0 z-5 px-1 py-1.5 text-xs font-bold text-center text-gray-700 bg-gray-100 border-r-2 border-gray-300 w-12 sm:px-2 sm:text-sm">
                             {t('size')}
                           </th>
-                          <th className="px-1 py-1.5 text-[8px] sm:text-[10px] font-semibold text-center text-gray-700 border-r border-gray-200 min-w-[60px] sm:min-w-[70px]">
+                          <th className="px-1 py-1.5 text-[10px] sm:text-xs font-semibold text-center text-gray-700 border-r border-gray-200 min-w-[60px] sm:min-w-[70px]">
                             {t('quantity')}
                           </th>
                           {type === 'jama' && (
                             <>
-                              <th className="px-1 py-1.5 text-[8px] sm:text-[10px] font-semibold text-center text-amber-700 border-r border-gray-200 min-w-[60px] sm:min-w-[70px]">
+                              <th className="px-1 py-1.5 text-[10px] sm:text-xs font-semibold text-center text-amber-700 border-r border-gray-200 min-w-[60px] sm:min-w-[70px]">
                                 {t('lost')}
                               </th>
-                              <th className="px-1 py-1.5 text-[8px] sm:text-[10px] font-semibold text-center text-rose-700 border-r border-gray-200 min-w-[60px] sm:min-w-[70px]">
+                              <th className="px-1 py-1.5 text-[10px] sm:text-xs font-semibold text-center text-rose-700 border-r border-gray-200 min-w-[60px] sm:min-w-[70px]">
                                 {t('damaged')}
                               </th>
                             </>
                           )}
-                          <th className="px-1 py-1.5 text-[8px] sm:text-[10px] font-semibold text-center text-gray-700 border-r border-gray-200 min-w-[60px] sm:min-w-[70px]">
+                          <th className="px-1 py-1.5 text-[10px] sm:text-xs font-semibold text-center text-gray-700 border-r border-gray-200 min-w-[60px] sm:min-w-[70px]">
                             {t('borrowedStock')}
                           </th>
-                          <th className="px-1 py-1.5 text-[8px] sm:text-[10px] font-semibold text-center text-gray-700 min-w-[100px] sm:min-w-[120px]">
+                          <th className="px-1 py-1.5 text-[10px] sm:text-xs font-semibold text-center text-gray-700 min-w-[100px] sm:min-w-[120px]">
                             {t('note')}
                           </th>
                         </tr>
@@ -529,7 +529,7 @@ const ChallanEditModal: React.FC<ChallanEditModalProps> = ({
                             key={ps.id}
                             className={index % 2 === 0 ? 'bg-white' : 'bg-gray-50'}
                           >
-                            <td className="sticky left-0 z-5 px-1 py-1.5 text-[10px] font-bold text-center text-gray-900 border-r-2 border-gray-300 sm:px-2 sm:text-sm bg-inherit">
+                            <td className="sticky left-0 z-5 px-1 py-1.5 text-xs font-bold text-center text-gray-900 border-r-2 border-gray-300 sm:px-2 sm:text-sm bg-inherit">
                               {ps.name}
                             </td>
                             <td className="px-1 py-1.5 border-r border-gray-200">

@@ -72,7 +72,7 @@ const ClientList: React.FC<ClientListProps> = ({ clients, onEdit, onDelete, onTo
                       <div className="flex items-center gap-2">
                         {client.client_nic_name}
                         {client.is_hidden && (
-                          <span className="px-1.5 py-0.5 text-[10px] font-medium text-gray-500 bg-gray-200 rounded">
+                          <span className="px-1.5 py-0.5 text-xs font-medium text-gray-500 bg-gray-200 rounded">
                             {t('hidden') || 'Hidden'}
                           </span>
                         )}
@@ -142,7 +142,7 @@ const ClientList: React.FC<ClientListProps> = ({ clients, onEdit, onDelete, onTo
                     <h4 className="text-sm font-semibold text-gray-900 truncate sm:text-base">
                       {client.client_nic_name}
                     </h4>
-                    <p className="text-[10px] sm:text-xs text-gray-600 truncate">
+                    <p className="text-xs text-gray-600 truncate">
                       {client.client_name}
                     </p>
                   </div>
@@ -187,7 +187,7 @@ const ClientList: React.FC<ClientListProps> = ({ clients, onEdit, onDelete, onTo
                 </div>
 
                 {/* Details Row - Compact Info */}
-                <div className="flex items-center gap-3 sm:gap-4 text-[10px] sm:text-xs text-gray-600">
+                <div className="flex items-center gap-3 sm:gap-4 text-xs text-gray-600">
                   <div className="flex items-center flex-1 min-w-0 gap-1">
                     <MapPin className="w-3 h-3 sm:w-3.5 sm:h-3.5 flex-shrink-0 text-gray-400" />
                     <span className="truncate">{client.site}</span>
