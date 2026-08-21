@@ -235,9 +235,9 @@ const StockHistory: React.FC = () => {
                                                     </td>
                                                     <td className={`px-4 py-4 font-bold whitespace-nowrap ${isLost ? 'text-amber-600' : isDamaged ? 'text-rose-600' : isAdd ? 'text-green-600' : 'text-red-600'}`}>
                                                         {isLost
-                                                            ? <span>{totalQty > 0 ? '+' : ''}{totalQty} <span className="text-[10px] font-semibold bg-amber-100 text-amber-700 px-1.5 py-0.5 rounded">{t("lost")}</span></span>
+                                                            ? <span>{totalQty > 0 ? '+' : ''}{totalQty} <span className="text-xs font-semibold bg-amber-100 text-amber-700 px-1.5 py-0.5 rounded">{t("lost")}</span></span>
                                                             : isDamaged
-                                                                ? <span>{totalQty > 0 ? '+' : ''}{totalQty} <span className="text-[10px] font-semibold bg-rose-100 text-rose-700 px-1.5 py-0.5 rounded">{t("damaged")}</span></span>
+                                                                ? <span>{totalQty > 0 ? '+' : ''}{totalQty} <span className="text-xs font-semibold bg-rose-100 text-rose-700 px-1.5 py-0.5 rounded">{t("damaged")}</span></span>
                                                                 : <>{isAdd ? '+' : '-'}{totalQty}</>}
                                                     </td>
                                                     {plateSizes.map((ps) => {

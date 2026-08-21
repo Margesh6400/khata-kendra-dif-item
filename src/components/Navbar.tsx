@@ -265,7 +265,7 @@ const Navbar: React.FC = () => {
                       </div>
                       <div className="truncate">
                         <p className="text-white text-[12px] font-bold leading-none truncate">{currentCat.label}</p>
-                        <p className="text-[9px] leading-none mt-1 truncate text-slate-400">{currentCat.desc}</p>
+                        <p className="text-[10px] leading-none mt-1 truncate text-slate-400">{currentCat.desc}</p>
                       </div>
                     </div>
                   );
@@ -323,7 +323,7 @@ const Navbar: React.FC = () => {
                           </div>
                           <div className="truncate text-left">
                             <span className="block text-white text-[12px] font-semibold leading-tight truncate">{cat.label}</span>
-                            <span className="block text-[9px] leading-tight truncate text-slate-400">{cat.desc}</span>
+                            <span className="block text-[10px] leading-tight truncate text-slate-400">{cat.desc}</span>
                           </div>
                         </div>
                         {isSelected && (
@@ -479,7 +479,7 @@ const Navbar: React.FC = () => {
                   className="absolute right-0 mt-2 z-50 w-48 p-1.5 rounded-2xl border border-gray-100 bg-white shadow-2xl animate-fadeIn"
                   style={{ top: '100%' }}
                 >
-                  <div className="text-[9px] font-bold text-gray-400 px-2.5 py-1 uppercase tracking-wider">
+                  <div className="text-[10px] font-bold text-gray-400 px-2.5 py-1 uppercase tracking-wider">
                     {language === 'gu' ? 'વિભાગ બદલો' : 'Switch Section'}
                   </div>
                   {categoriesList.map((cat) => {

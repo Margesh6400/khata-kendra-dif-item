@@ -598,7 +598,7 @@ export default function ClientLedger() {
               <h3 className="mb-2 text-sm font-semibold text-gray-900 sm:text-base lg:text-lg">
                 {searchQuery ? t.noMatchingClients : t.noClients}
               </h3>
-              <p className="text-[10px] sm:text-xs lg:text-sm text-gray-500">
+              <p className="text-xs sm:text-xs lg:text-sm text-gray-500">
                 {searchQuery ? 'Try adjusting your search criteria' : 'Add clients to start tracking their rental history'}
               </p>
               {searchQuery && (

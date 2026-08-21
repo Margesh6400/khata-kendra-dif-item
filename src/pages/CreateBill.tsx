@@ -1351,7 +1351,7 @@ export default function CreateBill() {
                       />
                     </div>
                     {billData.errors.billNumber && (
-                      <p className="mt-1 text-[10px] text-red-500">
+                      <p className="mt-1 text-xs text-red-500">
                         {billData.errors.billNumber}
                       </p>
                     )}
@@ -1457,7 +1457,7 @@ export default function CreateBill() {
                             }
                             setSelectedSizeIds(nextSelected);
                           }}
-                          className={`px-2 py-1 text-[10px] font-bold rounded-lg border transition-all ${
+                          className={`px-2 py-1.5 text-xs font-bold rounded-lg border transition-all ${
                             isChecked
                               ? 'bg-blue-50 border-blue-300 text-blue-700 shadow-sm'
                               : 'bg-white border-gray-300 text-gray-500 opacity-60 hover:opacity-100 hover:bg-gray-50'

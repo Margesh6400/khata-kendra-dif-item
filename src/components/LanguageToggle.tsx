@@ -22,7 +22,7 @@ const LanguageToggle: React.FC = () => {
         <button
           type="button"
           onClick={() => setLanguage('gu')}
-          className={`relative z-10 flex-1 py-1 text-[10px] font-bold transition-colors duration-200 flex items-center justify-center ${
+          className={`relative z-10 flex-1 py-2 text-xs font-bold transition-colors duration-200 flex items-center justify-center ${
             language === 'gu'
               ? 'text-white'
               : 'text-slate-400 hover:text-slate-200'
@@ -34,7 +34,7 @@ const LanguageToggle: React.FC = () => {
         <button
           type="button"
           onClick={() => setLanguage('en')}
-          className={`relative z-10 flex-1 py-1 text-[10px] font-bold transition-colors duration-200 flex items-center justify-center ${
+          className={`relative z-10 flex-1 py-2 text-xs font-bold transition-colors duration-200 flex items-center justify-center ${
             language === 'en'
               ? 'text-white'
               : 'text-slate-400 hover:text-slate-200'

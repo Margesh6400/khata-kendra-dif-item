@@ -56,7 +56,7 @@ const BillCard: React.FC<BillCardProps> = ({ bill, t, onView, onDownload, onDele
                             <h4 className="font-bold text-gray-900 text-sm">
                                 #{bill.bill_number}
                             </h4>
-                            <span className={`inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-medium ${bill.status === 'cancelled' ? 'bg-red-100 text-red-800' : 'bg-green-100 text-green-800'
+                            <span className={`inline-flex items-center px-1.5 py-0.5 rounded text-xs font-medium ${bill.status === 'cancelled' ? 'bg-red-100 text-red-800' : 'bg-green-100 text-green-800'
                                 }`}>
                                 {bill.status || 'Generated'}
                             </span>
@@ -73,7 +73,7 @@ const BillCard: React.FC<BillCardProps> = ({ bill, t, onView, onDownload, onDele
                                 {t('due') || 'Due'}: ₹{(bill.due_payment || 0).toLocaleString("en-IN")}
                             </div>
                         )}
-                        <div className="text-[10px] text-gray-500">
+                        <div className="text-xs text-gray-500">
                             {date ? formatLocalDate(date, "dd MMM yy") : t('noDate')}
                         </div>
                     </div>
