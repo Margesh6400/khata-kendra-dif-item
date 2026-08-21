@@ -463,11 +463,18 @@ export default function ClientLedger() {
     }
   };
 
-  const handleScroll = useCallback((e: React.UIEvent<HTMLElement>) => {
-    const t = e.currentTarget;
-    if (!loadingMore && hasMore && t.scrollHeight - t.scrollTop - t.clientHeight < 100) {
-      setCurrentPage(prev => prev + 1);
-    }
+  useEffect(() => {
+    const handleWindowScroll = () => {
+      if (loadingMore || !hasMore) return;
+      const scrollHeight = document.documentElement.scrollHeight;
+      const scrollTop = window.scrollY || document.documentElement.scrollTop;
+      const clientHeight = window.innerHeight;
+      if (scrollHeight - scrollTop - clientHeight < 300) {
+        setCurrentPage(prev => prev + 1);
+      }
+    };
+    window.addEventListener('scroll', handleWindowScroll, { passive: true });
+    return () => window.removeEventListener('scroll', handleWindowScroll);
   }, [loadingMore, hasMore]);
 
   // ── Effects ─────────────────────────────────────────────────────────────────
@@ -509,10 +516,7 @@ export default function ClientLedger() {
         error: { iconTheme: { primary: '#ef4444', secondary: '#fff' } },
       }} />
       <Navbar />
-      <main
-        className="flex-1 w-full ml-0 overflow-y-auto pt-14 sm:pt-0 lg:ml-64 h-[100dvh]"
-        onScroll={handleScroll}
-      >
+      <main className="flex-1 w-full ml-0 pt-[72px] lg:pt-0 lg:ml-64">
         <div className="w-full h-full px-3 py-3 pb-20 mx-auto sm:px-4 sm:py-5 lg:px-8 lg:py-12 lg:pb-12 max-w-7xl">
 
           {/* Header */}

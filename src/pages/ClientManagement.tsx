@@ -72,43 +72,49 @@ const ClientManagement: React.FC = () => {
   const ITEMS_PER_PAGE = 10;
   const loadingMoreRef = useRef(false);
 
-  const handleScroll = async (e: React.UIEvent<HTMLElement>) => {
-    const target = e.currentTarget;
-    const scrolledToBottom =
-      target.scrollHeight - target.scrollTop <= target.clientHeight * 1.5;
+  useEffect(() => {
+    const handleWindowScroll = () => {
+      const scrollHeight = document.documentElement.scrollHeight;
+      const scrollTop = window.scrollY || document.documentElement.scrollTop;
+      const clientHeight = window.innerHeight;
+      const scrolledToBottom = scrollHeight - scrollTop - clientHeight < 400;
 
-    if (!loadingMoreRef.current && hasMore && scrolledToBottom) {
-      loadingMoreRef.current = true;
-      setLoadingMore(true);
-      try {
-        const relevantClients = searchQuery
-          ? allClients.filter(client => {
-            const searchLower = searchQuery.toLowerCase();
-            return (client.client_nic_name || '').toLowerCase().includes(searchLower) ||
-              (client.client_name || '').toLowerCase().includes(searchLower) ||
-              (client.site || '').toLowerCase().includes(searchLower);
-          })
-          : allClients;
+      if (!loadingMoreRef.current && hasMore && scrolledToBottom) {
+        loadingMoreRef.current = true;
+        setLoadingMore(true);
+        try {
+          const relevantClients = searchQuery
+            ? allClients.filter(client => {
+              const searchLower = searchQuery.toLowerCase();
+              return (client.client_nic_name || '').toLowerCase().includes(searchLower) ||
+                (client.client_name || '').toLowerCase().includes(searchLower) ||
+                (client.site || '').toLowerCase().includes(searchLower);
+            })
+            : allClients;
 
-        const start = currentPage * ITEMS_PER_PAGE;
-        const nextBatch = relevantClients.slice(start, start + ITEMS_PER_PAGE);
+          const start = currentPage * ITEMS_PER_PAGE;
+          const nextBatch = relevantClients.slice(start, start + ITEMS_PER_PAGE);
 
-        if (nextBatch.length > 0) {
-          setClients(prev => [...prev, ...nextBatch]);
-          setCurrentPage(prev => prev + 1);
-          setHasMore(start + ITEMS_PER_PAGE < relevantClients.length);
-        } else {
-          setHasMore(false);
+          if (nextBatch.length > 0) {
+            setClients(prev => [...prev, ...nextBatch]);
+            setCurrentPage(prev => prev + 1);
+            setHasMore(start + ITEMS_PER_PAGE < relevantClients.length);
+          } else {
+            setHasMore(false);
+          }
+        } catch (error) {
+          console.error('Error loading more clients:', error);
+          toast.error('Failed to load more clients');
+        } finally {
+          setLoadingMore(false);
+          loadingMoreRef.current = false;
         }
-      } catch (error) {
-        console.error('Error loading more clients:', error);
-        toast.error('Failed to load more clients');
-      } finally {
-        setLoadingMore(false);
-        loadingMoreRef.current = false;
       }
-    }
-  };
+    };
+
+    window.addEventListener('scroll', handleWindowScroll, { passive: true });
+    return () => window.removeEventListener('scroll', handleWindowScroll);
+  }, [hasMore, searchQuery, allClients, currentPage]);
 
   useEffect(() => {
     fetchClients();
@@ -467,10 +473,7 @@ const ClientManagement: React.FC = () => {
         }}
       />
       <Navbar />
-      <main
-        className="flex-1 w-full ml-0 overflow-y-auto pt-14 sm:pt-0 lg:ml-64 h-[100dvh]"
-        onScroll={handleScroll}
-      >
+      <main className="flex-1 w-full ml-0 pt-[72px] lg:pt-0 lg:ml-64">
         <div className="w-full px-4 py-6 mx-auto lg:px-8 lg:py-8 max-w-7xl" style={{ backgroundColor: '#f9fafb' }}>
           {/* Header Section - Hidden on Mobile */}
           <div className="hidden mb-4 sm:block sm:mb-6 lg:mb-8">

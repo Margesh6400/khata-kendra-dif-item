@@ -585,7 +585,7 @@ const ChallanDesigner: React.FC = () => {
         </div>
       )}
 
-      <main className="flex-1 w-full px-3 py-6 pb-24 sm:px-6 lg:px-8 lg:ml-64">
+      <main className="flex-1 w-full px-3 pt-[72px] pb-24 sm:px-6 lg:px-8 lg:py-6 lg:ml-64">
         <div className="max-w-7xl mx-auto">
           {/* Header */}
           <div className="flex items-center justify-between gap-3 border-b border-gray-200 pb-4 mb-3 flex-wrap">

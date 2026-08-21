@@ -139,7 +139,7 @@ const StockHistory: React.FC = () => {
         <div className="flex min-h-screen bg-gray-50">
             <Toaster position="top-center" />
             <Navbar />
-            <main className="flex-1 w-full ml-0 overflow-auto pt-14 pb-20 sm:pt-0 sm:pb-0 lg:ml-64">
+            <main className="flex-1 w-full ml-0 pt-[72px] pb-20 sm:pt-0 sm:pb-0 lg:ml-64">
                 <div className="p-4 sm:p-6 lg:p-8">
                     <div className="flex flex-col gap-4 mb-6 sm:flex-row sm:items-center sm:justify-between">
                         <div className="hidden sm:block">

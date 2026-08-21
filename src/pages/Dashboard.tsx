@@ -370,7 +370,7 @@ const Dashboard: React.FC = () => {
       />
       <Navbar />
 
-      <main className="flex-1 w-full ml-0 overflow-auto lg:ml-64 pt-[56px] lg:pt-0">
+      <main className="flex-1 w-full ml-0 pt-[72px] lg:pt-0 lg:ml-64">
         <div className="w-full px-3 pt-1 pb-3 mx-auto sm:px-4 sm:py-5 lg:px-8 lg:pt-1 lg:pb-8 max-w-7xl">
           {/* Welcome Section - Compact Mobile */}
           <div className="relative p-3 mb-3 overflow-hidden text-white rounded-2xl shadow-lg sm:p-5 sm:mb-5 lg:p-8 lg:mb-8 bg-gradient-to-r from-blue-600 to-indigo-700 sm:rounded-2xl lg:rounded-2xl">

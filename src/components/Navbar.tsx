@@ -92,42 +92,15 @@ const Navbar: React.FC = () => {
     },
   ];
 
-  // Add padding to main content when using mobile header
+  // Prevent background scroll when mobile menu drawer is open
   useEffect(() => {
-    const mainContent = document.querySelector('main');
-    if (mainContent) {
-      // 56px header + 8px + 8px, plus the iOS notch/status-bar inset when installed standalone
-      mainContent.style.paddingTop = 'calc(72px + env(safe-area-inset-top))';
-    }
-    return () => {
-      if (mainContent) {
-        mainContent.style.paddingTop = '';
-      }
-    };
-  }, []);
-
-  // Prevent background scroll when mobile menu is open (locking html, body, and main)
-  useEffect(() => {
-    const mainElement = document.querySelector('main');
     if (mobileMenuOpen) {
       document.body.style.overflow = 'hidden';
-      document.documentElement.style.overflow = 'hidden';
-      if (mainElement) {
-        mainElement.style.overflow = 'hidden';
-      }
     } else {
       document.body.style.overflow = '';
-      document.documentElement.style.overflow = '';
-      if (mainElement) {
-        mainElement.style.overflow = '';
-      }
     }
     return () => {
       document.body.style.overflow = '';
-      document.documentElement.style.overflow = '';
-      if (mainElement) {
-        mainElement.style.overflow = '';
-      }
     };
   }, [mobileMenuOpen]);
 
