@@ -481,71 +481,67 @@ ${businessInfo.name}`;
         <div className="max-w-7xl mx-auto px-3 sm:px-6 lg:px-8 py-2 sm:py-4">
         
         {/* Page Header */}
-        <div className="mb-6 flex flex-col md:flex-row md:items-center md:justify-between gap-4">
-          <div>
-            <div className="flex items-center gap-2">
-              <div className="p-2 bg-emerald-100 text-emerald-700 rounded-lg">
-                <Wallet className="w-6 h-6" />
-              </div>
-              <div>
-                <h1 className="text-xl sm:text-2xl font-bold text-gray-900">
-                  {isGu ? 'ચૂકવણી કલેક્શન & લેજર' : 'Quick Payment Collection'}
-                </h1>
-                <p className="text-xs sm:text-sm text-gray-500">
-                  {isGu ? 'ગ્રાહક પાસેથી રકમ ઝડપથી જમા કરો અને ચૂકવણી લેજર હિસાબ જુઓ' : 'Instantly record customer payments & view transaction ledger'}
-                </p>
-              </div>
+        <div className="mb-5 flex items-start justify-between gap-3">
+          <div className="flex items-center gap-2 min-w-0">
+            <div className="p-2 bg-emerald-100 text-emerald-700 rounded-lg shrink-0">
+              <Wallet className="w-6 h-6" />
+            </div>
+            <div className="min-w-0">
+              <h1 className="text-lg sm:text-2xl font-bold text-gray-900 leading-tight">
+                {isGu ? 'ચૂકવણી કલેક્શન & લેજર' : 'Quick Payment Collection'}
+              </h1>
+              <p className="hidden sm:block text-xs sm:text-sm text-gray-500 mt-0.5">
+                {isGu ? 'ગ્રાહક પાસેથી રકમ ઝડપથી જમા કરો અને ચૂકવણી લેજર હિસાબ જુઓ' : 'Instantly record customer payments & view transaction ledger'}
+              </p>
             </div>
           </div>
 
-          <div className="flex items-center gap-2">
-            <button
-              onClick={loadData}
-              className="p-2 text-gray-600 bg-white border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors shadow-sm"
-              title="Refresh"
-            >
-              <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
-            </button>
-          </div>
+          <button
+            onClick={loadData}
+            aria-label={isGu ? 'તાજું કરો' : 'Refresh'}
+            className="flex items-center justify-center w-10 h-10 shrink-0 text-gray-600 bg-white border border-gray-200 rounded-lg hover:bg-gray-50 active:scale-95 transition-all shadow-sm"
+          >
+            <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
+          </button>
         </div>
 
         {/* Top Summary Metrics Cards */}
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 sm:gap-4 mb-6">
-          
-          <div className="p-4 bg-white border border-emerald-100 rounded-xl shadow-sm bg-gradient-to-br from-emerald-50/50 to-white">
+        <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 sm:gap-4 mb-5">
+
+          <div className="p-3 sm:p-4 bg-white border border-emerald-100 rounded-xl shadow-sm bg-gradient-to-br from-emerald-50/50 to-white">
             <div className="flex items-center justify-between mb-1">
-              <span className="text-xs font-semibold text-emerald-800 uppercase tracking-wider">
-                {isGu ? 'આજના જમા કલેક્શન' : "Today's Collection"}
+              <span className="text-[11px] sm:text-xs font-semibold text-emerald-800 uppercase tracking-wider">
+                {isGu ? 'આજનું કલેક્શન' : "Today"}
               </span>
-              <div className="p-1.5 bg-emerald-100 text-emerald-700 rounded-md">
+              <div className="p-1.5 bg-emerald-100 text-emerald-700 rounded-md shrink-0">
                 <CheckCircle className="w-4 h-4" />
               </div>
             </div>
-            <p className="text-2xl font-extrabold text-emerald-950">
+            <p className="text-xl sm:text-2xl font-extrabold text-emerald-950 truncate">
               ₹{stats.todayCollected.toLocaleString('en-IN')}
             </p>
           </div>
 
-          <div className="p-4 bg-white border border-blue-100 rounded-xl shadow-sm bg-gradient-to-br from-blue-50/50 to-white">
+          <div className="p-3 sm:p-4 bg-white border border-blue-100 rounded-xl shadow-sm bg-gradient-to-br from-blue-50/50 to-white">
             <div className="flex items-center justify-between mb-1">
-              <span className="text-xs font-semibold text-blue-800 uppercase tracking-wider">
-                {isGu ? 'ચાલુ મહિનાના કલેક્શન' : 'This Month Collection'}
+              <span className="text-[11px] sm:text-xs font-semibold text-blue-800 uppercase tracking-wider">
+                {isGu ? 'આ મહિને' : 'This Month'}
               </span>
-              <div className="p-1.5 bg-blue-100 text-blue-700 rounded-md">
+              <div className="p-1.5 bg-blue-100 text-blue-700 rounded-md shrink-0">
                 <TrendingUp className="w-4 h-4" />
               </div>
             </div>
-            <p className="text-2xl font-extrabold text-blue-950">
+            <p className="text-xl sm:text-2xl font-extrabold text-blue-950 truncate">
               ₹{stats.monthCollected.toLocaleString('en-IN')}
             </p>
           </div>
 
-          <div className="p-4 bg-white border border-amber-100 rounded-xl shadow-sm bg-gradient-to-br from-amber-50/50 to-white">
+          <div className="col-span-2 sm:col-span-1 p-3 sm:p-4 bg-white border border-amber-100 rounded-xl shadow-sm bg-gradient-to-br from-amber-50/50 to-white">
             <div className="flex items-center justify-between mb-1">
-              <span className="text-xs font-semibold text-amber-800 uppercase tracking-wider">
+              <span className="text-[11px] sm:text-xs font-semibold text-amber-800 uppercase tracking-wider">
                 {isGu ? 'કુલ બાકી લેણી રકમ' : 'Total Pending Due'}
               </span>
-              <div className="p-1.5 bg-amber-100 text-amber-700 rounded-md">
+              <div className="p-1.5 bg-amber-100 text-amber-700 rounded-md shrink-0">
                 <Clock className="w-4 h-4" />
               </div>
             </div>
@@ -557,29 +553,29 @@ ${businessInfo.name}`;
         </div>
 
         {/* Navigation Tabs */}
-        <div className="flex border-b border-gray-200 mb-6 bg-white rounded-t-xl p-1.5 shadow-sm">
+        <div className="flex gap-1.5 mb-5 bg-gray-100 rounded-xl p-1.5">
           <button
             onClick={() => setActiveTab('cards')}
-            className={`flex-1 py-2.5 px-4 text-xs sm:text-sm font-semibold rounded-lg flex items-center justify-center gap-2 transition-all ${
+            className={`flex-1 py-2.5 px-2 sm:px-4 text-xs sm:text-sm font-semibold rounded-lg flex items-center justify-center gap-1.5 sm:gap-2 transition-all ${
               activeTab === 'cards'
                 ? 'bg-emerald-600 text-white shadow'
-                : 'text-gray-600 hover:text-gray-900 hover:bg-gray-100'
+                : 'text-gray-600 bg-white/60 hover:text-gray-900 hover:bg-white'
             }`}
           >
-            <CreditCard className="w-4 h-4" />
-            {isGu ? '💳 ગ્રાહક ચૂકવણી કાર્ડ્સ' : '💳 Client Payment Cards'}
+            <CreditCard className="w-4 h-4 shrink-0" />
+            <span className="truncate">{isGu ? 'ગ્રાહક ચૂકવણી કાર્ડ્સ' : 'Client Payment Cards'}</span>
           </button>
-          
+
           <button
             onClick={() => setActiveTab('ledger')}
-            className={`flex-1 py-2.5 px-4 text-xs sm:text-sm font-semibold rounded-lg flex items-center justify-center gap-2 transition-all ${
+            className={`flex-1 py-2.5 px-2 sm:px-4 text-xs sm:text-sm font-semibold rounded-lg flex items-center justify-center gap-1.5 sm:gap-2 transition-all ${
               activeTab === 'ledger'
                 ? 'bg-emerald-600 text-white shadow'
-                : 'text-gray-600 hover:text-gray-900 hover:bg-gray-100'
+                : 'text-gray-600 bg-white/60 hover:text-gray-900 hover:bg-white'
             }`}
           >
-            <FileText className="w-4 h-4" />
-            {isGu ? '📜 ચૂકવણી લેજર (ઈતિહાસ)' : '📜 Payment Ledger History'}
+            <FileText className="w-4 h-4 shrink-0" />
+            <span className="truncate">{isGu ? 'ચૂકવણી લેજર' : 'Payment Ledger'}</span>
           </button>
         </div>
 
