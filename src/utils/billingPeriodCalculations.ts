@@ -651,77 +651,9 @@ export function calculateBill(
   let periods: any[] = [];
 
   if (plateSizes && plateSizes.length > 0) {
-    // Separate sizes with custom rents from default rate sizes
-    const jackCustomSizes = plateSizes.filter(ps =>
-      jackRents &&
-      typeof jackRents[ps.id] === 'number'
-    );
-    const shutteringSizes = plateSizes.filter(ps =>
-      !(jackRents && typeof jackRents[ps.id] === 'number')
-    );
-
-    // ── SHUTTERING: combined global calculation across all shuttering+same-rate sizes ──
-    // Build combined entries only from shuttering sizes (exclude jack-custom sizes)
-    const shuttEntries: ChallanEntry[] = [];
-    if (shutteringSizes.length > 0) {
-      udharChallans.forEach(ch => {
-        let qty = 0;
-        shutteringSizes.forEach(ps => {
-          if (ps.id === 2 || ps.id === 3) return; // Morla (2) and Machine (3) don't count towards zula quantity
-          const d = getQtyForSize(ch, ps.id);
-          qty += d.qty + d.borrowed;
-        });
-        if (qty > 0) {
-          shuttEntries.push({
-            date: ch.udhar_date,
-            effectiveDate: ch.udhar_date,
-            type: 'udhar',
-            plateCount: qty,
-            challanNumber: ch.udhar_challan_number,
-            sortPriority: getSortPriority('udhar', jamaFirst)
-          });
-        }
-      });
-      jamaReturns.forEach(ch => {
-        let qty = 0;
-        shutteringSizes.forEach(ps => {
-          if (ps.id === 2 || ps.id === 3) return; // Morla (2) and Machine (3) don't count towards zula quantity
-          const d = getQtyForSize(ch, ps.id);
-          qty += d.qty + d.borrowed + d.lost + d.damaged;
-        });
-        if (qty > 0) {
-          const effectiveDate = jamaFirst
-            ? ch.jama_date
-            : format(addDays(parseISO(ch.jama_date), 1), 'yyyy-MM-dd');
-          shuttEntries.push({
-            date: ch.jama_date,
-            effectiveDate,
-            type: 'jama',
-            plateCount: qty,
-            challanNumber: ch.jama_challan_number,
-            sortPriority: getSortPriority('jama', jamaFirst)
-          });
-        }
-      });
-      shuttEntries.sort((a, b) => {
-        const d = new Date(a.date).getTime() - new Date(b.date).getTime();
-        return d === 0 ? a.sortPriority - b.sortPriority : d;
-      });
-
-      if (shuttEntries.length > 0) {
-        const shuttResult = jamaFirst
-          ? calculateBillingPeriodsFIFO(shuttEntries, billDate, dailyRate)
-          : calculateBillingPeriods(shuttEntries, billDate, dailyRate);
-        shuttResult.periods.forEach(p => {
-          periods.push({ ...p, rate: dailyRate });
-          // No sizeId/sizeName — these are combined shuttering
-        });
-      }
-    }
-
-    // ── JACK (custom rent): separate per-size calculation ──
-    jackCustomSizes.forEach(ps => {
-      const rate = jackRents[ps.id] as number;
+    // Process each size individually so all sizes show separate breakdown with sizeName & sizeId
+    plateSizes.forEach(ps => {
+      const rate = (jackRents && typeof jackRents[ps.id] === 'number') ? jackRents[ps.id] : dailyRate;
       const sizeEntries = buildSizeEntries(ps.id);
       if (sizeEntries.length > 0) {
         const sizeResult = jamaFirst
@@ -732,6 +664,7 @@ export function calculateBill(
             ...p,
             sizeId: ps.id,
             sizeName: ps.name,
+            category: ps.category,
             rate
           });
         });
@@ -745,12 +678,16 @@ export function calculateBill(
     periods = globalBillingPeriods.periods.map(p => ({ ...p, rate: dailyRate }));
   }
 
-  // Sort all periods: shuttering (no sizeId) first, then jack by sizeId, then by startDate/endDate
+  // Sort all periods by the sequence in plateSizes, then by date
+  const sizeOrderMap = new Map<number, number>();
+  (plateSizes || []).forEach((ps, idx) => {
+    sizeOrderMap.set(ps.id, idx);
+  });
+
   periods.sort((a, b) => {
-    const aIsJack = a.sizeId !== undefined ? 1 : 0;
-    const bIsJack = b.sizeId !== undefined ? 1 : 0;
-    if (aIsJack !== bIsJack) return aIsJack - bIsJack;
-    if (a.sizeId !== b.sizeId) return (a.sizeId || 0) - (b.sizeId || 0);
+    const orderA = a.sizeId !== undefined ? (sizeOrderMap.get(a.sizeId) ?? 999) : -1;
+    const orderB = b.sizeId !== undefined ? (sizeOrderMap.get(b.sizeId) ?? 999) : -1;
+    if (orderA !== orderB) return orderA - orderB;
 
     if (jamaFirst) {
       return new Date(a.endDate).getTime() - new Date(b.endDate).getTime();

@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from "react";
+import React, { useState, useEffect, useMemo, Fragment } from "react";
 import { useParams, useNavigate, useSearchParams } from "react-router-dom";
 import { format, parseISO, differenceInDays, addDays } from "date-fns";
 import { formatLocalDate, safeParseLocalDate } from "../utils/dateUtils";
@@ -1065,31 +1065,26 @@ export default function CreateBill() {
         const methodLabel = dateSortingMethod === 'jamaFirst' ? '🟢 Jama First' : '🔵 Standard';
         toast.success(`${methodLabel} | Rent: ₹${result.billingPeriods.totalRent.toFixed(2)}`, { duration: 5000 });
 
-        // Initialize balance tracking
-        // Create balance from the final period's state
-        const lastPeriod =
-          result.billingPeriods.periods[
-          result.billingPeriods.periods.length - 1
-          ];
+        // Initialize balance tracking from the per-size results
         const balance: ClientBalance = {
-          grandTotal: lastPeriod?.plateCount || 0,
+          grandTotal: 0,
           sizes: {},
         };
 
-        // Initialize sizes from transaction history
-        const finalLedgerEntry =
-          result.billingPeriods.ledger[result.billingPeriods.ledger.length - 1];
-        if (finalLedgerEntry) {
-          // We'll initialize from the last ledger entry to capture the final state
-          for (let i = 1; i <= 9; i++) {
-            balance.sizes[i.toString()] = {
-              size: i.toString(),
-              main: 0, // These will be populated from the ledger if available
-              borrowed: 0,
-              total: 0,
-            };
-          }
-        }
+        plateSizes.forEach((ps) => {
+          const sizePeriods = result.billingPeriods.periods.filter(
+            (p: any) => p.sizeId === ps.id
+          );
+          const lastSizePeriod = sizePeriods[sizePeriods.length - 1];
+          const count = lastSizePeriod?.plateCount || 0;
+          balance.sizes[ps.id.toString()] = {
+            size: ps.name,
+            main: count,
+            borrowed: 0,
+            total: count,
+          };
+          balance.grandTotal += count;
+        });
 
         // Sum lost and damaged quantities from jama challans inside the billing period
         // so a charge line can be prefilled per size per bucket.
@@ -1436,11 +1431,30 @@ export default function CreateBill() {
               </div>
 
               {/* Select Items to Include Section */}
-              {!enableCategorySeparation && plateSizes && plateSizes.length > 0 && (
+              {plateSizes && plateSizes.length > 0 && (
                 <div className="pt-2 border-t border-gray-150">
-                  <label className="block mb-1.5 text-xs font-semibold text-gray-700">
-                    {language === 'gu' ? 'બિલમાં સામેલ કરવા માટે સાઇઝ પસંદ કરો' : 'Select Sizes to Include in Bill'}
-                  </label>
+                  <div className="flex items-center justify-between mb-1.5">
+                    <label className="block text-xs font-semibold text-gray-700">
+                      {language === 'gu' ? 'બિલમાં સામેલ કરવા માટે સાઇઝ પસંદ કરો' : 'Select Sizes to Include in Bill'}
+                    </label>
+                    <div className="flex gap-2 text-[11px]">
+                      <button
+                        type="button"
+                        onClick={() => setSelectedSizeIds(new Set(plateSizes.map((s) => s.id)))}
+                        className="font-medium text-blue-600 hover:underline"
+                      >
+                        {language === 'gu' ? 'બધા પસંદ કરો' : 'Select All'}
+                      </button>
+                      <span className="text-gray-300">|</span>
+                      <button
+                        type="button"
+                        onClick={() => setSelectedSizeIds(new Set())}
+                        className="font-medium text-gray-500 hover:underline"
+                      >
+                        {language === 'gu' ? 'બધા કાઢી નાખો' : 'Clear All'}
+                      </button>
+                    </div>
+                  </div>
                   <div className="flex flex-wrap gap-1.5 p-2 bg-gray-50 border border-gray-200 rounded-lg max-h-[160px] overflow-y-auto">
                     {plateSizes.map((size) => {
                       const isChecked = selectedSizeIds.has(size.id);
@@ -1650,7 +1664,7 @@ export default function CreateBill() {
                     </thead>
                     <tbody className="divide-y divide-gray-200">
                       {billResult?.billingPeriods.periods.map(
-                        (period, index) => {
+                        (period, index, array) => {
                           // const isLastPeriod = index === array.length - 1;
                           // For Jama periods, show the actual return date
                           // For other periods, show one day before the next period starts
@@ -1664,55 +1678,73 @@ export default function CreateBill() {
                           // Days calculation is now handled in billingPeriodCalculations.ts
                           const rate = (period as any).rate || billData.dailyRent;
                           const amount = period.rent;
+                          const sizeName = (period as any).sizeName;
 
-                          const catName = (activeCategory || (period as any).sizeName || client?.category || '').toLowerCase();
+                          const isNewSize = Boolean(
+                            sizeName &&
+                            (index === 0 || sizeName !== (array[index - 1] as any).sizeName)
+                          );
+
+                          const catName = (activeCategory || sizeName || client?.category || '').toLowerCase();
                           const unitLabel = (catName.includes('zula') || catName.includes('jhula') || catName.includes('ઝૂલા')) ? 'ઝૂલા' :
                                             (catName.includes('pharma') || catName.includes('ફર્મા')) ? 'ફર્મા' :
                                             (catName.includes('jack') || catName.includes('જેક')) ? 'જેક' : 'પ્લેટ';
 
                           return (
-                            <tr
-                              key={index}
-                              className={
-                                period.causeType === "udhar"
-                                  ? "bg-red-50"
-                                  : "bg-green-50"
-                              }
-                            >
-                              <td className="px-4 py-3">
-                                <div className="flex flex-col gap-1">
-                                  <div className="flex items-center gap-2">
-                                    <div
-                                      className={`w-2 h-2 rounded-full ${period.causeType === "udhar"
-                                        ? "bg-red-500"
-                                        : "bg-green-500"
-                                        }`}
-                                    ></div>
-                                    <span>
-                                      {period.days === 0
-                                        ? newDisplayEndDate
-                                        : <>{format(parseISO(period.startDate), "dd/MM/yyyy")} થી {newDisplayEndDate}</>
-                                      }
-                                    </span>
-                                  </div>
-                                  {(period as any).sizeName && (
-                                    <div className="text-xs text-gray-500 ml-4 font-bold">
-                                      સાઈઝ: {(period as any).sizeName}
+                            <React.Fragment key={`period-row-${index}`}>
+                              {isNewSize && (
+                                <tr className="bg-slate-100/90 border-t border-b border-slate-300 font-semibold">
+                                  <td colSpan={showCalculation ? 4 : 3} className="px-4 py-2 text-xs text-slate-800">
+                                    <div className="flex items-center gap-2">
+                                      <span className="inline-block w-2 h-2 rounded-full bg-blue-600"></span>
+                                      <span>સાઈઝ: <strong className="text-gray-900 text-xs sm:text-sm font-bold">{sizeName}</strong></span>
+                                      {rate ? <span className="text-gray-500 font-normal ml-1 text-[11px]">(ભાવ: ₹{rate}/દિવસ)</span> : null}
                                     </div>
-                                  )}
-                                </div>
-                              </td>
-                              <td className="px-4 py-3">{period.days}</td>
-                              {showCalculation && (
-                                <td className="px-4 py-3">
-                                  {period.plateCount} {unitLabel} × {period.days} દિવસો
-                                  × ₹{rate}
-                                </td>
+                                  </td>
+                                </tr>
                               )}
-                              <td className="px-4 py-3 font-medium text-right">
-                                ₹{amount.toLocaleString("en-IN")}
-                              </td>
-                            </tr>
+                              <tr
+                                className={
+                                  period.causeType === "udhar"
+                                    ? "bg-red-50"
+                                    : "bg-green-50"
+                                }
+                              >
+                                <td className="px-4 py-3">
+                                  <div className="flex flex-col gap-1">
+                                    <div className="flex items-center gap-2">
+                                      <div
+                                        className={`w-2 h-2 rounded-full ${period.causeType === "udhar"
+                                          ? "bg-red-500"
+                                          : "bg-green-500"
+                                          }`}
+                                      ></div>
+                                      <span>
+                                        {period.days === 0
+                                          ? newDisplayEndDate
+                                          : <>{format(parseISO(period.startDate), "dd/MM/yyyy")} થી {newDisplayEndDate}</>
+                                        }
+                                      </span>
+                                    </div>
+                                    {sizeName && (
+                                      <div className="text-xs text-gray-500 ml-4 font-semibold">
+                                        સાઈઝ: {sizeName}
+                                      </div>
+                                    )}
+                                  </div>
+                                </td>
+                                <td className="px-4 py-3">{period.days}</td>
+                                {showCalculation && (
+                                  <td className="px-4 py-3">
+                                    {period.plateCount} {unitLabel} × {period.days} દિવસો
+                                    × ₹{rate}
+                                  </td>
+                                )}
+                                <td className="px-4 py-3 font-medium text-right">
+                                  ₹{amount.toLocaleString("en-IN")}
+                                </td>
+                              </tr>
+                            </React.Fragment>
                           );
                         }
                       )}
@@ -1970,11 +2002,11 @@ export default function CreateBill() {
                   )}
                 </div>
 
-                {/* Section E: Discounts */}
+                {/* Section E: Deposits & Discounts */}
                 <div className={`p-4 bg-white border border-gray-200 rounded-xl ${billData.discounts.length === 0 ? 'hidden' : 'block'}`}>
                   <div className="flex items-center justify-between mb-4">
                     <h4 className="text-base font-medium text-gray-900">
-                      છૂટ
+                      {language === 'gu' ? 'ડિપોઝિટ / છૂટ' : 'Deposit / Discounts'}
                     </h4>
                     <div className="flex items-center gap-2">
                       {billData.discounts.length > 0 && (
@@ -2075,7 +2107,7 @@ export default function CreateBill() {
                                   newDiscounts[index] = {
                                     ...discount,
                                     pieces,
-                                    total: pieces * discount.discountPerPiece,
+                                    total: pieces * (discount.discountPerPiece || 0),
                                   };
                                   setBillData((prev) => ({
                                     ...prev,
@@ -2098,7 +2130,7 @@ export default function CreateBill() {
                                   newDiscounts[index] = {
                                     ...discount,
                                     discountPerPiece,
-                                    total: discount.pieces * discountPerPiece,
+                                    total: (discount.pieces || 1) * discountPerPiece,
                                   };
                                   setBillData((prev) => ({
                                     ...prev,
@@ -2123,7 +2155,7 @@ export default function CreateBill() {
 
                       {/* Total */}
                       <div className="flex justify-between p-3 font-medium border-t-2 border-gray-300 bg-gray-50">
-                        <span>કુલ છૂટ:</span>
+                        <span>કુલ છૂટ / ડિપોઝિટ:</span>
                         <span>
                           ₹{billData.discounts
                             .reduce((sum, discount) => sum + discount.total, 0)
@@ -2222,28 +2254,24 @@ export default function CreateBill() {
                           </div>
                           <div className="grid grid-cols-2 gap-2">
                             <div>
-                              <label className="block mb-1 text-xs font-medium text-gray-600">મેથડ</label>
+                              <label className="block mb-1 text-xs font-medium text-gray-600">ચુકવણી પદ્ધતિ</label>
                               <select
                                 value={payment.method}
                                 onChange={(e) => {
                                   const newPayments = [...billData.payments];
                                   newPayments[index] = {
                                     ...payment,
-                                    method: e.target.value as Payment["method"],
+                                    method: e.target.value as "cash" | "bank",
                                   };
                                   setBillData((prev) => ({
                                     ...prev,
                                     payments: newPayments,
                                   }));
                                 }}
-                                className="w-full px-2 py-1 text-sm border rounded"
+                                className="w-full px-2 py-1.5 text-sm border border-gray-300 rounded bg-white outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500"
                               >
-                                <option value="cash">રોકડ</option>
-                                <option value="bank">બેંક</option>
-                                <option value="upi">UPI</option>
-                                <option value="cheque">ચેક</option>
-                                <option value="card">કાર્ડ</option>
-                                <option value="other">અન્ય</option>
+                                <option value="cash">રોકડ (Cash)</option>
+                                <option value="bank">બેંક (Bank)</option>
                               </select>
                             </div>
                             <div>
@@ -2303,20 +2331,27 @@ export default function CreateBill() {
                       key={label}
                       className={`flex justify-between items-center ${label.startsWith("Sub Total") ||
                         label.startsWith("GRAND TOTAL") ||
-                        label.startsWith("DUE PAYMENT")
+                        label.startsWith("DUE PAYMENT") ||
+                        label.includes("પેટા કુલ") ||
+                        label.includes("કુલ રકમ") ||
+                        label.includes("બાકી રકમ")
                         ? "pt-2 text-base font-semibold border-t border-gray-200"
                         : ""
-                        } ${label.startsWith("DUE PAYMENT")
+                        } ${label.includes("બાકી રકમ") || label.includes("Due Payment")
                           ? amount > 0
-                            ? "text-red-600"
-                            : "text-green-600"
-                          : label.startsWith("GRAND TOTAL")
-                            ? "text-blue-600"
-                            : ""
+                            ? "text-red-600 font-bold text-base"
+                            : "text-green-600 font-bold text-base"
+                          : label.includes("કુલ રકમ") || label.includes("Grand Total")
+                            ? "text-blue-700 font-bold text-base"
+                            : label.includes("ડિપોઝિટ") || label.includes("Deposit")
+                              ? "text-green-700 font-medium"
+                              : ""
                         }`}
                     >
                       <span>{label}:</span>
-                      <span>₹{Math.abs(amount).toLocaleString("en-IN")}</span>
+                      <span className={label.includes("ડિપોઝિટ") || label.includes("Deposit") ? "text-green-700 font-semibold" : ""}>
+                        {label.includes("(-)") ? "-" : ""}₹{Math.abs(amount).toLocaleString("en-IN")}
+                      </span>
                     </div>
                   )
                 )}

@@ -46,6 +46,12 @@ interface BillInvoiceProps {
     pieces?: number;
     rate?: number;
   }[];
+  discounts?: {
+    id: string;
+    date: string;
+    description: string;
+    amount: number;
+  }[];
   payments: {
     id: string;
     date: string;
@@ -60,6 +66,7 @@ interface BillInvoiceProps {
     netPlates: number;
     serviceCharge: number;
     totalExtraCosts: number;
+    totalDeposit?: number;
     discounts: number;
     grandTotal: number;
     totalPaid: number;
@@ -100,6 +107,7 @@ const BillInvoiceTemplate: React.FC<BillInvoiceProps> = ({
   clientDetails,
   rentalCharges,
   extraCosts,
+  discounts = [],
   payments,
   summary,
   mainNote,
@@ -255,45 +263,69 @@ const BillInvoiceTemplate: React.FC<BillInvoiceProps> = ({
                 const oneDayAmount = Math.round(charge.pieces * dailyRate);
                 const isZeroBalance = charge.pieces === 0 && charge.days === 0;
 
+                const isNewSize = Boolean(
+                  charge.size &&
+                  charge.size !== 'All' &&
+                  (index === 0 || charge.size !== rentalCharges[index - 1].size)
+                );
+
                 const rowBg = index % 2 === 1 ? '#fafcff' : undefined;
 
                 return (
-                  <tr key={`charge-${index}`} style={{ borderBottom: '1px solid #000', height: '28px', backgroundColor: rowBg }}>
-                    {/* 1. નંગ (Pieces) */}
-                    <td style={{ borderRight: '1px solid #000', padding: '5px 4px', textAlign: 'center', fontWeight: 'bold' }}>
-                      {charge.pieces}
-                    </td>
+                  <React.Fragment key={`charge-item-${index}`}>
+                    {isNewSize && (
+                      <tr style={{ borderBottom: '1.5px solid #000', backgroundColor: '#f1f5f9' }}>
+                        <td
+                          colSpan={7}
+                          style={{
+                            padding: '4px 8px',
+                            fontWeight: 'bold',
+                            fontSize: '12px',
+                            color: '#0f172a',
+                            letterSpacing: '0.2px',
+                          }}
+                        >
+                          સાઈઝ : {charge.size}
+                        </td>
+                      </tr>
+                    )}
+                    <tr style={{ borderBottom: '1px solid #000', height: '28px', backgroundColor: rowBg }}>
+                      {/* 1. નંગ (Pieces) */}
+                      <td style={{ borderRight: '1px solid #000', padding: '5px 4px', textAlign: 'center', fontWeight: 'bold' }}>
+                        {charge.pieces}
+                      </td>
 
-                    {/* 2. આ.તારીખ (Udhar Date) */}
-                    <td style={{ borderRight: '1px solid #000', padding: '5px 4px', textAlign: 'center', fontWeight: '500' }}>
-                      {rowStartDate}
-                    </td>
+                      {/* 2. આ.તારીખ (Udhar Date) */}
+                      <td style={{ borderRight: '1px solid #000', padding: '5px 4px', textAlign: 'center', fontWeight: '500' }}>
+                        {rowStartDate}
+                      </td>
 
-                    {/* 3. જ.તારીખ (Jama Date) */}
-                    <td style={{ borderRight: '1px solid #000', padding: '5px 4px', textAlign: 'center', fontWeight: '500' }}>
-                      {isZeroBalance ? '-' : `થી ${rowEndDate}`}
-                    </td>
+                      {/* 3. જ.તારીખ (Jama Date) */}
+                      <td style={{ borderRight: '1px solid #000', padding: '5px 4px', textAlign: 'center', fontWeight: '500' }}>
+                        {isZeroBalance ? '-' : `થી ${rowEndDate}`}
+                      </td>
 
-                    {/* 4. ભાવ (Rate) */}
-                    <td style={{ borderRight: '1px solid #000', padding: '5px 4px', textAlign: 'center', fontWeight: '500' }}>
-                      {isZeroBalance ? '-' : dailyRate}
-                    </td>
+                      {/* 4. ભાવ (Rate) */}
+                      <td style={{ borderRight: '1px solid #000', padding: '5px 4px', textAlign: 'center', fontWeight: '500' }}>
+                        {isZeroBalance ? '-' : dailyRate}
+                      </td>
 
-                    {/* 5. ૧ દિવસનુ (1 Day Rent = Pieces * Rate) */}
-                    <td style={{ borderRight: '1px solid #000', padding: '5px 4px', textAlign: 'center', fontWeight: '600' }}>
-                      {isZeroBalance ? '-' : formatIndianCurrency(oneDayAmount)}
-                    </td>
+                      {/* 5. ૧ દિવસનુ (1 Day Rent = Pieces * Rate) */}
+                      <td style={{ borderRight: '1px solid #000', padding: '5px 4px', textAlign: 'center', fontWeight: '600' }}>
+                        {isZeroBalance ? '-' : formatIndianCurrency(oneDayAmount)}
+                      </td>
 
-                    {/* 6. કુ. દિવસ (Total Days) */}
-                    <td style={{ borderRight: '1px solid #000', padding: '5px 4px', textAlign: 'center', fontWeight: 'bold' }}>
-                      {isZeroBalance ? '-' : charge.days}
-                    </td>
+                      {/* 6. કુ. દિવસ (Total Days) */}
+                      <td style={{ borderRight: '1px solid #000', padding: '5px 4px', textAlign: 'center', fontWeight: 'bold' }}>
+                        {isZeroBalance ? '-' : charge.days}
+                      </td>
 
-                    {/* 7. કુલ રકમ (Total Amount) */}
-                    <td style={{ padding: '5px 8px', textAlign: 'right', fontWeight: 'bold' }}>
-                      {isZeroBalance ? '-' : formatIndianCurrency(Math.round(charge.amount))}
-                    </td>
-                  </tr>
+                      {/* 7. કુલ રકમ (Total Amount) */}
+                      <td style={{ padding: '5px 8px', textAlign: 'right', fontWeight: 'bold' }}>
+                        {isZeroBalance ? '-' : formatIndianCurrency(Math.round(charge.amount))}
+                      </td>
+                    </tr>
+                  </React.Fragment>
                 );
               })}
 
@@ -310,6 +342,25 @@ const BillInvoiceTemplate: React.FC<BillInvoiceProps> = ({
                     </td>
                     <td style={{ padding: '6px 8px', textAlign: 'right', fontWeight: 'bold' }}>
                       {formatIndianCurrency(cost.amount)}
+                    </td>
+                  </tr>
+                );
+              })}
+
+              {/* Discounts & Deposit Deductions Rows */}
+              {(discounts || []).map((discount, index) => {
+                const isDeposit = String(discount.id || '').includes('deposit') ||
+                                  String(discount.description || '').includes('ડિપોઝિટ') ||
+                                  String(discount.description || '').includes('Deposit');
+                const desc = discount.description || (isDeposit ? 'ડિપોઝિટ જમા' : 'કસર / ડિસ્કાઉન્ટ');
+                return (
+                  <tr key={`discount-${index}`} style={{ borderBottom: '1px solid #000' }}>
+                    <td style={{ borderRight: '1px solid #000', padding: '4px', textAlign: 'center' }}>-</td>
+                    <td colSpan={5} style={{ borderRight: '1px solid #000', padding: '6px 8px', fontWeight: 'bold', color: '#166534' }}>
+                      {desc} {discount.date ? `(${formatLocalDate(discount.date)})` : ''}
+                    </td>
+                    <td style={{ padding: '6px 8px', textAlign: 'right', fontWeight: 'bold', color: '#166534' }}>
+                      -{formatIndianCurrency(discount.amount)}
                     </td>
                   </tr>
                 );
@@ -337,7 +388,7 @@ const BillInvoiceTemplate: React.FC<BillInvoiceProps> = ({
               })}
 
               {/* Empty Rows Padding to match physical printed slip layout */}
-              {Array.from({ length: Math.max(0, 10 - rentalCharges.length - extraCosts.length - payments.length) }).map((_, i) => (
+              {Array.from({ length: Math.max(0, 10 - rentalCharges.length - extraCosts.length - (discounts || []).length - payments.length) }).map((_, i) => (
                 <tr key={`empty-${i}`} style={{ borderBottom: '1px solid #e2e8f0', height: '26px' }}>
                   <td style={{ borderRight: '1px solid #000' }}></td>
                   <td style={{ borderRight: '1px solid #000' }}></td>
