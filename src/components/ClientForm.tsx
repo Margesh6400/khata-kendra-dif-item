@@ -32,8 +32,7 @@ const ClientForm: React.FC<ClientFormProps> = ({ initialData, onSubmit, onCancel
   const groupedSizes = React.useMemo(() => {
     const groups: Record<string, typeof plateSizes> = {};
     plateSizes.forEach(size => {
-      if (size.category === 'shuttering') return; // Shuttering rent is always the default daily rent
-      const category = size.category || 'other';
+      const category = size.category || 'shuttering';
       if (!groups[category]) {
         groups[category] = [];
       }

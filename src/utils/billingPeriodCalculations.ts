@@ -653,7 +653,14 @@ export function calculateBill(
   if (plateSizes && plateSizes.length > 0) {
     // Process each size individually so all sizes show separate breakdown with sizeName & sizeId
     plateSizes.forEach(ps => {
-      const rate = (jackRents && typeof jackRents[ps.id] === 'number') ? jackRents[ps.id] : dailyRate;
+      let customRate: number | null = null;
+      if (jackRents) {
+        const val = (jackRents as any)[ps.id] !== undefined ? (jackRents as any)[ps.id] : (jackRents as any)[String(ps.id)];
+        if (val !== undefined && val !== null && val !== '' && !isNaN(Number(val))) {
+          customRate = Number(val);
+        }
+      }
+      const rate = customRate !== null ? customRate : dailyRate;
       const sizeEntries = buildSizeEntries(ps.id);
       if (sizeEntries.length > 0) {
         const sizeResult = jamaFirst

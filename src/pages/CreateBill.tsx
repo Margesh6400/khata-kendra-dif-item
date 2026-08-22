@@ -1535,7 +1535,7 @@ export default function CreateBill() {
                 {(() => {
                   const selectedCategory = activeCategory || client?.category;
                   const visibleEntries = Object.entries(groupedSizes).filter(([category, sizes]) => {
-                    if (!sizes || sizes.length === 0 || category === 'shuttering') return false;
+                    if (!sizes || sizes.length === 0) return false;
                     if (enableCategoryClientSeparation && selectedCategory) {
                       return category === selectedCategory;
                     }
@@ -1551,7 +1551,8 @@ export default function CreateBill() {
                   }
 
                   return visibleEntries.map(([category, sizes]) => {
-                    const categoryLabel = category === 'jack' ? (language === 'gu' ? 'જેક' : 'Jack') :
+                    const categoryLabel = category === 'shuttering' ? (language === 'gu' ? 'શટરિંગ / પ્લેટ' : 'Shuttering / Plates') :
+                                         category === 'jack' ? (language === 'gu' ? 'જેક' : 'Jack') :
                                          category === 'cuplock' ? (language === 'gu' ? 'કપલોક' : 'Cuplock') :
                                          (language === 'gu' ? 'અન્ય' : 'Other');
                     return (
