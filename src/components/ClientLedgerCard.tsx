@@ -8,7 +8,6 @@ import { translations } from '../utils/translations';
 import TransactionTable from './TransactionTable';
 import ClientLedgerDownload from './ClientLedgerDownload';
 import { generateClientLedgerJPEG } from '../utils/generateLedgerJPEG';
-import { formatIndianCurrency } from '../utils/currencyFormat';
 import toast from 'react-hot-toast';
 
 interface ClientLedgerCardProps {
@@ -156,7 +155,7 @@ export default function ClientLedgerCard({ ledger }: ClientLedgerCardProps) {
               <span className="text-xs font-medium text-gray-500">કુલ બહાર</span>
               {ledger.transactionsLoaded ? (
                 <span className={`text-lg font-bold tabular-nums ${(ledger.currentBalance?.grandTotal ?? 0) > 0 ? 'text-amber-600' : 'text-green-600'} `}>
-                  {formatIndianCurrency(ledger.currentBalance?.grandTotal ?? 0)}
+                  {(ledger.currentBalance?.grandTotal ?? 0).toLocaleString("en-IN")}
                 </span>
               ) : (
                 <Loader2 className="w-5 h-5 animate-spin text-gray-400" />
@@ -222,7 +221,7 @@ export default function ClientLedgerCard({ ledger }: ClientLedgerCardProps) {
                 <span className="text-[11px] font-medium text-gray-500">કુલ બહાર</span>
                 {ledger.transactionsLoaded ? (
                   <span className={`text-base font-bold tabular-nums ${(ledger.currentBalance?.grandTotal ?? 0) > 0 ? 'text-amber-600' : 'text-green-600'} `}>
-                    {formatIndianCurrency(ledger.currentBalance?.grandTotal ?? 0)}
+                    {(ledger.currentBalance?.grandTotal ?? 0).toLocaleString("en-IN")}
                   </span>
                 ) : (
                   <Loader2 className="w-4 h-4 animate-spin text-gray-400" />

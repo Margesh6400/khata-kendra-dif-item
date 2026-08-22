@@ -660,25 +660,37 @@ export default function CreateBill() {
 
         // 3. Insert New Related Data
         if (billData.extraCosts.length > 0) {
-          const extraCostsData = billData.extraCosts.map((cost) => ({
-            bill_number: billData.billNumber,
-            date: cost.date,
-            note: cost.note,
-            pieces: cost.pieces,
-            price_per_piece: cost.pricePerPiece,
-          }));
+          const extraCostsData = billData.extraCosts.map((cost) => {
+            const pieces = (cost.pieces !== undefined && cost.pieces !== null && Number(cost.pieces) > 0) ? Number(cost.pieces) : 1;
+            const price = (cost.pricePerPiece !== undefined && cost.pricePerPiece !== null && Number(cost.pricePerPiece) > 0)
+              ? Number(cost.pricePerPiece)
+              : (Number(cost.total) || 0) / pieces;
+            return {
+              bill_number: billData.billNumber,
+              date: cost.date || billData.billDate,
+              note: cost.note || 'Extra Cost',
+              pieces: pieces,
+              price_per_piece: price,
+            };
+          });
           const { error: extraCostsError } = await supabase.from("bill_extra_costs").insert(extraCostsData);
           if (extraCostsError) console.warn("Could not insert bill_extra_costs:", extraCostsError);
         }
 
         if (billData.discounts.length > 0) {
-          const discountsData = billData.discounts.map((discount) => ({
-            bill_number: billData.billNumber,
-            date: discount.date,
-            note: discount.note,
-            pieces: discount.pieces,
-            discount_per_piece: discount.discountPerPiece,
-          }));
+          const discountsData = billData.discounts.map((discount) => {
+            const pieces = (discount.pieces !== undefined && discount.pieces !== null && Number(discount.pieces) > 0) ? Number(discount.pieces) : 1;
+            const price = (discount.discountPerPiece !== undefined && discount.discountPerPiece !== null && Number(discount.discountPerPiece) > 0)
+              ? Number(discount.discountPerPiece)
+              : (Number(discount.total) || 0) / pieces;
+            return {
+              bill_number: billData.billNumber,
+              date: discount.date || billData.billDate,
+              note: discount.note || 'Discount',
+              pieces: pieces,
+              discount_per_piece: price,
+            };
+          });
           const { error: discountsError } = await supabase.from("bill_discounts").insert(discountsData);
           if (discountsError) console.warn("Could not insert bill_discounts:", discountsError);
         }
@@ -686,9 +698,9 @@ export default function CreateBill() {
         if (billData.payments.length > 0) {
           const paymentsData = billData.payments.map((payment) => ({
             bill_number: billData.billNumber,
-            date: payment.date,
+            date: payment.date || billData.billDate,
             note: payment.note,
-            amount: payment.amount,
+            amount: Number(payment.amount) || 0,
             payment_method: payment.method,
           }));
           const { error: paymentsError } = await supabase.from("bill_payments").insert(paymentsData);
@@ -723,13 +735,19 @@ export default function CreateBill() {
 
         // Save extra costs
         if (billData.extraCosts.length > 0) {
-          const extraCostsData = billData.extraCosts.map((cost) => ({
-            bill_number: billData.billNumber,
-            date: cost.date,
-            note: cost.note,
-            pieces: cost.pieces,
-            price_per_piece: cost.pricePerPiece,
-          }));
+          const extraCostsData = billData.extraCosts.map((cost) => {
+            const pieces = (cost.pieces !== undefined && cost.pieces !== null && Number(cost.pieces) > 0) ? Number(cost.pieces) : 1;
+            const price = (cost.pricePerPiece !== undefined && cost.pricePerPiece !== null && Number(cost.pricePerPiece) > 0)
+              ? Number(cost.pricePerPiece)
+              : (Number(cost.total) || 0) / pieces;
+            return {
+              bill_number: billData.billNumber,
+              date: cost.date || billData.billDate,
+              note: cost.note || 'Extra Cost',
+              pieces: pieces,
+              price_per_piece: price,
+            };
+          });
 
           const { error: extraCostsError } = await supabase
             .from("bill_extra_costs")
@@ -740,13 +758,19 @@ export default function CreateBill() {
 
         // Save discounts
         if (billData.discounts.length > 0) {
-          const discountsData = billData.discounts.map((discount) => ({
-            bill_number: billData.billNumber,
-            date: discount.date,
-            note: discount.note,
-            pieces: discount.pieces,
-            discount_per_piece: discount.discountPerPiece,
-          }));
+          const discountsData = billData.discounts.map((discount) => {
+            const pieces = (discount.pieces !== undefined && discount.pieces !== null && Number(discount.pieces) > 0) ? Number(discount.pieces) : 1;
+            const price = (discount.discountPerPiece !== undefined && discount.discountPerPiece !== null && Number(discount.discountPerPiece) > 0)
+              ? Number(discount.discountPerPiece)
+              : (Number(discount.total) || 0) / pieces;
+            return {
+              bill_number: billData.billNumber,
+              date: discount.date || billData.billDate,
+              note: discount.note || 'Discount',
+              pieces: pieces,
+              discount_per_piece: price,
+            };
+          });
 
           const { error: discountsError } = await supabase
             .from("bill_discounts")

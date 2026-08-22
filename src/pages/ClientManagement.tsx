@@ -652,11 +652,11 @@ const ClientManagement: React.FC = () => {
             setShowForm(true);
             setEditingClient(undefined);
           }}
-          className="fixed z-50 flex items-center justify-center transition-all shadow-lg lg:hidden right-4 w-14 h-14 bg-gradient-to-br from-blue-600 to-blue-700 rounded-2xl hover:shadow-2xl active:scale-90 touch-manipulation"
+          className="fixed z-50 flex items-center justify-center transition-all shadow-2xl lg:hidden right-5 w-16 h-16 bg-gradient-to-br from-blue-500 to-blue-700 rounded-full hover:shadow-blue-500/50 active:scale-90 touch-manipulation border-2 border-white ring-4 ring-blue-600/30"
           style={{ bottom: 'calc(1.5rem + env(safe-area-inset-bottom))' }}
           aria-label="Add new client"
         >
-          <Plus className="text-white w-7 h-7" strokeWidth={2.5} />
+          <Plus className="text-white w-9 h-9" strokeWidth={3} />
         </button>
 
         {/* Mobile drawer replaced by unified centered modal dialog above */}

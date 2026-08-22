@@ -129,10 +129,10 @@ const ChallanEditModal: React.FC<ChallanEditModalProps> = ({
       // Build old_items JSONB array from the flat originalItems (size_1_qty etc.)
       const oldItems: any[] = [];
       plateSizes.forEach((ps) => {
-        const qty = (originalItems as any)[`size_${ps.id}_qty`] || 0;
-        const borrowed = (originalItems as any)[`size_${ps.id}_borrowed`] || 0;
-        const lost = (originalItems as any)[`size_${ps.id}_lost`] || 0;
-        const damaged = (originalItems as any)[`size_${ps.id}_damaged`] || 0;
+        const qty = Number((originalItems as any)[`size_${ps.id}_qty`]) || 0;
+        const borrowed = Number((originalItems as any)[`size_${ps.id}_borrowed`]) || 0;
+        const lost = Number((originalItems as any)[`size_${ps.id}_lost`]) || 0;
+        const damaged = Number((originalItems as any)[`size_${ps.id}_damaged`]) || 0;
         const note = (originalItems as any)[`size_${ps.id}_note`] || '';
         if (qty > 0 || borrowed > 0 || lost > 0 || damaged > 0 || note) {
           oldItems.push({ size_id: ps.id, qty, borrowed, lost, damaged, note });
@@ -142,86 +142,195 @@ const ChallanEditModal: React.FC<ChallanEditModalProps> = ({
       // Build new_items JSONB array from the form state
       const newItems: any[] = [];
       plateSizes.forEach((ps) => {
-        const qty = (items as FormItems)[`size_${ps.id}_qty` as keyof FormItems] ?? 0;
-        const borrowed = (items as FormItems)[`size_${ps.id}_borrowed` as keyof FormItems] ?? 0;
-        const lost = ((items as FormItems)[`size_${ps.id}_lost` as keyof FormItems] ?? 0) as number;
-        const damaged = ((items as FormItems)[`size_${ps.id}_damaged` as keyof FormItems] ?? 0) as number;
-        const note = (items as FormItems)[`size_${ps.id}_note` as keyof FormItems] || '';
-        if ((qty as number) > 0 || (borrowed as number) > 0 || lost > 0 || damaged > 0 || note) {
-          newItems.push({ size_id: ps.id, qty: (qty as number) || 0, borrowed: (borrowed as number) || 0, lost: lost || 0, damaged: damaged || 0, note: note as string });
+        const qty = Number((items as any)[`size_${ps.id}_qty`]) || 0;
+        const borrowed = Number((items as any)[`size_${ps.id}_borrowed`]) || 0;
+        const lost = Number((items as any)[`size_${ps.id}_lost`]) || 0;
+        const damaged = Number((items as any)[`size_${ps.id}_damaged`]) || 0;
+        const note = (items as any)[`size_${ps.id}_note`] || '';
+        if (qty > 0 || borrowed > 0 || lost > 0 || damaged > 0 || note) {
+          newItems.push({ size_id: ps.id, qty, borrowed, lost, damaged, note });
         }
       });
 
-      const { data, error } = await supabase.rpc(rpcFunction, {
-        p_challan_number: challan.challanNumber,
-        p_client_id: challan.clientId,
-        p_alternative_site: alternativeSite || null,
-        p_secondary_phone_number: secondaryPhone || null,
-        [dateField]: date,
-        p_driver_name: driverName || null,
-        p_driver_mobile: driverMobile || null,
-        p_vehicle_number: vehicleNumber || null,
-        p_old_items: oldItems,
-        p_new_items: newItems,
-        p_new_main_note: items.main_note,
-      });
-
-      if (error) throw error;
-
       const targetTable = type === 'udhar' ? 'udhar_challans' : 'jama_challans';
+      const targetItemsTable = type === 'udhar' ? 'udhar_items' : 'jama_items';
       const targetNumField = type === 'udhar' ? 'udhar_challan_number' : 'jama_challan_number';
+      const dateCol = type === 'udhar' ? 'udhar_date' : 'jama_date';
 
-      await supabase
+      let rpcSuccess = false;
+
+      // 1. Try RPC update first
+      try {
+        // Attempt with full parameters (with driver_mobile & vehicle_number)
+        let rpcRes = await supabase.rpc(rpcFunction, {
+          p_challan_number: challan.challanNumber,
+          p_client_id: challan.clientId,
+          p_alternative_site: alternativeSite || null,
+          p_secondary_phone_number: secondaryPhone || null,
+          [dateField]: date,
+          p_driver_name: driverName || null,
+          p_driver_mobile: driverMobile || null,
+          p_vehicle_number: vehicleNumber || null,
+          p_old_items: oldItems,
+          p_new_items: newItems,
+          p_new_main_note: items.main_note,
+        });
+
+        // If that failed due to param signature mismatch, try without driver_mobile & vehicle_number
+        if (rpcRes.error) {
+          rpcRes = await supabase.rpc(rpcFunction, {
+            p_challan_number: challan.challanNumber,
+            p_client_id: challan.clientId,
+            p_alternative_site: alternativeSite || null,
+            p_secondary_phone_number: secondaryPhone || null,
+            [dateField]: date,
+            p_driver_name: driverName || null,
+            p_old_items: oldItems,
+            p_new_items: newItems,
+            p_new_main_note: items.main_note,
+          });
+        }
+
+        if (!rpcRes.error) {
+          const rpcData = rpcRes.data;
+          if (!rpcData || typeof rpcData !== 'object' || !('success' in rpcData) || (rpcData as any).success) {
+            rpcSuccess = true;
+          }
+        }
+      } catch (rpcErr) {
+        console.warn("RPC update attempt failed, falling back to direct table update:", rpcErr);
+      }
+
+      // 2. Direct Table Updates (Always updates challan metadata & extra costs, and handles items/stock if RPC didn't)
+      const challanUpdatePayload: any = {
+        client_id: challan.clientId,
+        alternative_site: alternativeSite || null,
+        secondary_phone_number: secondaryPhone || null,
+        [dateCol]: date,
+        driver_name: driverName || null,
+        driver_mobile: driverMobile || null,
+        vehicle_number: vehicleNumber || null,
+        loading_unloading_charges: loadingUnloadingCharges ? parseFloat(loadingUnloadingCharges) || 0 : 0,
+        vehicle_rent: vehicleRent ? parseFloat(vehicleRent) || 0 : 0,
+        deposit: deposit ? parseFloat(deposit) || 0 : 0,
+      };
+
+      const { error: chUpdateError } = await supabase
         .from(targetTable)
+        .update(challanUpdatePayload)
+        .eq(targetNumField, challan.challanNumber);
+
+      if (chUpdateError) throw chUpdateError;
+
+      // Update Items table directly
+      const { error: itemsUpdateError } = await supabase
+        .from(targetItemsTable)
         .update({
-          loading_unloading_charges: loadingUnloadingCharges ? parseFloat(loadingUnloadingCharges) || 0 : 0,
-          vehicle_rent: vehicleRent ? parseFloat(vehicleRent) || 0 : 0,
-          deposit: deposit ? parseFloat(deposit) || 0 : 0,
+          items: newItems,
+          main_note: items.main_note || null,
         })
         .eq(targetNumField, challan.challanNumber);
 
-      const rpcFailed = data && typeof data === 'object' && 'success' in data && !data.success;
+      if (itemsUpdateError) console.warn("Notice: items table direct update:", itemsUpdateError);
 
-      if (rpcFailed) {
-        toast.error(`Error: ${(data as any).message}`);
-      } else {
-        // Keep stock_history in sync with the lost_stock/damaged_stock deltas the RPC applied
-        if (type === 'jama') {
-          const lostDelta: { [key: number]: number } = {};
-          const damagedDelta: { [key: number]: number } = {};
-          plateSizes.forEach((ps) => {
-            const oldItem = oldItems.find(i => i.size_id === ps.id);
-            const newItem = newItems.find(i => i.size_id === ps.id);
-            const oldLost = oldItem?.lost || 0;
-            const newLost = newItem?.lost || 0;
-            if (newLost !== oldLost) lostDelta[ps.id] = newLost - oldLost;
-            const oldDamaged = oldItem?.damaged || 0;
-            const newDamaged = newItem?.damaged || 0;
-            if (newDamaged !== oldDamaged) damagedDelta[ps.id] = newDamaged - oldDamaged;
-          });
-          for (const delta of [
-            { type: 'lost', items: lostDelta },
-            { type: 'damaged', items: damagedDelta },
-          ]) {
-            if (Object.keys(delta.items).length > 0) {
-              await supabase.from('stock_history').insert({
-                type: delta.type,
-                party_name: challan.clientNicName || '',
-                note: `ચલણ #${challan.challanNumber} સુધારેલ`,
-                amount: 0,
-                items: delta.items,
-                date: new Date().toISOString(),
+      // If RPC was not used or failed, compute and apply stock deltas directly
+      if (!rpcSuccess) {
+        for (const ps of plateSizes) {
+          const oldItem = oldItems.find(i => i.size_id === ps.id) || { qty: 0, borrowed: 0, lost: 0, damaged: 0 };
+          const newItem = newItems.find(i => i.size_id === ps.id) || { qty: 0, borrowed: 0, lost: 0, damaged: 0 };
+
+          if (type === 'udhar') {
+            const deltaQty = (newItem.qty || 0) - (oldItem.qty || 0);
+            const deltaBorrowed = (newItem.borrowed || 0) - (oldItem.borrowed || 0);
+
+            if (deltaQty > 0 || deltaBorrowed > 0) {
+              await supabase.rpc('increment_stock', {
+                p_size: ps.id,
+                p_on_rent_increment: Math.max(0, deltaQty),
+                p_borrowed_increment: Math.max(0, deltaBorrowed),
+              });
+            }
+            if (deltaQty < 0 || deltaBorrowed < 0) {
+              await supabase.rpc('decrement_stock', {
+                p_size: ps.id,
+                p_on_rent_decrement: Math.max(0, -deltaQty),
+                p_borrowed_decrement: Math.max(0, -deltaBorrowed),
+              });
+            }
+          } else {
+            // type === 'jama' (return items)
+            const deltaQty = (newItem.qty || 0) - (oldItem.qty || 0);
+            const deltaBorrowed = (newItem.borrowed || 0) - (oldItem.borrowed || 0);
+            const deltaLost = (newItem.lost || 0) - (oldItem.lost || 0);
+            const deltaDamaged = (newItem.damaged || 0) - (oldItem.damaged || 0);
+
+            if (deltaQty > 0 || deltaBorrowed > 0) {
+              await supabase.rpc('decrement_stock', {
+                p_size: ps.id,
+                p_on_rent_decrement: Math.max(0, deltaQty),
+                p_borrowed_decrement: Math.max(0, deltaBorrowed),
+              });
+            }
+            if (deltaQty < 0 || deltaBorrowed < 0) {
+              await supabase.rpc('increment_stock', {
+                p_size: ps.id,
+                p_on_rent_increment: Math.max(0, -deltaQty),
+                p_borrowed_increment: Math.max(0, -deltaBorrowed),
+              });
+            }
+            if (deltaLost !== 0) {
+              await supabase.rpc('adjust_lost_stock', {
+                p_size: ps.id,
+                p_lost_delta: deltaLost,
+              });
+            }
+            if (deltaDamaged !== 0) {
+              await supabase.rpc('adjust_damaged_stock', {
+                p_size: ps.id,
+                p_damaged_delta: deltaDamaged,
               });
             }
           }
         }
-        toast.success(t('challanUpdated'));
-        onSave();
-        onClose();
       }
-    } catch (error) {
+
+      // Stock history for jama lost/damaged changes
+      if (type === 'jama') {
+        const lostDelta: { [key: number]: number } = {};
+        const damagedDelta: { [key: number]: number } = {};
+        plateSizes.forEach((ps) => {
+          const oldItem = oldItems.find(i => i.size_id === ps.id);
+          const newItem = newItems.find(i => i.size_id === ps.id);
+          const oldLost = oldItem?.lost || 0;
+          const newLost = newItem?.lost || 0;
+          if (newLost !== oldLost) lostDelta[ps.id] = newLost - oldLost;
+          const oldDamaged = oldItem?.damaged || 0;
+          const newDamaged = newItem?.damaged || 0;
+          if (newDamaged !== oldDamaged) damagedDelta[ps.id] = newDamaged - oldDamaged;
+        });
+        for (const delta of [
+          { type: 'lost', items: lostDelta },
+          { type: 'damaged', items: damagedDelta },
+        ]) {
+          if (Object.keys(delta.items).length > 0) {
+            await supabase.from('stock_history').insert({
+              type: delta.type,
+              party_name: challan.clientNicName || '',
+              note: `ચલણ #${challan.challanNumber} સુધારેલ`,
+              amount: 0,
+              items: delta.items,
+              date: new Date().toISOString(),
+            });
+          }
+        }
+      }
+
+      toast.success(t('challanUpdated') || 'ચલણ સફળતાપૂર્વક અપડેટ થયું');
+      onSave();
+      onClose();
+    } catch (error: any) {
       console.error('Error updating challan:', error);
-      toast.error(t('errorUpdatingChallan'));
+      toast.error(error?.message || t('errorUpdatingChallan'));
     } finally {
       setLoading(false);
     }

@@ -26,7 +26,6 @@ import { mapRecordToArray } from '../utils/challanOperations';
 import ReceiptTemplate from '../components/ReceiptTemplate';
 import { useLanguage } from '../contexts/LanguageContext';
 import { supabase } from '../utils/supabase';
-import { formatIndianCurrency } from '../utils/currencyFormat';
 import { generateJPEG } from '../utils/generateJPEG';
 import { tryExportChallanDesign } from '../utils/challanDesign/exportChallanDesign';
 import Navbar from '../components/Navbar';
@@ -196,7 +195,7 @@ const ClientSelectionStep: React.FC<ClientSelectionStepProps> = ({
                   <span className="text-[11px] text-gray-500">કુલ બહાર</span>
                   <span className={`text-sm sm:text-base font-bold tabular-nums ${(clientBalances[client.id!] || 0) > 0 ? 'text-amber-600' : 'text-green-600'
                     }`}>
-                    {formatIndianCurrency(clientBalances[client.id!] || 0)}
+                    {(clientBalances[client.id!] || 0).toLocaleString("en-IN")}
                   </span>
                 </div>
                 <ChevronRight className="flex-shrink-0 w-4 h-4 text-gray-400 transition-transform sm:w-5 sm:h-5 group-hover:translate-x-1" />
@@ -523,6 +522,33 @@ const ChallanDetailsStep: React.FC<ChallanDetailsStepProps> = ({
           </div>
         </div>
 
+        {/* Items Table - Compact */}
+        <div className="p-3 bg-white border border-gray-200 rounded-lg shadow-sm sm:p-4 lg:p-6 sm:rounded-xl">
+          <div className="flex items-center gap-2 mb-3 sm:mb-4">
+            <div className="p-1.5 sm:p-2 bg-green-100 rounded-md sm:rounded-lg">
+              <Package className="w-4 h-4 text-green-600 sm:w-4.5 sm:h-4.5 lg:w-5 lg:h-5" />
+            </div>
+            <h3 className="text-sm font-semibold text-gray-900 sm:text-base lg:text-lg">{t('items')}</h3>
+          </div>
+          {errors.items && (
+            <div className="p-2 mb-3 border border-red-200 rounded-lg sm:p-3 sm:mb-4 bg-red-50">
+              <p className="flex items-center gap-1.5 text-xs sm:text-xs text-red-600">
+                <span>⚠</span> {errors.items}
+              </p>
+            </div>
+          )}
+          <ItemsTable
+            items={items}
+            onChange={setItems}
+            outstandingBalances={outstandingBalances}
+            borrowedOutstanding={borrowedOutstanding}
+            hideColumns={hideExtraColumns}
+            stockData={stockData}
+            showAvailable={false}
+            showLost={showLostAndDamaged}
+          />
+        </div>
+
         {/* Extra Cost Section */}
         {showExtraCost && (
           <div className="p-3 bg-white border border-gray-200 rounded-lg shadow-sm sm:p-4 lg:p-6 sm:rounded-xl">
@@ -575,34 +601,6 @@ const ChallanDetailsStep: React.FC<ChallanDetailsStepProps> = ({
             </div>
           </div>
         )}
-
-
-        {/* Items Table - Compact */}
-        <div className="p-3 bg-white border border-gray-200 rounded-lg shadow-sm sm:p-4 lg:p-6 sm:rounded-xl">
-          <div className="flex items-center gap-2 mb-3 sm:mb-4">
-            <div className="p-1.5 sm:p-2 bg-green-100 rounded-md sm:rounded-lg">
-              <Package className="w-4 h-4 text-green-600 sm:w-4.5 sm:h-4.5 lg:w-5 lg:h-5" />
-            </div>
-            <h3 className="text-sm font-semibold text-gray-900 sm:text-base lg:text-lg">{t('items')}</h3>
-          </div>
-          {errors.items && (
-            <div className="p-2 mb-3 border border-red-200 rounded-lg sm:p-3 sm:mb-4 bg-red-50">
-              <p className="flex items-center gap-1.5 text-xs sm:text-xs text-red-600">
-                <span>⚠</span> {errors.items}
-              </p>
-            </div>
-          )}
-          <ItemsTable
-            items={items}
-            onChange={setItems}
-            outstandingBalances={outstandingBalances}
-            borrowedOutstanding={borrowedOutstanding}
-            hideColumns={hideExtraColumns}
-            stockData={stockData}
-            showAvailable={false}
-            showLost={showLostAndDamaged}
-          />
-        </div>
 
 
         {/* Save or Success State - Mobile Optimized */}

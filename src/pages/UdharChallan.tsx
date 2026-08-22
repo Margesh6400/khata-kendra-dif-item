@@ -221,11 +221,11 @@ const ClientSelectionStep: React.FC<ClientSelectionStepProps> = ({
       {!isFormOpen && (
         <button
           onClick={onAddNewClick}
-          className="fixed z-50 flex items-center justify-center transition-all shadow-lg sm:hidden right-4 w-14 h-14 bg-gradient-to-br from-green-600 to-green-700 rounded-2xl hover:shadow-2xl active:scale-90 touch-manipulation"
+          className="fixed z-50 flex items-center justify-center transition-all shadow-2xl sm:hidden right-5 w-16 h-16 bg-gradient-to-br from-green-500 to-green-700 rounded-full hover:shadow-green-500/50 active:scale-90 touch-manipulation border-2 border-white ring-4 ring-green-600/30"
           style={{ bottom: 'calc(1.5rem + env(safe-area-inset-bottom))' }}
           aria-label="Add new client"
         >
-          <Plus className="text-white w-7 h-7" strokeWidth={2.5} />
+          <Plus className="text-white w-9 h-9" strokeWidth={3} />
         </button>
       )}
     </div>
@@ -369,50 +369,6 @@ const ChallanDetailsStep: React.FC<ChallanDetailsStepProps> = ({
       </div>
 
       <div className="space-y-3 sm:space-y-4 lg:space-y-6">
-        {/* Override Details - Collapsible on Mobile */}
-        <details className="p-3 bg-white border border-gray-200 rounded-lg shadow-sm sm:p-4 lg:p-6 sm:rounded-xl group">
-          <summary className="flex items-center justify-between cursor-pointer list-none touch-manipulation active:scale-[0.99]">
-            <div className="flex items-center gap-2">
-              <div className="p-1.5 sm:p-2 bg-yellow-100 rounded-md sm:rounded-lg">
-                <FileText className="w-4 h-4 text-yellow-600 sm:w-4.5 sm:h-4.5 lg:w-5 lg:h-5" />
-              </div>
-              <h3 className="text-sm font-semibold text-gray-900 sm:text-base lg:text-lg">{t('overrideDetails')}</h3>
-            </div>
-            <ChevronRight className="w-4 h-4 text-gray-400 transition-transform sm:w-5 sm:h-5 group-open:rotate-90" />
-          </summary>
-          <div className="mt-3 sm:mt-4">
-            <div className="grid gap-2 sm:gap-3 md:grid-cols-2 lg:gap-4">
-              <div>
-                <label className="flex items-center gap-1 sm:gap-1.5 mb-1.5 sm:mb-2 text-xs sm:text-xs lg:text-sm font-medium text-gray-700">
-                  <MapPin className="w-3 h-3 sm:w-3.5 sm:h-3.5" />
-                  {t('alternativeSite')}
-                </label>
-                <input
-                  type="text"
-                  value={alternativeSite}
-                  onChange={(e) => setAlternativeSite(e.target.value)}
-                  placeholder={t('optional')}
-                  className="w-full px-2.5 py-2 sm:px-3 sm:py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm sm:text-sm"
-                />
-              </div>
-              <div>
-                <label className="flex items-center gap-1 sm:gap-1.5 mb-1.5 sm:mb-2 text-xs sm:text-xs lg:text-sm font-medium text-gray-700">
-                  <Phone className="w-3 h-3 sm:w-3.5 sm:h-3.5" />
-                  {t('secondaryPhone')}
-                </label>
-                <input
-                  type="tel"
-                  inputMode="tel"
-                  value={secondaryPhone}
-                  onChange={(e) => setSecondaryPhone(e.target.value)}
-                  placeholder={t('optional')}
-                  className="w-full px-2.5 py-2 sm:px-3 sm:py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-xs sm:text-sm"
-                />
-              </div>
-            </div>
-          </div>
-        </details>
-
         {/* Basic Challan Details - Compact */}
         <div className="p-3 bg-white border border-gray-200 rounded-lg shadow-sm sm:p-4 lg:p-6 sm:rounded-xl">
           <div className="flex items-center gap-2 mb-3 sm:mb-4">
@@ -552,6 +508,30 @@ const ChallanDetailsStep: React.FC<ChallanDetailsStepProps> = ({
           </div>
         </div>
 
+        {/* Items Table - Compact */}
+        <div className="p-3 bg-white border border-gray-200 rounded-lg shadow-sm sm:p-4 lg:p-6 sm:rounded-xl">
+          <div className="flex items-center gap-2 mb-3 sm:mb-4">
+            <div className="p-1.5 sm:p-2 bg-green-100 rounded-md sm:rounded-lg">
+              <Package className="w-4 h-4 text-green-600 sm:w-4.5 sm:h-4.5 lg:w-5 lg:h-5" />
+            </div>
+            <h3 className="text-sm font-semibold text-gray-900 sm:text-base lg:text-lg">{t('itemsDetails')}</h3>
+          </div>
+          {errors.items && (
+            <div className="p-2 mb-3 border border-red-200 rounded-lg sm:p-3 sm:mb-4 bg-red-50">
+              <p className="flex items-center gap-1.5 text-xs sm:text-xs text-red-600">
+                <span>⚠</span> {errors.items}
+              </p>
+            </div>
+          )}
+          <ItemsTable
+            items={items}
+            onChange={setItems}
+            hideColumns={hideExtraColumns}
+            stockData={stockData}
+            showAvailable={true}
+          />
+        </div>
+
         {/* Extra Cost Section */}
         {showExtraCost && (
           <div className="p-3 bg-white border border-gray-200 rounded-lg shadow-sm sm:p-4 lg:p-6 sm:rounded-xl">
@@ -622,29 +602,49 @@ const ChallanDetailsStep: React.FC<ChallanDetailsStepProps> = ({
           </div>
         )}
 
-        {/* Items Table - Compact */}
-        <div className="p-3 bg-white border border-gray-200 rounded-lg shadow-sm sm:p-4 lg:p-6 sm:rounded-xl">
-          <div className="flex items-center gap-2 mb-3 sm:mb-4">
-            <div className="p-1.5 sm:p-2 bg-green-100 rounded-md sm:rounded-lg">
-              <Package className="w-4 h-4 text-green-600 sm:w-4.5 sm:h-4.5 lg:w-5 lg:h-5" />
+        {/* Override Details - Collapsible on Mobile */}
+        <details className="p-3 bg-white border border-gray-200 rounded-lg shadow-sm sm:p-4 lg:p-6 sm:rounded-xl group">
+          <summary className="flex items-center justify-between cursor-pointer list-none touch-manipulation active:scale-[0.99]">
+            <div className="flex items-center gap-2">
+              <div className="p-1.5 sm:p-2 bg-yellow-100 rounded-md sm:rounded-lg">
+                <FileText className="w-4 h-4 text-yellow-600 sm:w-4.5 sm:h-4.5 lg:w-5 lg:h-5" />
+              </div>
+              <h3 className="text-sm font-semibold text-gray-900 sm:text-base lg:text-lg">{t('overrideDetails')}</h3>
             </div>
-            <h3 className="text-sm font-semibold text-gray-900 sm:text-base lg:text-lg">{t('itemsDetails')}</h3>
+            <ChevronRight className="w-4 h-4 text-gray-400 transition-transform sm:w-5 sm:h-5 group-open:rotate-90" />
+          </summary>
+          <div className="mt-3 sm:mt-4">
+            <div className="grid gap-2 sm:gap-3 md:grid-cols-2 lg:gap-4">
+              <div>
+                <label className="flex items-center gap-1 sm:gap-1.5 mb-1.5 sm:mb-2 text-xs sm:text-xs lg:text-sm font-medium text-gray-700">
+                  <MapPin className="w-3 h-3 sm:w-3.5 sm:h-3.5" />
+                  {t('alternativeSite')}
+                </label>
+                <input
+                  type="text"
+                  value={alternativeSite}
+                  onChange={(e) => setAlternativeSite(e.target.value)}
+                  placeholder={t('optional')}
+                  className="w-full px-2.5 py-2 sm:px-3 sm:py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm sm:text-sm"
+                />
+              </div>
+              <div>
+                <label className="flex items-center gap-1 sm:gap-1.5 mb-1.5 sm:mb-2 text-xs sm:text-xs lg:text-sm font-medium text-gray-700">
+                  <Phone className="w-3 h-3 sm:w-3.5 sm:h-3.5" />
+                  {t('secondaryPhone')}
+                </label>
+                <input
+                  type="tel"
+                  inputMode="tel"
+                  value={secondaryPhone}
+                  onChange={(e) => setSecondaryPhone(e.target.value)}
+                  placeholder={t('optional')}
+                  className="w-full px-2.5 py-2 sm:px-3 sm:py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-xs sm:text-sm"
+                />
+              </div>
+            </div>
           </div>
-          {errors.items && (
-            <div className="p-2 mb-3 border border-red-200 rounded-lg sm:p-3 sm:mb-4 bg-red-50">
-              <p className="flex items-center gap-1.5 text-xs sm:text-xs text-red-600">
-                <span>⚠</span> {errors.items}
-              </p>
-            </div>
-          )}
-          <ItemsTable
-            items={items}
-            onChange={setItems}
-            hideColumns={hideExtraColumns}
-            stockData={stockData}
-            showAvailable={true}
-          />
-        </div>
+        </details>
 
         {/* Save or Success State - Mobile Optimized */}
         {showSuccess ? (

@@ -56,24 +56,42 @@ const BillCard: React.FC<BillCardProps> = ({ bill, t, onView, onDownload, onDele
                             <h4 className="font-bold text-gray-900 text-sm">
                                 #{bill.bill_number}
                             </h4>
-                            <span className={`inline-flex items-center px-1.5 py-0.5 rounded text-xs font-medium ${bill.status === 'cancelled' ? 'bg-red-100 text-red-800' : 'bg-green-100 text-green-800'
-                                }`}>
-                                {bill.status || 'Generated'}
+                            <span className={`inline-flex items-center px-1.5 py-0.5 rounded text-[11px] font-medium ${
+                                bill.status === 'cancelled' ? 'bg-red-100 text-red-800' :
+                                (bill.due_payment ?? 0) <= 0 && (bill.total_payment ?? 0) > 0 ? 'bg-emerald-100 text-emerald-800' :
+                                (bill.total_payment ?? 0) > 0 ? 'bg-blue-100 text-blue-800' :
+                                'bg-gray-100 text-gray-800'
+                            }`}>
+                                {bill.status === 'cancelled' ? (t('cancelled') || 'Cancelled') :
+                                 (bill.due_payment ?? 0) <= 0 && (bill.total_payment ?? 0) > 0 ? (t('fullyPaid') || 'ચૂકતે') :
+                                 (bill.total_payment ?? 0) > 0 ? (t('partiallyPaid') || 'આંશિક ચૂકવેલ') :
+                                 (bill.status || t('generated') || 'Generated')}
                             </span>
                         </div>
                     </div>
                     <div className="text-right">
                         {amount > 0 && (
-                            <div className="text-base font-bold text-blue-600">
+                            <div className="text-sm sm:text-base font-bold text-gray-900">
                                 ₹{amount.toLocaleString("en-IN")}
                             </div>
                         )}
-                        {(bill.due_payment || 0) > 0 && (
-                            <div className="text-xs font-bold text-red-600">
-                                {t('due') || 'Due'}: ₹{(bill.due_payment || 0).toLocaleString("en-IN")}
+                        {(bill.total_payment || 0) > 0 && (
+                            <div className="text-xs font-bold text-emerald-600">
+                                {t('paid') || 'ચૂકવેલ'}: ₹{(bill.total_payment || 0).toLocaleString("en-IN")}
                             </div>
                         )}
-                        <div className="text-xs text-gray-500">
+                        {(bill.due_payment || 0) > 0 ? (
+                            <div className="text-xs font-bold text-red-600">
+                                {t('due') || 'બાકી'}: ₹{(bill.due_payment || 0).toLocaleString("en-IN")}
+                            </div>
+                        ) : (
+                            (bill.total_payment || 0) > 0 && (
+                                <div className="text-[11px] font-semibold text-emerald-700">
+                                    ✓ {t('fullyPaid') || 'ચૂકતે'}
+                                </div>
+                            )
+                        )}
+                        <div className="text-[11px] text-gray-500 mt-0.5">
                             {date ? formatLocalDate(date, "dd MMM yy") : t('noDate')}
                         </div>
                     </div>

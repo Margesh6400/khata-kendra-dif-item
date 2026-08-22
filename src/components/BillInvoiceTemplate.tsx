@@ -226,22 +226,6 @@ const BillInvoiceTemplate: React.FC<BillInvoiceProps> = ({
               </tr>
             </thead>
             <tbody>
-              {/* Category Subtitle Row */}
-              <tr style={{ borderBottom: '1px solid #000', backgroundColor: '#fafafa' }}>
-                <td colSpan={7} style={{ padding: '4px 8px', fontWeight: 'bold', fontSize: '13px', fontStyle: 'italic' }}>
-                  {(() => {
-                    const cat = (billDetails.category || '').toLowerCase();
-                    if (cat.includes('pharma') || cat.includes('ફર્મા')) return 'ફર્મા';
-                    if (cat.includes('khapeda') || cat.includes('ખપેડા')) return 'ખપેડા';
-                    if (cat.includes('jack') || cat.includes('જેક')) return 'જેક';
-                    if (cat.includes('cuplock') || cat.includes('કપલોક')) return 'કપલોક';
-                    if (cat.includes('shuttering') || cat.includes('શટરિંગ')) return 'શટરિંગ / પ્લેટ';
-                    if (cat.includes('zhula') || cat.includes('ઝુલા') || cat.includes('ઝૂલા')) return 'ઝૂલા';
-                    return 'સેન્ટિંગ / ભાડા સામાન';
-                  })()}
-                </td>
-              </tr>
-
               {/* Previous Bill Row */}
               {previousBill && previousBill.amount > 0 && (
                 <tr style={{ borderBottom: '1px solid #000' }}>

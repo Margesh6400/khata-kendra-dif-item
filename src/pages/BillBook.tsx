@@ -142,6 +142,18 @@ export default function BillBook() {
     });
   }, [bills, searchQuery, sortOption]);
 
+  const summaryStats = useMemo(() => {
+    let totalBilled = 0;
+    let totalPaid = 0;
+    let totalDue = 0;
+    (bills || []).forEach((b) => {
+      totalBilled += (b.grand_total || b.total_amount || 0);
+      totalPaid += (b.total_payment || 0);
+      totalDue += (b.due_payment || 0);
+    });
+    return { totalBilled, totalPaid, totalDue, count: bills.length };
+  }, [bills]);
+
   const getSortLabel = (option: SortOption) => {
     return t(option) || option;
   };
@@ -238,22 +250,165 @@ export default function BillBook() {
         }
       }
 
+      // Extract extra costs and deposit discounts from challans in the bill period if not present in bill_extra_costs
+      const challanExtraCosts: any[] = [];
+      const challanDiscounts: any[] = [];
+
+      const filterDate = (d: string) => {
+        if (!d) return true;
+        const dStr = String(d).split('T')[0];
+        const fromStr = bill.from_date ? String(bill.from_date).split('T')[0] : '';
+        const toStr = (bill.to_date || billDateStr) ? String(bill.to_date || billDateStr).split('T')[0] : '';
+        if (fromStr && dStr < fromStr) return false;
+        if (toStr && dStr > toStr) return false;
+        return true;
+      };
+
+      (udharChallans || []).forEach((ch: any) => {
+        if (!filterDate(ch.udhar_date)) return;
+        const num = ch.udhar_challan_number;
+        const loadVal = parseFloat(String(ch.loading_unloading_charges || 0)) || 0;
+        const rentVal = parseFloat(String(ch.vehicle_rent || 0)) || 0;
+        const depVal = parseFloat(String(ch.deposit || 0)) || 0;
+        const dateStr = ch.udhar_date ? String(ch.udhar_date).split('T')[0] : '';
+
+        if (loadVal > 0) {
+          challanExtraCosts.push({
+            id: `udhar-${num}-loading`,
+            date: dateStr,
+            description: language === 'gu' ? `ચડાય (ઉધાર ચલણ #${num})` : `Loading Charges (Udhar Challan #${num})`,
+            pieces: 1,
+            rate: loadVal,
+            amount: loadVal,
+          });
+        }
+        if (rentVal > 0) {
+          challanExtraCosts.push({
+            id: `udhar-${num}-rent`,
+            date: dateStr,
+            description: language === 'gu' ? `વાહન ભાડું (ઉધાર ચલણ #${num})` : `Vehicle Rent (Udhar Challan #${num})`,
+            pieces: 1,
+            rate: rentVal,
+            amount: rentVal,
+          });
+        }
+        if (depVal > 0) {
+          challanDiscounts.push({
+            id: `udhar-${num}-deposit`,
+            date: dateStr,
+            description: language === 'gu' ? `ડિપોઝિટ જમા (ઉધાર ચલણ #${num})` : `Deposit Credit (Udhar Challan #${num})`,
+            amount: depVal,
+          });
+        }
+      });
+
+      (jamaChallans || []).forEach((ch: any) => {
+        if (!filterDate(ch.jama_date)) return;
+        const num = ch.jama_challan_number;
+        const loadVal = parseFloat(String(ch.loading_unloading_charges || 0)) || 0;
+        const rentVal = parseFloat(String(ch.vehicle_rent || 0)) || 0;
+        const depVal = parseFloat(String(ch.deposit || 0)) || 0;
+        const dateStr = ch.jama_date ? String(ch.jama_date).split('T')[0] : '';
+
+        if (loadVal > 0) {
+          challanExtraCosts.push({
+            id: `jama-${num}-loading`,
+            date: dateStr,
+            description: language === 'gu' ? `ઉતરાય (જમા ચલણ #${num})` : `Unloading Charges (Jama Challan #${num})`,
+            pieces: 1,
+            rate: loadVal,
+            amount: loadVal,
+          });
+        }
+        if (rentVal > 0) {
+          challanExtraCosts.push({
+            id: `jama-${num}-rent`,
+            date: dateStr,
+            description: language === 'gu' ? `વાહન ભાડું (જમા ચલણ #${num})` : `Vehicle Rent (Jama Challan #${num})`,
+            pieces: 1,
+            rate: rentVal,
+            amount: rentVal,
+          });
+        }
+        if (depVal > 0) {
+          challanDiscounts.push({
+            id: `jama-${num}-deposit`,
+            date: dateStr,
+            description: language === 'gu' ? `ડિપોઝિટ જમા (જમા ચલણ #${num})` : `Deposit Credit (Jama Challan #${num})`,
+            amount: depVal,
+          });
+        }
+      });
+
+      let mappedExtraCosts: any[] = [];
+      if (extraCosts && extraCosts.length > 0) {
+        mappedExtraCosts = extraCosts.map((c: any) => {
+          let description = c.note || '';
+          if (description.includes('ભાડાની હમાલી (ઉધાર ચલણ')) {
+            description = description.replace(/ભાડાની હમાલી \(ઉધાર ચલણ/g, 'ચડાય (ઉધાર ચલણ');
+          } else if (description.includes('ભાડાની હમાલી (જમા ચલણ')) {
+            description = description.replace(/ભાડાની હમાલી \(જમા ચલણ/g, 'ઉતરાય (જમા ચલણ');
+          }
+          const pieces = Number(c.pieces) || 1;
+          const rate = Number(c.price_per_piece) || (Number(c.total_amount) ? Number(c.total_amount) / pieces : 0);
+          const amount = Number(c.total_amount) || (pieces * rate) || Number(c.amount) || 0;
+          return {
+            id: c.id,
+            date: c.date,
+            description: description,
+            amount: amount,
+            pieces: pieces,
+            rate: rate,
+          };
+        });
+      } else if (challanExtraCosts.length > 0) {
+        mappedExtraCosts = challanExtraCosts;
+      } else if ((bill.total_extra_cost || 0) > 0) {
+        mappedExtraCosts = [{
+          id: 'extra-cost-total',
+          date: bill.to_date || billDateStr,
+          description: language === 'gu' ? 'વધારાનો ખર્ચ' : 'Extra Cost',
+          amount: Number(bill.total_extra_cost),
+          pieces: 1,
+          rate: Number(bill.total_extra_cost),
+        }];
+      }
+
+      let mappedDiscounts: any[] = [];
+      if (discounts && discounts.length > 0) {
+        mappedDiscounts = discounts.map((d: any) => {
+          const pieces = Number(d.pieces) || 1;
+          const rate = Number(d.discount_per_piece) || (Number(d.total_amount) ? Number(d.total_amount) / pieces : 0);
+          const amount = Number(d.total_amount) || (pieces * rate) || Number(d.amount) || 0;
+          return {
+            id: d.id,
+            date: d.date,
+            description: d.note,
+            amount: amount,
+            pieces: pieces,
+            rate: rate,
+          };
+        });
+      } else if (challanDiscounts.length > 0) {
+        mappedDiscounts = challanDiscounts;
+      } else if ((bill.total_discount || 0) > 0) {
+        mappedDiscounts = [{
+          id: 'discount-total',
+          date: bill.to_date || billDateStr,
+          description: language === 'gu' ? 'કસર / ડિસ્કાઉન્ટ' : 'Discount',
+          amount: Number(bill.total_discount),
+        }];
+      }
+
       // Calculate derived totals to ensure display even if DB columns are 0
       const calculatedTotalRent = bill.total_rent_amount || result.billingPeriods.totalRent || 0;
-      const calculatedExtra = bill.total_extra_cost || (extraCosts || []).reduce((sum: any, c: any) => sum + (c.total_amount || (c.pieces * c.price_per_piece)), 0);
-      const calculatedDiscount = bill.total_discount || (discounts || []).reduce((sum: any, d: any) => sum + (d.total_amount || (d.pieces * d.discount_per_piece)), 0);
+      const calculatedExtra = bill.total_extra_cost || mappedExtraCosts.reduce((sum: number, c: any) => sum + (c.amount || 0), 0);
+      const calculatedDiscount = bill.total_discount || mappedDiscounts.reduce((sum: number, d: any) => sum + (d.amount || 0), 0);
       const calculatedPaid = bill.total_payment || (payments || []).reduce((sum: any, p: any) => sum + p.amount, 0);
       const pending = previousBillData?.amount || 0;
 
       const derivedGrandTotal = calculatedTotalRent + calculatedExtra + pending;
       const derivedDue = derivedGrandTotal - calculatedDiscount - calculatedPaid;
-
-      const mappedDiscounts = (discounts || []).map((d: any) => ({
-        id: d.id,
-        date: d.date,
-        description: d.note,
-        amount: d.total_amount || (d.pieces * (d.discount_per_piece || 0)),
-      }));
 
       const calculatedDeposit = mappedDiscounts
         .filter((d: any) => String(d.id || '').includes('deposit') || String(d.description || '').includes('ડિપોઝિટ') || String(d.description || '').includes('Deposit'))
@@ -296,22 +451,7 @@ export default function BillBook() {
           jamaDetails: p.jamaDetails,
           sizeId: p.sizeId,
         })),
-        extraCosts: (extraCosts || []).map((c: any) => {
-          let description = c.note || '';
-          if (description.includes('ભાડાની હમાલી (ઉધાર ચલણ')) {
-            description = description.replace(/ભાડાની હમાલી \(ઉધાર ચલણ/g, 'ચડાય (ઉધાર ચલણ');
-          } else if (description.includes('ભાડાની હમાલી (જમા ચલણ')) {
-            description = description.replace(/ભાડાની હમાલી \(જમા ચલણ/g, 'ઉતરાય (જમા ચલણ');
-          }
-          return {
-            id: c.id,
-            date: c.date,
-            description: description,
-            amount: c.total_amount || (c.pieces * c.price_per_piece),
-            pieces: c.pieces,
-            rate: c.price_per_piece
-          };
-        }),
+        extraCosts: mappedExtraCosts,
         discounts: mappedDiscounts,
         payments: (payments || []).map((p: any) => ({
           id: p.id, date: p.date, method: p.payment_method, note: p.note, amount: p.amount
@@ -607,6 +747,34 @@ ${businessInfo.name}`;
               >
                 <RefreshCw className="w-5 h-5 text-gray-600" />
               </button>
+            </div>
+          </div>
+
+          {/* Quick Summary Stats */}
+          <div className="grid grid-cols-3 gap-2 sm:gap-4">
+            <div className="p-2.5 sm:p-4 bg-white border border-gray-200 rounded-xl shadow-sm">
+              <span className="text-[11px] sm:text-xs font-medium text-gray-500 block">
+                {language === 'gu' ? 'કુલ બિલ રકમ' : 'Total Billed'}
+              </span>
+              <span className="text-sm sm:text-lg font-bold text-gray-900 tabular-nums">
+                ₹{summaryStats.totalBilled.toLocaleString('en-IN')}
+              </span>
+            </div>
+            <div className="p-2.5 sm:p-4 bg-white border border-green-200 rounded-xl shadow-sm bg-gradient-to-br from-green-50/50 to-white">
+              <span className="text-[11px] sm:text-xs font-medium text-emerald-700 block">
+                {language === 'gu' ? 'જમા / ચૂકવેલ રકમ' : 'Payment Done'}
+              </span>
+              <span className="text-sm sm:text-lg font-bold text-emerald-600 tabular-nums">
+                ₹{summaryStats.totalPaid.toLocaleString('en-IN')}
+              </span>
+            </div>
+            <div className="p-2.5 sm:p-4 bg-white border border-red-200 rounded-xl shadow-sm bg-gradient-to-br from-red-50/50 to-white">
+              <span className="text-[11px] sm:text-xs font-medium text-red-700 block">
+                {language === 'gu' ? 'કુલ બાકી રકમ' : 'Total Due'}
+              </span>
+              <span className="text-sm sm:text-lg font-bold text-red-600 tabular-nums">
+                ₹{summaryStats.totalDue.toLocaleString('en-IN')}
+              </span>
             </div>
           </div>
 
