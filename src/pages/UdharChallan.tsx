@@ -1154,7 +1154,7 @@ const UdharChallan: React.FC = () => {
         }}
       />
       <Navbar />
-      <main className="flex-1 w-full ml-0 pt-[72px] lg:pt-0 lg:ml-64">
+      <main className="flex-1 w-full ml-0 app-main-content lg:ml-64">
         <div className="w-full px-3 pb-20 mx-auto sm:px-4 sm:py-5 lg:px-8 lg:py-12 lg:pb-12 max-w-7xl">
           {currentStep === 'client-selection' ? (
             <>

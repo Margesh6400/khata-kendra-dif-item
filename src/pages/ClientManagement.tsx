@@ -473,7 +473,7 @@ const ClientManagement: React.FC = () => {
         }}
       />
       <Navbar />
-      <main className="flex-1 w-full ml-0 pt-[72px] lg:pt-0 lg:ml-64">
+      <main className="flex-1 w-full ml-0 app-main-content lg:ml-64">
         <div className="w-full px-4 py-6 mx-auto lg:px-8 lg:py-8 max-w-7xl" style={{ backgroundColor: '#f9fafb' }}>
           {/* Header Section - Hidden on Mobile */}
           <div className="hidden mb-4 sm:block sm:mb-6 lg:mb-8">

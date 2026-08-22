@@ -714,7 +714,7 @@ ${businessInfo.name}`;
   return (
     <div className="flex min-h-screen bg-gray-50">
       <Navbar />
-      <main className="flex-1 w-full ml-0 pt-[72px] lg:pt-0 lg:ml-64">
+      <main className="flex-1 w-full ml-0 app-main-content lg:ml-64">
         <div className="flex flex-col gap-3 sm:gap-6 p-4 sm:p-6 lg:p-8 max-w-7xl mx-auto">
 
           {/* Header */}

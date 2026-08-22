@@ -398,16 +398,14 @@ const Navbar: React.FC = () => {
         {renderSidebarContent()}
       </nav>
 
-      {/* Mobile Header - Sleek floating bar with smooth 16px rounded corners */}
-      <div
-        className="fixed left-0 right-0 z-50 flex items-center justify-between px-3.5 bg-white/95 backdrop-blur-md border border-slate-200/80 shadow-md shadow-slate-200/50 lg:hidden"
+      {/* Mobile Header - Full-width modern header supporting iOS safe areas */}
+      <header
+        className="fixed top-0 left-0 right-0 z-40 bg-white/95 backdrop-blur-md border-b border-slate-200/80 shadow-xs lg:hidden"
         style={{
-          height: '56px',
-          top: 'calc(10px + env(safe-area-inset-top))',
-          margin: '0 12px',
-          borderRadius: '16px'
+          paddingTop: 'env(safe-area-inset-top, 0px)',
         }}
       >
+        <div className="flex items-center justify-between px-3 sm:px-4 h-14">
         <button
           onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
           className="p-2 rounded-xl bg-slate-100/80 hover:bg-slate-200/80 text-blue-600 focus:outline-none transition-all active:scale-95 shrink-0"
@@ -504,7 +502,8 @@ const Navbar: React.FC = () => {
         ) : (
           <div className="w-8 shrink-0" />
         )}
-      </div>
+        </div>
+      </header>
 
       {/* Mobile Navigation Drawer */}
       {mobileMenuOpen && (

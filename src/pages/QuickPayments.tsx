@@ -510,7 +510,7 @@ ${businessInfo.name}`;
       <Navbar />
       <Toaster position="top-right" />
 
-      <main className="flex-1 w-full ml-0 pt-[72px] lg:pt-4 lg:ml-64">
+      <main className="flex-1 w-full ml-0 app-main-content lg:pt-4 lg:ml-64">
         <div className="max-w-7xl mx-auto px-3 sm:px-6 lg:px-8 py-2 sm:py-4">
         
         {/* Page Header */}

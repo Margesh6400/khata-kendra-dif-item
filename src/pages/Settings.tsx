@@ -316,7 +316,7 @@ const Settings: React.FC = () => {
       <Toaster position="top-right" />
       <Navbar />
 
-      <main className="flex-1 w-full px-4 pt-[72px] pb-24 sm:px-6 lg:px-8 lg:py-8 lg:ml-64 transition-all duration-200">
+      <main className="flex-1 w-full px-4 app-main-content pb-24 sm:px-6 lg:px-8 lg:py-8 lg:ml-64 transition-all duration-200">
         <div className="max-w-4xl mx-auto space-y-6">
 
           {/* Header — hidden on mobile (navbar already shows page title) */}

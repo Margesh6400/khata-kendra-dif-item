@@ -658,7 +658,7 @@ const StockManagement: React.FC = () => {
         }}
       />
       <Navbar />
-      <main className="flex-1 w-full ml-0 pt-[72px] pb-20 sm:pt-0 sm:pb-0 lg:ml-64">
+      <main className="flex-1 w-full ml-0 app-main-content pb-20 sm:pb-0 lg:ml-64">
         <div className="w-full h-full px-3 py-3 pb-20 mx-auto sm:px-4 sm:py-5 lg:px-8 lg:py-12 lg:pb-12 max-w-7xl">
           {/* Header - Desktop Only */}
           <div className="items-center justify-between hidden mb-6 lg:flex lg:mb-8">
