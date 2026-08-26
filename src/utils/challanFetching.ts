@@ -1,16 +1,19 @@
 
 export const mapItemsToRecord = (rawItems: any, mainNote: string = '') => {
-  const record: Record<number, { qty: number, borrowed: number, lost: number, damaged: number, note: string }> = {};
-  
+  const record: Record<number, {
+    qty: number, borrowed: number, lost: number, damaged: number, note: string,
+    extraReturned?: number, extraPortion?: 'inner' | 'outer', extraQty?: number
+  }> = {};
+
   if (!rawItems) return { items: record, main_note: mainNote };
-  
+
   // If it's a joined row array, take the first
   const itemRow = Array.isArray(rawItems) && rawItems.length > 0 && !rawItems[0].size_id ? rawItems[0] : rawItems;
-  
+
   // items array from jsonb
   const jsonArray = itemRow.items || itemRow || [];
   const arrayToProcess = Array.isArray(jsonArray) ? jsonArray : [];
-  
+
   arrayToProcess.forEach((item: any) => {
     if (item.size_id) {
       record[item.size_id] = {
@@ -18,11 +21,14 @@ export const mapItemsToRecord = (rawItems: any, mainNote: string = '') => {
         borrowed: item.borrowed || 0,
         lost: item.lost || 0,
         damaged: item.damaged || 0,
-        note: item.note || ''
+        note: item.note || '',
+        extraReturned: item.extraReturned || 0,
+        extraPortion: item.extraPortion === 'inner' || item.extraPortion === 'outer' ? item.extraPortion : undefined,
+        extraQty: item.extraQty || 0,
       };
     }
   });
-  
+
   return { items: record, main_note: itemRow.main_note || mainNote };
 };
 

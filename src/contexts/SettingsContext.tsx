@@ -6,6 +6,11 @@ export type LedgerDownloadFormat = 'detailed' | 'simple' | 'split';
 export type ShareBillMode = 'image' | 'text';
 export type BusinessCategory = 'shuttering' | 'jack' | 'cuplock' | 'other';
 export type QuickActionsSortMethod = 'default' | 'alphabetical' | 'mostUsed';
+// The three real business lines that the password-gated "lock to one category"
+// feature can pin the app to. 'other' is intentionally excluded — it is a
+// catch-all bucket, not a lockable business line.
+export type LockableCategory = 'shuttering' | 'jack' | 'cuplock';
+export type JackMaterialType = 'iron' | 'wooden';
 
 const MIN_FONT_SIZE = 12;
 const MAX_FONT_SIZE = 22;
@@ -45,6 +50,17 @@ interface SettingsContextType {
   setEnableCategoryChallanSeparation: (val: boolean) => void;
   activeCategory: BusinessCategory | null;
   setActiveCategory: (category: BusinessCategory | null) => void;
+  // Password-gated single-category lock (Shuttering / Jack / Cuplock only).
+  // When enabled, the category switcher is pinned to lockedCategory and
+  // hidden from switching in the UI until unlocked again with the password.
+  categoryLockEnabled: boolean;
+  setCategoryLockEnabled: (val: boolean) => void;
+  lockedCategory: LockableCategory | null;
+  setLockedCategory: (category: LockableCategory | null) => void;
+  // Whether Jack items are Iron (tracked as separate Inner/Outer portions)
+  // or Wooden (a single simple item, labelled "Teka").
+  jackMaterialType: JackMaterialType;
+  setJackMaterialType: (type: JackMaterialType) => void;
   quickActionsSortMethod: QuickActionsSortMethod;
   setQuickActionsSortMethod: (method: QuickActionsSortMethod) => void;
   visibleQuickActions: string[];
@@ -104,8 +120,24 @@ export const SettingsProvider: React.FC<{ children: ReactNode }> = ({ children }
   });
 
   const [activeCategory, setActiveCategoryState] = useState<BusinessCategory | null>(() => {
+    // If a category lock was already on before this load (e.g. app restart),
+    // seed straight into the locked category so the lock screen's "pick a
+    // category" prompt never gets a chance to flash first.
+    if (localStorage.getItem('categoryLockEnabled') === 'true') {
+      const locked = localStorage.getItem('lockedCategory');
+      if (locked === 'shuttering' || locked === 'jack' || locked === 'cuplock') return locked;
+    }
     const saved = sessionStorage.getItem('activeCategory');
     return (saved === 'shuttering' || saved === 'jack' || saved === 'cuplock' || saved === 'other') ? saved : null;
+  });
+
+  const [categoryLockEnabled, setCategoryLockEnabledState] = useState<boolean>(() => {
+    return localStorage.getItem('categoryLockEnabled') === 'true';
+  });
+
+  const [lockedCategory, setLockedCategoryState] = useState<LockableCategory | null>(() => {
+    const saved = localStorage.getItem('lockedCategory');
+    return (saved === 'shuttering' || saved === 'jack' || saved === 'cuplock') ? saved : null;
   });
 
   const [quickActionsSortMethod, setQuickActionsSortMethodState] = useState<QuickActionsSortMethod>(() => {
@@ -209,6 +241,28 @@ export const SettingsProvider: React.FC<{ children: ReactNode }> = ({ children }
           localStorage.setItem('enableCategoryChallanSeparation', String(val));
           break;
         }
+        case 'category_lock_enabled': {
+          const val = value === 'true';
+          setCategoryLockEnabledState(val);
+          localStorage.setItem('categoryLockEnabled', String(val));
+          break;
+        }
+        case 'locked_category':
+          if (value === 'shuttering' || value === 'jack' || value === 'cuplock') {
+            setLockedCategoryState(value);
+            localStorage.setItem('lockedCategory', value);
+            setActiveCategoryState(value);
+          } else if (value === '') {
+            setLockedCategoryState(null);
+            localStorage.removeItem('lockedCategory');
+          }
+          break;
+        case 'jack_material_type':
+          if (value === 'iron' || value === 'wooden') {
+            setJackMaterialTypeState(value);
+            localStorage.setItem('jackMaterialType', value);
+          }
+          break;
         case 'quick_actions_sort_method':
           if (value === 'default' || value === 'alphabetical' || value === 'mostUsed') {
             setQuickActionsSortMethodState(value);
@@ -320,6 +374,14 @@ export const SettingsProvider: React.FC<{ children: ReactNode }> = ({ children }
     }
   }, [activeCategory]);
 
+  // Keep activeCategory pinned to the locked category whenever the lock is
+  // on (e.g. right after settings load from Supabase on a fresh session).
+  useEffect(() => {
+    if (categoryLockEnabled && lockedCategory && activeCategory !== lockedCategory) {
+      setActiveCategoryState(lockedCategory);
+    }
+  }, [categoryLockEnabled, lockedCategory]);
+
   useEffect(() => {
     localStorage.setItem('quickActionsSortMethod', quickActionsSortMethod);
   }, [quickActionsSortMethod]);
@@ -427,7 +489,71 @@ export const SettingsProvider: React.FC<{ children: ReactNode }> = ({ children }
     syncAppSetting('enable_category_challan_separation', String(val));
   };
 
+  useEffect(() => {
+    localStorage.setItem('categoryLockEnabled', String(categoryLockEnabled));
+  }, [categoryLockEnabled]);
+
+  useEffect(() => {
+    if (lockedCategory) {
+      localStorage.setItem('lockedCategory', lockedCategory);
+    } else {
+      localStorage.removeItem('lockedCategory');
+    }
+  }, [lockedCategory]);
+
+  const setCategoryLockEnabled = (val: boolean) => {
+    setCategoryLockEnabledState(val);
+    localStorage.setItem('categoryLockEnabled', String(val));
+    syncAppSetting('category_lock_enabled', String(val));
+    if (val) {
+      // Locking to a single category only makes sense with category
+      // separation switched on — turn it on alongside the lock.
+      setEnableCategorySeparation(true);
+    } else {
+      // Clear the pinned category once the lock is lifted so a stale
+      // value doesn't silently re-apply if the lock is re-enabled later.
+      setLockedCategoryState(null);
+      localStorage.removeItem('lockedCategory');
+      syncAppSetting('locked_category', '');
+    }
+  };
+
+  const setLockedCategory = (category: LockableCategory | null) => {
+    setLockedCategoryState(category);
+    if (category) {
+      localStorage.setItem('lockedCategory', category);
+      syncAppSetting('locked_category', category);
+      setActiveCategoryState(category);
+    } else {
+      localStorage.removeItem('lockedCategory');
+      syncAppSetting('locked_category', '');
+    }
+  };
+
+  const [jackMaterialType, setJackMaterialTypeState] = useState<JackMaterialType>(() => {
+    const saved = localStorage.getItem('jackMaterialType');
+    return saved === 'wooden' ? 'wooden' : 'iron';
+  });
+
+  useEffect(() => {
+    localStorage.setItem('jackMaterialType', jackMaterialType);
+  }, [jackMaterialType]);
+
+  const setJackMaterialType = (type: JackMaterialType) => {
+    setJackMaterialTypeState(type);
+    localStorage.setItem('jackMaterialType', type);
+    syncAppSetting('jack_material_type', type);
+  };
+
   const setActiveCategory = (category: BusinessCategory | null) => {
+    // While a category lock is active, the app is only allowed to sit on the
+    // locked category — ignore any attempt (from a stale UI, deep link, etc.)
+    // to switch away from it without going through the password-gated
+    // unlock flow in Settings.
+    if (categoryLockEnabled && lockedCategory) {
+      setActiveCategoryState(lockedCategory);
+      return;
+    }
     setActiveCategoryState(category);
   };
 
@@ -494,6 +620,12 @@ export const SettingsProvider: React.FC<{ children: ReactNode }> = ({ children }
       setEnableCategoryChallanSeparation,
       activeCategory,
       setActiveCategory,
+      categoryLockEnabled,
+      setCategoryLockEnabled,
+      lockedCategory,
+      setLockedCategory,
+      jackMaterialType,
+      setJackMaterialType,
       quickActionsSortMethod,
       setQuickActionsSortMethod,
       visibleQuickActions,

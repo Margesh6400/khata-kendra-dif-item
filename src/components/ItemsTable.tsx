@@ -18,6 +18,17 @@ export interface ItemDetail {
   lost?: number;
   damaged?: number;
   note: string;
+  // Extra pieces returned beyond what was on record as outstanding for
+  // this size — computed automatically at save time (see JamaChallan's
+  // handleSave), never entered directly by a user.
+  extraReturned?: number;
+  // Iron jacks only: a jack is issued/returned as a pair (qty above is the
+  // pair count). extraPortion/extraQty record loose, unpaired Inner or
+  // Outer pieces that came with this transaction on top of the pairs —
+  // e.g. 100 full pairs plus 2 spare Outer pieces. Entered directly by
+  // the user (one portion at a time, kept simple on purpose).
+  extraPortion?: 'inner' | 'outer';
+  extraQty?: number;
 }
 
 export interface ItemsData {
@@ -28,6 +39,9 @@ export interface ItemsData {
       lost?: number;
       damaged?: number;
       note: string;
+      extraReturned?: number;
+      extraPortion?: 'inner' | 'outer';
+      extraQty?: number;
     };
   };
   main_note: string;
@@ -53,6 +67,10 @@ interface ItemsTableProps {
   onChange: (items: ItemsData) => void;
   outstandingBalances?: { [key: number]: number };
   borrowedOutstanding?: { [key: number]: number };
+  // Iron-jack-only breakdown of outstandingBalances into its two portions.
+  // Optional — only JamaChallan supplies these (Udhar has no outstanding).
+  innerOutstandingBalances?: { [key: number]: number };
+  outerOutstandingBalances?: { [key: number]: number };
   hideColumns?: boolean;
   stockData?: StockData[];
   showAvailable?: boolean;
@@ -65,6 +83,8 @@ const ItemsTable: React.FC<ItemsTableProps> = ({
   onChange,
   outstandingBalances,
   borrowedOutstanding,
+  innerOutstandingBalances,
+  outerOutstandingBalances,
   hideColumns = false,
   stockData = [],
   showAvailable = false,
@@ -72,12 +92,27 @@ const ItemsTable: React.FC<ItemsTableProps> = ({
 }) => {
   const { t } = useLanguage();
   const { sizes: hookPlateSizes } = usePlateSizes();
-  const { activeCategory: globalActiveCategory, enableCategorySeparation } = useSettings();
+  const { activeCategory: globalActiveCategory, enableCategorySeparation, jackMaterialType } = useSettings();
+  const isJackIron = (ps: PlateSize) => ps.category === 'jack' && jackMaterialType === 'iron';
+  // A negative outstanding balance means the client has returned more of
+  // this portion than they were on record for — that surplus is an
+  // automatically-remembered credit (see JamaChallan's handleSave), so it
+  // is shown distinctly instead of as a plain (misleading) negative debt.
+  const formatPortionBalance = (value: number) => {
+    if (value < 0) return { text: `+${Math.abs(value)} ${t('credit') || 'credit'}`, className: 'bg-emerald-50 text-emerald-700' };
+    if (value === 0) return { text: '0', className: 'bg-gray-100 text-gray-600' };
+    return { text: String(value), className: 'bg-red-50 text-red-700' };
+  };
   const plateSizes = React.useMemo(() => {
     const rawSizes = propPlateSizes || hookPlateSizes || [];
     if (!enableCategorySeparation || !globalActiveCategory) return rawSizes;
     return rawSizes.filter(ps => (ps.category || 'shuttering') === globalActiveCategory);
   }, [propPlateSizes, hookPlateSizes, enableCategorySeparation, globalActiveCategory]);
+
+  // Whether the "Extra" column (loose Inner/Outer jack pieces) should be
+  // shown at all — only relevant when at least one visible row is an Iron
+  // jack.
+  const hasJackIronRows = React.useMemo(() => plateSizes.some(isJackIron), [plateSizes, jackMaterialType]);
 
   const [collapsedSections, setCollapsedSections] = React.useState<Record<string, boolean>>({
     shuttering: false,
@@ -126,7 +161,7 @@ const ItemsTable: React.FC<ItemsTableProps> = ({
   };
 
 
-  const handleChange = (sizeId: number, field: 'qty' | 'borrowed' | 'lost' | 'damaged' | 'note', value: number | string) => {
+  const handleChange = (sizeId: number, field: 'qty' | 'borrowed' | 'lost' | 'damaged' | 'note' | 'extraQty', value: number | string) => {
     const currentItem = items.items[sizeId] || { qty: 0, borrowed: 0, lost: 0, damaged: 0, note: '' };
 
     let newValue: any = value;
@@ -141,11 +176,32 @@ const ItemsTable: React.FC<ItemsTableProps> = ({
       }
     }
 
+    const updatedItem: any = { ...currentItem, [field]: newValue };
+
     onChange({
       ...items,
       items: {
         ...items.items,
-        [sizeId]: { ...currentItem, [field]: newValue }
+        [sizeId]: updatedItem
+      }
+    });
+  };
+
+  // Iron jacks only — picks which loose portion (Inner/Outer) the Extra
+  // column's count belongs to for this size. Clicking the already-selected
+  // portion clears it (and its count), acting as a simple toggle-off.
+  const handleExtraPortionToggle = (sizeId: number, portion: 'inner' | 'outer') => {
+    const currentItem = items.items[sizeId] || { qty: 0, borrowed: 0, lost: 0, damaged: 0, note: '' };
+    const isDeselecting = currentItem.extraPortion === portion;
+    onChange({
+      ...items,
+      items: {
+        ...items.items,
+        [sizeId]: {
+          ...currentItem,
+          extraPortion: isDeselecting ? undefined : portion,
+          extraQty: isDeselecting ? 0 : currentItem.extraQty,
+        }
       }
     });
   };
@@ -170,6 +226,16 @@ const ItemsTable: React.FC<ItemsTableProps> = ({
           >
             {outstandingBalances[ps.id] || 0}
           </div>
+          {isJackIron(ps) && innerOutstandingBalances && outerOutstandingBalances && (innerOutstandingBalances[ps.id] || 0) !== (outerOutstandingBalances[ps.id] || 0) && (
+            <div className="flex flex-col gap-1 items-center mt-1.5">
+              <span className={`px-2 py-0.5 text-[10px] font-semibold rounded ${formatPortionBalance(innerOutstandingBalances[ps.id] || 0).className}`}>
+                {t('inner') || 'Inner'}: {formatPortionBalance(innerOutstandingBalances[ps.id] || 0).text}
+              </span>
+              <span className={`px-2 py-0.5 text-[10px] font-semibold rounded ${formatPortionBalance(outerOutstandingBalances[ps.id] || 0).className}`}>
+                {t('outer') || 'Outer'}: {formatPortionBalance(outerOutstandingBalances[ps.id] || 0).text}
+              </span>
+            </div>
+          )}
         </td>
       )}
       {showAvailable && (
@@ -196,6 +262,41 @@ const ItemsTable: React.FC<ItemsTableProps> = ({
           className="w-24 px-3 py-2 text-center border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
         />
       </td>
+      {hasJackIronRows && (
+        <td className="px-4 py-4 text-center whitespace-nowrap">
+          {isJackIron(ps) ? (
+            <div className="flex flex-col gap-1 items-center">
+              <div className="flex rounded-lg overflow-hidden border border-gray-300 text-[10px] font-bold">
+                <button
+                  type="button"
+                  onClick={() => handleExtraPortionToggle(ps.id, 'inner')}
+                  className={`px-2 py-1 transition-colors ${items.items[ps.id]?.extraPortion === 'inner' ? 'bg-blue-600 text-white' : 'bg-white text-gray-500 hover:bg-gray-50'}`}
+                >
+                  {t('inner') || 'Inner'}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => handleExtraPortionToggle(ps.id, 'outer')}
+                  className={`px-2 py-1 border-l border-gray-300 transition-colors ${items.items[ps.id]?.extraPortion === 'outer' ? 'bg-blue-600 text-white' : 'bg-white text-gray-500 hover:bg-gray-50'}`}
+                >
+                  {t('outer') || 'Outer'}
+                </button>
+              </div>
+              <input
+                type="number"
+                min="0"
+                disabled={!items.items[ps.id]?.extraPortion}
+                value={items.items[ps.id]?.extraQty || ""}
+                onChange={(e) => handleChange(ps.id, 'extraQty', e.target.value)}
+                placeholder="0"
+                className="w-16 px-2 py-1.5 text-center border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent disabled:bg-gray-50 disabled:text-gray-300"
+              />
+            </div>
+          ) : (
+            <span className="text-gray-300">—</span>
+          )}
+        </td>
+      )}
       {showLost && (
         <>
           <td className="px-4 py-4 text-center whitespace-nowrap">
@@ -283,6 +384,16 @@ const ItemsTable: React.FC<ItemsTableProps> = ({
           >
             {outstandingBalances[ps.id] || 0}
           </div>
+          {isJackIron(ps) && innerOutstandingBalances && outerOutstandingBalances && (innerOutstandingBalances[ps.id] || 0) !== (outerOutstandingBalances[ps.id] || 0) && (
+            <div className="flex flex-col gap-0.5 items-center mt-1">
+              <span className={`px-1 py-0.5 text-[9px] font-semibold rounded whitespace-nowrap ${formatPortionBalance(innerOutstandingBalances[ps.id] || 0).className}`}>
+                {t('inner') || 'In'}: {formatPortionBalance(innerOutstandingBalances[ps.id] || 0).text}
+              </span>
+              <span className={`px-1 py-0.5 text-[9px] font-semibold rounded whitespace-nowrap ${formatPortionBalance(outerOutstandingBalances[ps.id] || 0).className}`}>
+                {t('outer') || 'Out'}: {formatPortionBalance(outerOutstandingBalances[ps.id] || 0).text}
+              </span>
+            </div>
+          )}
         </td>
       )}
       {showAvailable && (
@@ -312,6 +423,42 @@ const ItemsTable: React.FC<ItemsTableProps> = ({
           className="w-full px-2 py-2 text-[13px] sm:text-sm text-center border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent min-h-[40px] sm:min-h-[44px] touch-manipulation active:scale-[0.97]"
         />
       </td>
+      {hasJackIronRows && (
+        <td className="px-1 py-1.5 border-r border-gray-200">
+          {isJackIron(ps) ? (
+            <div className="flex flex-col gap-1 items-center">
+              <div className="flex rounded-lg overflow-hidden border border-gray-300 text-[9px] font-bold">
+                <button
+                  type="button"
+                  onClick={() => handleExtraPortionToggle(ps.id, 'inner')}
+                  className={`px-1.5 py-1 transition-colors ${items.items[ps.id]?.extraPortion === 'inner' ? 'bg-blue-600 text-white' : 'bg-white text-gray-500'}`}
+                >
+                  {t('inner') || 'In'}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => handleExtraPortionToggle(ps.id, 'outer')}
+                  className={`px-1.5 py-1 border-l border-gray-300 transition-colors ${items.items[ps.id]?.extraPortion === 'outer' ? 'bg-blue-600 text-white' : 'bg-white text-gray-500'}`}
+                >
+                  {t('outer') || 'Out'}
+                </button>
+              </div>
+              <input
+                type="number"
+                inputMode="numeric"
+                min="0"
+                disabled={!items.items[ps.id]?.extraPortion}
+                value={items.items[ps.id]?.extraQty || ""}
+                onChange={(e) => handleChange(ps.id, 'extraQty', e.target.value)}
+                placeholder="0"
+                className="w-14 px-1 py-1.5 text-[13px] text-center border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent min-h-[36px] touch-manipulation active:scale-[0.97] disabled:bg-gray-50 disabled:text-gray-300"
+              />
+            </div>
+          ) : (
+            <span className="text-gray-300 text-xs">—</span>
+          )}
+        </td>
+      )}
       {showLost && (
         <>
           <td className="px-1 py-1.5 border-r border-gray-200">
@@ -414,6 +561,11 @@ const ItemsTable: React.FC<ItemsTableProps> = ({
               <th className="px-4 py-3 text-xs font-medium tracking-wider text-center text-gray-500 uppercase">
                 {t("quantity")}
               </th>
+              {hasJackIronRows && (
+                <th className="px-4 py-3 text-xs font-medium tracking-wider text-center text-blue-600 uppercase">
+                  {t("extra") || 'Extra'} ({t('inner') || 'In'}/{t('outer') || 'Out'})
+                </th>
+              )}
               {showLost && (
                 <>
                   <th className="px-4 py-3 text-xs font-medium tracking-wider text-center text-amber-700 uppercase">
@@ -481,7 +633,7 @@ const ItemsTable: React.FC<ItemsTableProps> = ({
                       ) : (
                         <ChevronDown className="w-4 h-4 text-purple-600" />
                       )}
-                      <span>લોખંડના જેક (Iron Jacks)</span>
+                      <span>{jackMaterialType === 'wooden' ? 'ટેકા (Teka)' : 'લોખંડના જેક (Iron Jacks)'}</span>
                     </div>
                   </td>
                 </tr>
@@ -565,6 +717,11 @@ const ItemsTable: React.FC<ItemsTableProps> = ({
                     <th className="px-1 py-1.5 text-xs sm:text-sm font-semibold text-center text-gray-700 border-r border-gray-200 min-w-[70px] sm:min-w-[80px]">
                       {t("quantity")}
                     </th>
+                    {hasJackIronRows && (
+                      <th className="px-1 py-1.5 text-xs sm:text-sm font-semibold text-center text-blue-700 border-r border-gray-200 min-w-[70px] sm:min-w-[80px]">
+                        {t("extra") || 'Extra'}
+                      </th>
+                    )}
                     {showLost && (
                       <>
                         <th className="px-1 py-1.5 text-xs sm:text-sm font-semibold text-center text-amber-700 border-r border-gray-200 min-w-[70px] sm:min-w-[80px]">
@@ -632,7 +789,7 @@ const ItemsTable: React.FC<ItemsTableProps> = ({
                             ) : (
                               <ChevronDown className="w-3.5 h-3.5 text-purple-600" />
                             )}
-                            <span>લોખંડના જેક (Iron Jacks)</span>
+                            <span>{jackMaterialType === 'wooden' ? 'ટેકા (Teka)' : 'લોખંડના જેક (Iron Jacks)'}</span>
                           </div>
                         </td>
                       </tr>
@@ -708,6 +865,11 @@ const ItemsTable: React.FC<ItemsTableProps> = ({
                         {Object.values(items.items || {}).reduce((sum, item) => sum + (item.qty || 0) + (item.borrowed || 0), 0)} કુલ
                       </div>
                     </td>
+                    {hasJackIronRows && (
+                      <td className="px-1 py-3 text-center border-r border-gray-200">
+                        -
+                      </td>
+                    )}
                     {showLost && (
                       <>
                         <td className="px-1 py-3 text-xs font-bold text-center border-r border-gray-200 sm:text-sm">

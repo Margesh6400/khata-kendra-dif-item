@@ -7,8 +7,15 @@ export const mapRecordToArray = (itemsData: any) => {
     borrowed: data.borrowed || 0,
     lost: data.lost || 0,
     damaged: data.damaged || 0,
-    note: data.note || ''
-  })).filter(i => i.qty > 0 || i.borrowed > 0 || i.lost > 0 || i.damaged > 0 || i.note !== '');
+    note: data.note || '',
+    // The auto-computed "extra returned beyond outstanding" amount (see
+    // JamaChallan's handleSave) — 0 for every normal transaction.
+    extraReturned: data.extraReturned || 0,
+    // Iron jacks only: a loose, unpaired Inner/Outer piece entered
+    // directly by the user on top of the pair qty above.
+    extraPortion: data.extraPortion || null,
+    extraQty: data.extraQty || 0,
+  })).filter(i => i.qty > 0 || i.borrowed > 0 || i.lost > 0 || i.damaged > 0 || i.note !== '' || i.extraQty > 0);
 };
 
 import { supabase } from './supabase';

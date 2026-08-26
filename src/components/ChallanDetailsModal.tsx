@@ -223,7 +223,7 @@ const ChallanDetailsModal: React.FC<ChallanDetailsModalProps> = ({
 
             {(() => {
               const getItemDetails = (psId: number) => {
-                if (!challan?.items) return { qty: 0, borrowed: 0, lost: 0, damaged: 0, note: '' };
+                if (!challan?.items) return { qty: 0, borrowed: 0, lost: 0, damaged: 0, note: '', extraReturned: 0, extraPortion: undefined as ('inner' | 'outer' | undefined), extraQty: 0 };
                 if (challan.items.items && challan.items.items[psId]) {
                   const item = challan.items.items[psId];
                   return {
@@ -232,6 +232,9 @@ const ChallanDetailsModal: React.FC<ChallanDetailsModalProps> = ({
                     lost: Number(item.lost) || 0,
                     damaged: Number(item.damaged) || 0,
                     note: (item.note as string) || '',
+                    extraReturned: Number(item.extraReturned) || 0,
+                    extraPortion: (item.extraPortion as 'inner' | 'outer' | undefined) || undefined,
+                    extraQty: Number(item.extraQty) || 0,
                   };
                 }
                 return {
@@ -240,6 +243,9 @@ const ChallanDetailsModal: React.FC<ChallanDetailsModalProps> = ({
                   lost: Number(challan.items[`size_${psId}_lost` as keyof ItemsData]) || 0,
                   damaged: Number(challan.items[`size_${psId}_damaged` as keyof ItemsData]) || 0,
                   note: (challan.items[`size_${psId}_note` as keyof ItemsData] as string) || '',
+                  extraReturned: 0,
+                  extraPortion: undefined as ('inner' | 'outer' | undefined),
+                  extraQty: 0,
                 };
               };
 
@@ -286,9 +292,10 @@ const ChallanDetailsModal: React.FC<ChallanDetailsModalProps> = ({
                       </thead>
                       <tbody className="bg-white divide-y divide-gray-200">
                         {plateSizes.map((ps) => {
-                          const { qty, borrowed, lost, damaged, note } = getItemDetails(ps.id);
+                          const { qty, borrowed, lost, damaged, note, extraReturned, extraPortion, extraQty } = getItemDetails(ps.id);
                           const showRow = qty > 0 || (hasBorrowed && borrowed > 0) || (hasLost && lost > 0) || (hasDamaged && damaged > 0) || (hasNote && !!note);
                           if (!showRow) return null;
+                          const hasExtra = extraReturned > 0 || (!!extraPortion && extraQty > 0);
 
                           return (
                             <tr key={ps.id} className="hover:bg-gray-50">
@@ -299,6 +306,12 @@ const ChallanDetailsModal: React.FC<ChallanDetailsModalProps> = ({
                                 <span className="inline-block min-w-[40px] px-2 py-1 bg-blue-50 rounded">
                                   {qty}
                                 </span>
+                                {hasExtra && (
+                                  <div className="text-[10px] font-bold text-emerald-700 mt-1 whitespace-nowrap">
+                                    {extraReturned > 0 && `+${extraReturned} ${t('extra') || 'extra'}`}
+                                    {extraPortion && extraQty > 0 && ` +${extraQty} ${extraPortion === 'inner' ? (t('inner') || 'Inner') : (t('outer') || 'Outer')} ${t('extra') || 'extra'}`}
+                                  </div>
+                                )}
                               </td>
                               {hasBorrowed && (
                                 <td className="px-2 py-2 text-[11px] sm:text-sm text-gray-900 whitespace-nowrap text-center sm:px-4">
@@ -368,9 +381,10 @@ const ChallanDetailsModal: React.FC<ChallanDetailsModalProps> = ({
                       </thead>
                       <tbody className="bg-white divide-y divide-gray-200">
                         {plateSizes.map((ps) => {
-                          const { qty, borrowed, lost, damaged, note } = getItemDetails(ps.id);
+                          const { qty, borrowed, lost, damaged, note, extraReturned, extraPortion, extraQty } = getItemDetails(ps.id);
                           const showRow = qty > 0 || (hasBorrowed && borrowed > 0) || (hasLost && lost > 0) || (hasDamaged && damaged > 0) || (hasNote && !!note);
                           if (!showRow) return null;
+                          const hasExtra = extraReturned > 0 || (!!extraPortion && extraQty > 0);
 
                           return (
                             <tr key={ps.id} className="border-b border-gray-200">
@@ -381,6 +395,12 @@ const ChallanDetailsModal: React.FC<ChallanDetailsModalProps> = ({
                                 <span className="inline-block min-w-[28px] px-1.5 py-0.5 bg-blue-100 text-blue-800 rounded text-[10px] font-semibold">
                                   {qty}
                                 </span>
+                                {hasExtra && (
+                                  <div className="text-[9px] font-bold text-emerald-700 mt-0.5 whitespace-nowrap">
+                                    {extraReturned > 0 && `+${extraReturned}`}
+                                    {extraPortion && extraQty > 0 && ` +${extraQty}${extraPortion === 'inner' ? 'I' : 'O'}`}
+                                  </div>
+                                )}
                               </td>
                               {hasBorrowed && (
                                 <td className="px-2 py-1.5 text-xs text-center text-gray-900 whitespace-nowrap border-r border-gray-200">

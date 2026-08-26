@@ -242,6 +242,8 @@ interface ChallanDetailsStepProps {
   setItems: (items: ItemsData) => void;
   outstandingBalances: { [key: number]: number };
   borrowedOutstanding: { [key: number]: number };
+  innerOutstanding: { [key: number]: number };
+  outerOutstanding: { [key: number]: number };
   errors: { [key: string]: string };
   showSuccess: boolean;
   hideExtraColumns: boolean;
@@ -281,6 +283,8 @@ const ChallanDetailsStep: React.FC<ChallanDetailsStepProps> = ({
   setItems,
   outstandingBalances,
   borrowedOutstanding,
+  innerOutstanding,
+  outerOutstanding,
   errors,
   showSuccess,
   hideExtraColumns,
@@ -542,6 +546,8 @@ const ChallanDetailsStep: React.FC<ChallanDetailsStepProps> = ({
             onChange={setItems}
             outstandingBalances={outstandingBalances}
             borrowedOutstanding={borrowedOutstanding}
+            innerOutstandingBalances={innerOutstanding}
+            outerOutstandingBalances={outerOutstanding}
             hideColumns={hideExtraColumns}
             stockData={stockData}
             showAvailable={false}
@@ -646,9 +652,9 @@ const ChallanDetailsStep: React.FC<ChallanDetailsStepProps> = ({
 const JamaChallan: React.FC = () => {
   const navigate = useNavigate();
   const location = useLocation();
-  const { t } = useLanguage();
+  const { t, language } = useLanguage();
   const { sizes: plateSizes } = usePlateSizes();
-  const { enableCategorySeparation, enableCategoryClientSeparation, enableCategoryChallanSeparation, activeCategory } = useSettings();
+  const { enableCategorySeparation, enableCategoryClientSeparation, enableCategoryChallanSeparation, activeCategory, jackMaterialType } = useSettings();
 
 
   // Step management
@@ -730,6 +736,12 @@ const JamaChallan: React.FC = () => {
   const [items, setItems] = useState<ItemsData>({ items: {}, main_note: '' });
   const [outstandingBalances, setOutstandingBalances] = useState<{ [key: number]: number }>({});
   const [borrowedOutstanding, setBorrowedOutstanding] = useState<{ [key: number]: number }>({});
+  // Iron-jack-only running totals of the Inner/Outer portions borrowed
+  // minus returned so far — a client's history is summed in full every
+  // time, so an over-return that pushes one of these negative (a credit)
+  // is naturally remembered and carried into the next transaction.
+  const [innerOutstanding, setInnerOutstanding] = useState<{ [key: number]: number }>({});
+  const [outerOutstanding, setOuterOutstanding] = useState<{ [key: number]: number }>({});
   const [isAllReturn, setIsAllReturn] = useState(false);
 
 
@@ -887,6 +899,13 @@ const JamaChallan: React.FC = () => {
         borrowedBal[ps.id] = 0;
       });
 
+      const innerBal: { [key: number]: number } = {};
+      const outerBal: { [key: number]: number } = {};
+      plateSizes.forEach(ps => {
+        innerBal[ps.id] = 0;
+        outerBal[ps.id] = 0;
+      });
+
 
       transactions.forEach(transaction => {
         plateSizes.forEach(ps => {
@@ -895,14 +914,30 @@ const JamaChallan: React.FC = () => {
           const borrowed = itemDetail.borrowed || 0;
           const lost = itemDetail.lost || 0;
           const damaged = itemDetail.damaged || 0;
+          // A jack pair is one Inner + one Outer, so every pair counts
+          // toward both portions equally; extraQty only ever nudges the
+          // one portion the user picked (e.g. 2 spare Outer pieces on top
+          // of the pairs). This is what makes an uneven return show up as
+          // an Inner/Outer imbalance instead of just a pair count.
+          const pairQty = transaction.type === 'udhar' ? qty : qty + lost + damaged;
+          const extraInnerQty = itemDetail.extraPortion === 'inner' ? (itemDetail.extraQty || 0) : 0;
+          const extraOuterQty = itemDetail.extraPortion === 'outer' ? (itemDetail.extraQty || 0) : 0;
 
 
           if (transaction.type === 'udhar') {
             balances[ps.id] += qty;
             borrowedBal[ps.id] += borrowed;
+            innerBal[ps.id] += pairQty + extraInnerQty;
+            outerBal[ps.id] += pairQty + extraOuterQty;
           } else {
             balances[ps.id] -= qty + lost + damaged;
             borrowedBal[ps.id] -= borrowed;
+            // Over-returns are allowed to go negative on purpose — that
+            // negative value *is* the "extra returned" credit, and since
+            // it is recomputed from the client's full history every time,
+            // it is automatically remembered on their next transaction.
+            innerBal[ps.id] -= pairQty + extraInnerQty;
+            outerBal[ps.id] -= pairQty + extraOuterQty;
           }
         });
       });
@@ -910,6 +945,8 @@ const JamaChallan: React.FC = () => {
 
       setOutstandingBalances(balances);
       setBorrowedOutstanding(borrowedBal);
+      setInnerOutstanding(innerBal);
+      setOuterOutstanding(outerBal);
       setIsAllReturn(false);
       setShowLostAndDamaged(false);
 
@@ -1008,26 +1045,61 @@ const JamaChallan: React.FC = () => {
       hasErrors = true;
     }
 
-    // Validate against outstanding balances
+    // Reconcile against outstanding balances. Returning more of an item
+    // than is on record as outstanding used to be a hard error that
+    // blocked the save outright — which meant a perfectly real over-return
+    // (e.g. a client handing back 2 more Outer jack pieces than we had
+    // logged as lent to them) could never be recorded at all. Instead, the
+    // surplus is now saved as an explicit "extra" on the item — it is
+    // called out to the person saving the challan, printed on the challan
+    // itself, and — because outstanding balances are always recomputed
+    // from a client's full transaction history — automatically remembered
+    // and netted off the next time this client borrows or returns this
+    // item/portion.
+    const itemsWithExtras: typeof items.items = { ...items.items };
+    const extraNotes: string[] = [];
+    let hasBorrowedOverage = false;
+
     for (const ps of plateSizes) {
       const sizeId = ps.id;
-      const qty = items.items?.[sizeId]?.qty || 0;
-      const borrowed = items.items?.[sizeId]?.borrowed || 0;
-      const lost = items.items?.[sizeId]?.lost || 0;
-      const damaged = items.items?.[sizeId]?.damaged || 0;
+      const detail = items.items?.[sizeId];
+      if (!detail) continue;
 
-      const currentBalance = outstandingBalances[sizeId] || 0;
+      const qty = detail.qty || 0;
+      const borrowed = detail.borrowed || 0;
+      const lost = detail.lost || 0;
+      const damaged = detail.damaged || 0;
+
       const currentBorrowedBalance = borrowedOutstanding[sizeId] || 0;
-
-      if (qty + lost + damaged > 0 && qty + lost + damaged > currentBalance) {
-        toast.error(`${t('lostExceedsOutstanding')} - ${ps.name} (${t('outstanding')}: ${currentBalance})`);
-        return;
-      }
-
       if (borrowed > 0 && borrowed > currentBorrowedBalance) {
+        // "બીજો ડેપો" (borrowed-from-another-depot) stock is a distinct,
+        // tightly-tracked concept — over-returning it usually means a
+        // data-entry mistake, so this stays a hard stop.
         toast.error(`Cannot return more than borrowed stock for Size ${ps.name}. Available: ${currentBorrowedBalance}`);
-        return;
+        hasBorrowedOverage = true;
+        continue;
       }
+
+      // Pair count over-return (applies the same way to every item,
+      // jack included — a jack's qty is its pair count, exactly like any
+      // other size).
+      const currentBalance = outstandingBalances[sizeId] || 0;
+      const extra = Math.max(0, qty + lost + damaged - currentBalance);
+      if (extra > 0) {
+        itemsWithExtras[sizeId] = { ...itemsWithExtras[sizeId], extraReturned: extra };
+        extraNotes.push(`${ps.name}: +${extra}`);
+      }
+
+      // Iron jacks: a loose, unpaired Inner/Outer piece the user flagged
+      // directly on this line — just call it out, no computation needed.
+      if (ps.category === 'jack' && jackMaterialType === 'iron' && detail.extraPortion && (detail.extraQty || 0) > 0) {
+        const portionLabel = detail.extraPortion === 'inner' ? (t('inner') || 'Inner') : (t('outer') || 'Outer');
+        extraNotes.push(`${ps.name}: +${detail.extraQty} ${portionLabel}`);
+      }
+    }
+
+    if (hasBorrowedOverage) {
+      return;
     }
 
     const hasQuantities = Object.values(items.items || {}).some(item => (item.qty || 0) > 0);
@@ -1098,7 +1170,7 @@ const JamaChallan: React.FC = () => {
 
       const itemsPayload: any = {
         jama_challan_number: challanNumber,
-        items: mapRecordToArray(items),
+        items: mapRecordToArray({ ...items, items: itemsWithExtras }),
         main_note: items.main_note || null,
       };
       if (enableCategorySeparation || activeCategory) {
@@ -1191,6 +1263,12 @@ const JamaChallan: React.FC = () => {
 
       toast.dismiss(loadingToast);
       toast.success('Challan created successfully');
+      if (extraNotes.length > 0) {
+        toast.success(
+          (language === 'gu' ? 'નોંધ કરેલ વધારાનું પરત: ' : 'Extra returned, recorded for next time: ') + extraNotes.join(' | '),
+          { duration: 7000 }
+        );
+      }
       setShowSuccess(true);
 
 
@@ -1308,6 +1386,8 @@ const JamaChallan: React.FC = () => {
                 setItems={setItems}
                 outstandingBalances={outstandingBalances}
                 borrowedOutstanding={borrowedOutstanding}
+                innerOutstanding={innerOutstanding}
+                outerOutstanding={outerOutstanding}
                 errors={errors}
                 showSuccess={showSuccess}
                 hideExtraColumns={hideExtraColumns}

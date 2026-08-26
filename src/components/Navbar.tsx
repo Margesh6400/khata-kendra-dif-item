@@ -36,11 +36,15 @@ const Navbar: React.FC = () => {
     enableCategorySeparation,
     activeCategory,
     setActiveCategory,
+    categoryLockEnabled,
+    lockedCategory,
+    jackMaterialType,
     useCustomBusinessInfo,
     businessName,
     businessPhone,
     businessAddress,
   } = useSettings();
+  const isCategoryLocked = categoryLockEnabled && !!lockedCategory;
   const businessInfo = getBusinessInfo(
     { useCustomBusinessInfo, businessName, businessPhone, businessAddress },
     language
@@ -62,7 +66,7 @@ const Navbar: React.FC = () => {
     },
     {
       id: 'jack' as const,
-      label: language === 'gu' ? 'જેક' : 'Jack',
+      label: jackMaterialType === 'wooden' ? (language === 'gu' ? 'ટેકા' : 'Teka') : (language === 'gu' ? 'જેક' : 'Jack'),
       desc: language === 'gu' ? 'પાઇપ અને પ્રોપ્સ' : 'Pipes & Props',
       icon: Construction,
       iconColor: '#16a34a',
@@ -216,8 +220,11 @@ const Navbar: React.FC = () => {
           </div>
         </div>
 
-        {/* Custom Category Switcher Dropdown */}
-        {enableCategorySeparation && (
+        {/* Custom Category Switcher Dropdown — hidden entirely once a
+            category is locked. There is nothing to switch to, so there is
+            nothing to show here; the locked category is implied by every
+            page the app now shows. */}
+        {enableCategorySeparation && !isCategoryLocked && (
           <div className="relative">
             <button
               onClick={() => setDropdownOpen(!dropdownOpen)}
@@ -415,7 +422,10 @@ const Navbar: React.FC = () => {
         <h1 className="font-bold text-center truncate px-2 text-slate-800 text-sm sm:text-base">
           {getCurrentPageName()}
         </h1>
-        {enableCategorySeparation && activeCategory ? (
+        {isCategoryLocked ? (
+          // Locked — nothing to switch to, so nothing is shown here at all.
+          <div className="w-8 shrink-0" />
+        ) : enableCategorySeparation && activeCategory ? (
           <div className="relative shrink-0">
             <button
               onClick={() => setMobileDropdownOpen(!mobileDropdownOpen)}
@@ -429,9 +439,9 @@ const Navbar: React.FC = () => {
               }}
             >
               <span>{(() => {
-                const names = { 
+                const names = {
                   shuttering: language === 'gu' ? 'શટરિંગ' : 'Shuttering',
-                  jack: language === 'gu' ? 'જેક' : 'Jack',
+                  jack: jackMaterialType === 'wooden' ? (language === 'gu' ? 'ટેકા' : 'Teka') : (language === 'gu' ? 'જેક' : 'Jack'),
                   cuplock: language === 'gu' ? 'કપલોક' : 'Cuplock',
                   other: language === 'gu' ? 'અન્ય' : 'Other'
                 };

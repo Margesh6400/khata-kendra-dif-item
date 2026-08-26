@@ -729,43 +729,47 @@ const StockManagement: React.FC = () => {
 
           {/* Table Container */}
           <div className="bg-white rounded-xl border border-gray-200 overflow-hidden shadow-sm">
-            {/* Table Header with Controls */}
-            <div className="border-b border-gray-200">
-              {/* Mobile scrollable category tabs */}
-              <div className="overflow-x-auto no-scrollbar">
-                <div className="flex gap-1 p-2 min-w-max sm:min-w-0 sm:flex-wrap sm:p-3">
-                  {([
-                    { key: 'shuttering', label: t('shuttering'), color: 'blue' },
-                    { key: 'jack', label: t('jack'), color: 'amber' },
-                    { key: 'cuplock', label: language === 'gu' ? 'કપલોક' : 'Cuplock', color: 'indigo' },
-                    { key: 'other', label: t('other'), color: 'gray' },
-                  ] as const)
-                  .filter(({ key }) => !enableCategorySeparation || key === activeCategory)
-                  .map(({ key, label, color }) => {
-                    const isActive = selectedCategory === key;
-                    const activeStyles: Record<string, string> = {
-                      blue: 'bg-blue-600 text-white shadow-md shadow-blue-200',
-                      amber: 'bg-amber-500 text-white shadow-md shadow-amber-200',
-                      indigo: 'bg-indigo-600 text-white shadow-md shadow-indigo-200',
-                      gray: 'bg-gray-600 text-white shadow-md shadow-gray-200',
-                    };
-                    return (
-                      <button
-                        key={key}
-                        onClick={() => setSelectedCategory(key)}
-                        className={`px-4 py-2 text-xs sm:text-sm font-semibold rounded-full transition-all whitespace-nowrap active:scale-95 ${
-                          isActive
-                            ? activeStyles[color]
-                            : 'bg-gray-100 text-gray-500 hover:bg-gray-200 hover:text-gray-800'
-                        }`}
-                      >
-                        {label}
-                      </button>
-                    );
-                  })}
+            {/* Table Header with Controls — the category tab bar only makes
+                sense when there is more than one category to switch
+                between, so it's hidden entirely once category separation
+                filters everything down to a single, un-switchable tab. */}
+            {!enableCategorySeparation && (
+              <div className="border-b border-gray-200">
+                {/* Mobile scrollable category tabs */}
+                <div className="overflow-x-auto no-scrollbar">
+                  <div className="flex gap-1 p-2 min-w-max sm:min-w-0 sm:flex-wrap sm:p-3">
+                    {([
+                      { key: 'shuttering', label: t('shuttering'), color: 'blue' },
+                      { key: 'jack', label: t('jack'), color: 'amber' },
+                      { key: 'cuplock', label: language === 'gu' ? 'કપલોક' : 'Cuplock', color: 'indigo' },
+                      { key: 'other', label: t('other'), color: 'gray' },
+                    ] as const)
+                    .map(({ key, label, color }) => {
+                      const isActive = selectedCategory === key;
+                      const activeStyles: Record<string, string> = {
+                        blue: 'bg-blue-600 text-white shadow-md shadow-blue-200',
+                        amber: 'bg-amber-500 text-white shadow-md shadow-amber-200',
+                        indigo: 'bg-indigo-600 text-white shadow-md shadow-indigo-200',
+                        gray: 'bg-gray-600 text-white shadow-md shadow-gray-200',
+                      };
+                      return (
+                        <button
+                          key={key}
+                          onClick={() => setSelectedCategory(key)}
+                          className={`px-4 py-2 text-xs sm:text-sm font-semibold rounded-full transition-all whitespace-nowrap active:scale-95 ${
+                            isActive
+                              ? activeStyles[color]
+                              : 'bg-gray-100 text-gray-500 hover:bg-gray-200 hover:text-gray-800'
+                          }`}
+                        >
+                          {label}
+                        </button>
+                      );
+                    })}
+                  </div>
                 </div>
               </div>
-            </div>
+            )}
             {/* Desktop Table */}
             <div className="hidden overflow-x-auto lg:block">
               <table className="min-w-full divide-y divide-gray-200">

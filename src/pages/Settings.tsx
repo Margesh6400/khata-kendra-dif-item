@@ -3,10 +3,12 @@ import { useNavigate } from 'react-router-dom';
 import Navbar from '../components/Navbar';
 import { useLanguage } from '../contexts/LanguageContext';
 import { useSettings } from '../contexts/SettingsContext';
-import { Settings as SettingsIcon, Globe, Layers, CheckCircle, Download, Type, Lock, Shield, Fingerprint, Key, Share2, CalendarClock, LayoutGrid, ChevronRight, Building2 } from 'lucide-react';
+import { Settings as SettingsIcon, Globe, Layers, CheckCircle, Download, Type, Lock, Unlock, Shield, Fingerprint, Key, Share2, CalendarClock, LayoutGrid, ChevronRight, Building2, Construction, TreePine } from 'lucide-react';
 import toast, { Toaster } from 'react-hot-toast';
 import { supabase } from '../utils/supabase';
 import { DEFAULT_BUSINESS_INFO, getBusinessInfo } from '../utils/businessInfo';
+import { CATEGORY_LOCK_PASSWORD } from '../utils/categoryLock';
+import type { LockableCategory } from '../contexts/SettingsContext';
 
 const Settings: React.FC = () => {
   const navigate = useNavigate();
@@ -33,6 +35,12 @@ const Settings: React.FC = () => {
     setEnableCategoryClientSeparation,
     enableCategoryChallanSeparation,
     setEnableCategoryChallanSeparation,
+    categoryLockEnabled,
+    setCategoryLockEnabled,
+    lockedCategory,
+    setLockedCategory,
+    jackMaterialType,
+    setJackMaterialType,
     quickActionsSortMethod,
     setQuickActionsSortMethod,
     visibleQuickActions,
@@ -60,6 +68,53 @@ const Settings: React.FC = () => {
   const [showAuthModal, setShowAuthModal] = React.useState(false);
   const [authPin, setAuthPin] = React.useState('');
   const [pendingToggle, setPendingToggle] = React.useState<boolean | null>(null);
+
+  // Category Lock — restricts the app to a single business category
+  // (Shuttering / Jack / Cuplock). Enabling, disabling, or changing which
+  // category is locked all require the fixed owner password.
+  type PendingCategoryLockAction =
+    | { type: 'enable'; category: LockableCategory }
+    | { type: 'disable' }
+    | { type: 'change'; category: LockableCategory };
+  const [showCategoryLockModal, setShowCategoryLockModal] = React.useState(false);
+  const [categoryLockPasswordInput, setCategoryLockPasswordInput] = React.useState('');
+  const [pendingCategoryLockAction, setPendingCategoryLockAction] = React.useState<PendingCategoryLockAction | null>(null);
+
+  const lockableCategories: { id: LockableCategory; label: string }[] = [
+    { id: 'shuttering', label: language === 'gu' ? 'શટરિંગ' : 'Shuttering' },
+    { id: 'jack', label: language === 'gu' ? (jackMaterialType === 'wooden' ? 'ટેકા' : 'જેક') : (jackMaterialType === 'wooden' ? 'Teka' : 'Jack') },
+    { id: 'cuplock', label: language === 'gu' ? 'કપલોક' : 'Cuplock' },
+  ];
+
+  const requestCategoryLockChange = (action: PendingCategoryLockAction) => {
+    setPendingCategoryLockAction(action);
+    setCategoryLockPasswordInput('');
+    setShowCategoryLockModal(true);
+  };
+
+  const handleCategoryLockPasswordSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (categoryLockPasswordInput !== CATEGORY_LOCK_PASSWORD) {
+      toast.error(language === 'gu' ? 'ખોટો પાસવર્ડ!' : 'Incorrect password!');
+      setCategoryLockPasswordInput('');
+      return;
+    }
+
+    if (pendingCategoryLockAction) {
+      if (pendingCategoryLockAction.type === 'disable') {
+        setCategoryLockEnabled(false);
+        toast.success(language === 'gu' ? 'વિભાગ લોક દૂર કરવામાં આવ્યું' : 'Category lock removed');
+      } else {
+        setLockedCategory(pendingCategoryLockAction.category);
+        setCategoryLockEnabled(true);
+        toast.success(language === 'gu' ? 'વિભાગ લોક લાગુ કરવામાં આવ્યું' : 'Category lock applied');
+      }
+    }
+
+    setShowCategoryLockModal(false);
+    setPendingCategoryLockAction(null);
+    setCategoryLockPasswordInput('');
+  };
 
   // Monthly bill cron on/off — stored in app_settings so the server-side
   // cron job can check it. null while loading from DB.
@@ -909,6 +964,113 @@ const Settings: React.FC = () => {
               </div>
             </div>
 
+            {/* Category Lock Settings Card */}
+            <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
+              <div className="p-4 sm:p-6 border-b border-gray-100 bg-gray-50/50 flex items-center gap-3">
+                {categoryLockEnabled ? <Lock className="w-5 h-5 text-blue-600" /> : <Unlock className="w-5 h-5 text-blue-600" />}
+                <h3 className="font-bold text-gray-900 text-base sm:text-lg">
+                  {language === 'gu' ? 'વિભાગ લોક (પાસવર્ડ સુરક્ષિત)' : 'Category Lock (Password Protected)'}
+                </h3>
+              </div>
+              <div className="p-4 sm:p-6 space-y-4">
+                <p className="text-xs text-gray-500 leading-relaxed">
+                  {language === 'gu'
+                    ? 'એપ્લિકેશનને ફક્ત શટરિંગ, જેક અથવા કપલોકમાંથી એક જ વિભાગ માટે લોક કરો. વિભાગ સ્વિચર છુપાવવામાં આવશે અને લોક ચાલુ/બંધ કરવા અથવા બદલવા માટે પાસવર્ડ જરૂરી રહેશે.'
+                    : 'Lock the whole app to just one of Shuttering, Jack, or Cuplock. The category switcher is hidden while locked, and enabling, disabling, or changing the lock always requires the password.'}
+                </p>
+
+                {categoryLockEnabled && lockedCategory ? (
+                  <div className="flex flex-col sm:flex-row sm:items-center gap-3 p-4 rounded-xl border border-blue-600 bg-blue-50/40 ring-1 ring-blue-500">
+                    <div className="flex-1">
+                      <span className="text-[11px] font-bold text-blue-600 uppercase tracking-wide block mb-1">
+                        {language === 'gu' ? 'હાલમાં લોક' : 'Currently Locked To'}
+                      </span>
+                      <span className="font-bold text-sm sm:text-base text-gray-900">
+                        {lockableCategories.find(c => c.id === lockedCategory)?.label}
+                      </span>
+                    </div>
+                    <button
+                      onClick={() => requestCategoryLockChange({ type: 'disable' })}
+                      className="px-4 py-2 text-xs font-bold text-red-600 hover:text-red-700 bg-red-50 hover:bg-red-100 rounded-lg transition-colors"
+                    >
+                      {language === 'gu' ? 'લોક દૂર કરો' : 'Remove Lock'}
+                    </button>
+                  </div>
+                ) : (
+                  <div className="grid gap-3 sm:grid-cols-3">
+                    {lockableCategories.map((cat) => (
+                      <button
+                        key={cat.id}
+                        onClick={() => requestCategoryLockChange({ type: 'enable', category: cat.id })}
+                        className="relative p-4 rounded-xl border text-left transition-all border-gray-200 hover:border-blue-400 bg-white"
+                      >
+                        <span className="font-bold text-sm text-gray-900 block mb-1">{cat.label}</span>
+                        <span className="text-[11px] text-gray-500">
+                          {language === 'gu' ? 'આ વિભાગ પર લોક કરો' : 'Lock to this category'}
+                        </span>
+                      </button>
+                    ))}
+                  </div>
+                )}
+              </div>
+            </div>
+
+            {/* Jack Material Type Settings Card */}
+            <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
+              <div className="p-4 sm:p-6 border-b border-gray-100 bg-gray-50/50 flex items-center gap-3">
+                <Construction className="w-5 h-5 text-blue-600" />
+                <h3 className="font-bold text-gray-900 text-base sm:text-lg">
+                  {language === 'gu' ? 'જેક સામગ્રી પ્રકાર' : 'Jack Material Type'}
+                </h3>
+              </div>
+              <div className="p-4 sm:p-6 space-y-4">
+                <p className="text-xs text-gray-500 leading-relaxed">
+                  {language === 'gu'
+                    ? 'લોખંડના જેક ઈનર અને આઉટર એમ બે ભાગમાં અલગ-અલગ ટ્રેક થાય છે. લાકડાના જેકને ફક્ત "ટેકા" તરીકે ઓળખવામાં આવે છે અને એક જ સામાન્ય આઈટમ તરીકે ટ્રેક થાય છે.'
+                    : 'Iron jacks are tracked as two separate portions — Inner and Outer. Wooden jacks are just renamed "Teka" and tracked as a single, simple item — nothing else changes.'}
+                </p>
+                <div className="grid gap-4 sm:grid-cols-2">
+                  <button
+                    onClick={() => setJackMaterialType('iron')}
+                    className={`relative p-4 rounded-xl border text-left transition-all ${jackMaterialType === 'iron'
+                        ? 'border-blue-600 bg-blue-50/40 ring-1 ring-blue-500'
+                        : 'border-gray-200 hover:border-gray-300 bg-white'
+                      }`}
+                  >
+                    <div className="flex justify-between items-start mb-2">
+                      <span className="font-bold text-sm sm:text-base text-gray-900 flex items-center gap-2">
+                        <Construction className="w-4 h-4 text-gray-500" />
+                        {language === 'gu' ? 'લોખંડ (Iron)' : 'Iron'}
+                      </span>
+                      {jackMaterialType === 'iron' && <CheckCircle className="w-5 h-5 text-blue-600" />}
+                    </div>
+                    <p className="text-xs text-gray-500 leading-relaxed">
+                      {language === 'gu' ? 'ઈનર અને આઉટર અલગ-અલગ ટ્રેક કરો' : 'Track Inner and Outer separately'}
+                    </p>
+                  </button>
+
+                  <button
+                    onClick={() => setJackMaterialType('wooden')}
+                    className={`relative p-4 rounded-xl border text-left transition-all ${jackMaterialType === 'wooden'
+                        ? 'border-blue-600 bg-blue-50/40 ring-1 ring-blue-500'
+                        : 'border-gray-200 hover:border-gray-300 bg-white'
+                      }`}
+                  >
+                    <div className="flex justify-between items-start mb-2">
+                      <span className="font-bold text-sm sm:text-base text-gray-900 flex items-center gap-2">
+                        <TreePine className="w-4 h-4 text-gray-500" />
+                        {language === 'gu' ? 'લાકડું (Wooden) — ટેકા' : 'Wooden — Teka'}
+                      </span>
+                      {jackMaterialType === 'wooden' && <CheckCircle className="w-5 h-5 text-blue-600" />}
+                    </div>
+                    <p className="text-xs text-gray-500 leading-relaxed">
+                      {language === 'gu' ? 'ફક્ત નામ બદલાય છે, એક જ સામાન્ય આઈટમ' : 'Just a name change, tracked as one simple item'}
+                    </p>
+                  </button>
+                </div>
+              </div>
+            </div>
+
             {/* Monthly Bill Cron Card */}
             <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
               <div className="p-4 sm:p-6 border-b border-gray-100 bg-gray-50/50 flex items-center gap-3">
@@ -1354,6 +1516,62 @@ const Settings: React.FC = () => {
                         {language === 'gu' ? 'બાયોમેટ્રિક સ્કેન કરો' : 'Scan Biometrics'}
                       </button>
                     )}
+                  </form>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Category Lock Password Modal */}
+          {showCategoryLockModal && (
+            <div className="fixed inset-0 z-50 flex items-center justify-center p-3 bg-black bg-opacity-60 sm:p-4 backdrop-blur-sm">
+              <div className="bg-white rounded-2xl shadow-xl w-full max-w-sm overflow-hidden p-6 animate-scale-in border border-gray-100">
+                <div className="flex flex-col items-center text-center">
+                  <div className="mb-4 p-3 bg-blue-50 text-blue-600 rounded-full">
+                    <Lock className="w-8 h-8" />
+                  </div>
+                  <h3 className="text-lg font-bold text-gray-900 mb-1">
+                    {language === 'gu' ? 'પાસવર્ડ જરૂરી' : 'Password Required'}
+                  </h3>
+                  <p className="text-xs text-gray-500 mb-6">
+                    {language === 'gu'
+                      ? 'વિભાગ લોક બદલવા માટે પાસવર્ડ દાખલ કરો.'
+                      : 'Enter the password to change the category lock.'}
+                  </p>
+
+                  <form onSubmit={handleCategoryLockPasswordSubmit} className="w-full space-y-4">
+                    <div className="relative">
+                      <Key className="absolute w-5 h-5 text-gray-400 transform -translate-y-1/2 left-3 top-1/2" />
+                      <input
+                        type="password"
+                        value={categoryLockPasswordInput}
+                        onChange={(e) => setCategoryLockPasswordInput(e.target.value)}
+                        className="w-full py-2.5 pl-10 pr-4 text-gray-900 border border-gray-300 rounded-xl focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 focus:outline-none"
+                        placeholder={language === 'gu' ? 'પાસવર્ડ' : 'Password'}
+                        autoFocus
+                      />
+                    </div>
+
+                    <div className="flex gap-3 pt-2">
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setShowCategoryLockModal(false);
+                          setPendingCategoryLockAction(null);
+                          setCategoryLockPasswordInput('');
+                        }}
+                        className="flex-1 px-4 py-2.5 border border-gray-300 rounded-xl text-xs font-bold text-gray-700 hover:bg-gray-50 transition-colors"
+                      >
+                        {language === 'gu' ? 'રદ કરો' : 'Cancel'}
+                      </button>
+                      <button
+                        type="submit"
+                        disabled={!categoryLockPasswordInput}
+                        className="flex-1 px-4 py-2.5 bg-blue-600 hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed text-white rounded-xl text-xs font-bold transition-colors"
+                      >
+                        {language === 'gu' ? 'ચકાસો' : 'Verify'}
+                      </button>
+                    </div>
                   </form>
                 </div>
               </div>
