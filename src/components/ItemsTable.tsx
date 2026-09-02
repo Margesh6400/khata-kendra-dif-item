@@ -466,23 +466,23 @@ const ItemsTable: React.FC<ItemsTableProps> = ({
         />
       </td>
       {isExtraPortionVisible && (
-        <td className="px-1 py-1.5 border-r border-gray-200">
+        <td className="px-1 py-1.5 border-r border-gray-200 min-w-[96px]">
           {isJackIron(ps) ? (
-            <div className="flex flex-col gap-1 items-center">
-              <div className="flex rounded-lg overflow-hidden border border-gray-300 text-[9px] font-bold">
+            <div className="flex flex-col gap-1 items-center w-full">
+              <div className="flex rounded-md overflow-hidden border border-gray-300 text-[10px] font-bold w-full max-w-[90px] shadow-sm">
                 <button
                   type="button"
                   onClick={() => handleExtraPortionToggle(ps.id, 'inner')}
-                  className={`px-1.5 py-1 transition-colors ${items.items[ps.id]?.extraPortion === 'inner' ? 'bg-blue-600 text-white' : 'bg-white text-gray-500'}`}
+                  className={`flex-1 py-1 text-center transition-colors ${items.items[ps.id]?.extraPortion === 'inner' ? 'bg-blue-600 text-white' : 'bg-gray-50 text-gray-700 active:bg-gray-200'}`}
                 >
-                  {t('inner') || 'In'}
+                  {language === 'gu' ? 'ઈનર' : 'In'}
                 </button>
                 <button
                   type="button"
                   onClick={() => handleExtraPortionToggle(ps.id, 'outer')}
-                  className={`px-1.5 py-1 border-l border-gray-300 transition-colors ${items.items[ps.id]?.extraPortion === 'outer' ? 'bg-blue-600 text-white' : 'bg-white text-gray-500'}`}
+                  className={`flex-1 py-1 text-center border-l border-gray-300 transition-colors ${items.items[ps.id]?.extraPortion === 'outer' ? 'bg-blue-600 text-white' : 'bg-gray-50 text-gray-700 active:bg-gray-200'}`}
                 >
-                  {t('outer') || 'Out'}
+                  {language === 'gu' ? 'આઉટર' : 'Out'}
                 </button>
               </div>
               <input
@@ -490,10 +490,10 @@ const ItemsTable: React.FC<ItemsTableProps> = ({
                 inputMode="numeric"
                 min="0"
                 disabled={!items.items[ps.id]?.extraPortion}
-                value={items.items[ps.id]?.extraQty || ""}
+                value={items.items[ps.id]?.extraQty === 0 || items.items[ps.id]?.extraQty === undefined ? "" : items.items[ps.id]?.extraQty}
                 onChange={(e) => handleChange(ps.id, 'extraQty', e.target.value)}
                 placeholder="0"
-                className="w-14 px-1 py-1.5 text-[13px] text-center border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent min-h-[36px] touch-manipulation active:scale-[0.97] disabled:bg-gray-50 disabled:text-gray-300"
+                className="w-full max-w-[90px] px-1 py-1 text-[13px] text-center font-semibold border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent min-h-[34px] touch-manipulation active:scale-[0.97] disabled:bg-gray-50 disabled:text-gray-300"
               />
             </div>
           ) : (
@@ -760,8 +760,8 @@ const ItemsTable: React.FC<ItemsTableProps> = ({
                       {t("quantity")}
                     </th>
                     {isExtraPortionVisible && (
-                      <th className="px-1 py-1.5 text-xs sm:text-sm font-semibold text-center text-blue-700 border-r border-gray-200 min-w-[70px] sm:min-w-[80px]">
-                        {t("extra") || 'Extra'}
+                      <th className="px-1 py-1.5 text-xs sm:text-sm font-semibold text-center text-blue-700 border-r border-gray-200 min-w-[96px] sm:min-w-[110px]">
+                        {language === 'gu' ? 'વધારે (ઈ/આ)' : 'Extra (In/Out)'}
                       </th>
                     )}
                     {showLost && (

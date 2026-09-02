@@ -769,8 +769,8 @@ const ChallanEditModal: React.FC<ChallanEditModalProps> = ({
                             {t('quantity')}
                           </th>
                           {hasJackIronRows && showExtraPortion && (
-                            <th className="px-1 py-1.5 text-[10px] sm:text-xs font-semibold text-center text-blue-700 bg-blue-50/50 border-r border-gray-200 min-w-[80px]">
-                              {t('extra') || 'Extra'}
+                            <th className="px-1 py-1.5 text-xs sm:text-sm font-semibold text-center text-blue-700 bg-blue-50/50 border-r border-gray-200 min-w-[96px] sm:min-w-[110px]">
+                              {language === 'gu' ? 'વધારે (ઈ/આ)' : 'Extra (In/Out)'}
                             </th>
                           )}
                           {type === 'jama' && (
@@ -811,29 +811,29 @@ const ChallanEditModal: React.FC<ChallanEditModalProps> = ({
                               />
                             </td>
                             {hasJackIronRows && showExtraPortion && (
-                              <td className="px-1 py-1 text-center border-r border-gray-200 bg-blue-50/20">
+                              <td className="px-1 py-1.5 text-center border-r border-gray-200 bg-blue-50/20 min-w-[96px]">
                                 {isJackIron(ps) ? (
-                                  <div className="flex flex-col items-center gap-0.5">
-                                    <div className="inline-flex rounded border border-gray-300 text-[10px] font-bold overflow-hidden">
+                                  <div className="flex flex-col gap-1 items-center w-full">
+                                    <div className="flex rounded-md overflow-hidden border border-gray-300 text-[10px] font-bold w-full max-w-[90px] shadow-sm">
                                       <button
                                         type="button"
                                         onClick={() => handleExtraPortionToggle(ps.id, 'inner')}
-                                        className={`px-1.5 py-0.5 ${(items as any)[`size_${ps.id}_extraPortion`] === 'inner'
+                                        className={`flex-1 py-1 text-center transition-colors ${(items as any)[`size_${ps.id}_extraPortion`] === 'inner'
                                             ? 'bg-blue-600 text-white'
-                                            : 'bg-white text-gray-500'
+                                            : 'bg-gray-50 text-gray-700 active:bg-gray-200'
                                           }`}
                                       >
-                                        I
+                                        {language === 'gu' ? 'ઈનર' : 'In'}
                                       </button>
                                       <button
                                         type="button"
                                         onClick={() => handleExtraPortionToggle(ps.id, 'outer')}
-                                        className={`px-1.5 py-0.5 border-l border-gray-300 ${(items as any)[`size_${ps.id}_extraPortion`] === 'outer'
+                                        className={`flex-1 py-1 text-center border-l border-gray-300 transition-colors ${(items as any)[`size_${ps.id}_extraPortion`] === 'outer'
                                             ? 'bg-blue-600 text-white'
-                                            : 'bg-white text-gray-500'
+                                            : 'bg-gray-50 text-gray-700 active:bg-gray-200'
                                           }`}
                                       >
-                                        O
+                                        {language === 'gu' ? 'આઉટર' : 'Out'}
                                       </button>
                                     </div>
                                     <input
@@ -844,7 +844,7 @@ const ChallanEditModal: React.FC<ChallanEditModalProps> = ({
                                       value={(items as any)[`size_${ps.id}_extraQty`] ?? ''}
                                       onChange={(e) => handleItemChange(ps.id, 'extraQty', e.target.value)}
                                       placeholder="0"
-                                      className="w-12 px-1 py-0.5 text-[11px] text-center border border-gray-300 rounded disabled:bg-gray-100 disabled:opacity-50"
+                                      className="w-full max-w-[90px] px-1 py-1 text-[13px] text-center font-semibold border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent min-h-[34px] touch-manipulation active:scale-[0.97] disabled:bg-gray-50 disabled:text-gray-300"
                                     />
                                   </div>
                                 ) : (
