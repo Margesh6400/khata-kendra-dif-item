@@ -148,28 +148,47 @@ function buildLedgerFromTransactions(client: any, rawTransactions: any[]): Clien
   const sizes: ClientBalance['sizes'] = {};
   
 
+  const ironJackBalances: Record<number, { inner: number; outer: number }> = {};
+
   const transactions: Transaction[] = rawTransactions.map(t => {
     const sizeData: Transaction['sizes'] = {};
     let grandTotal = 0;
     const multiplier = t.type === 'udhar' ? 1 : -1;
     const totals = t.type === 'udhar' ? udharTotals : jamaTotals;
 
-        Object.entries(t.items.items || {}).forEach(([sizeIdStr, itemData]: [string, any]) => {
+    Object.entries(t.items.items || {}).forEach(([sizeIdStr, itemData]: [string, any]) => {
       const i = parseInt(sizeIdStr);
       const qty = itemData.qty || 0;
       const borrowed = itemData.borrowed || 0;
       const lost = t.type === 'jama' ? (itemData.lost || 0) : 0;
       const damaged = t.type === 'jama' ? (itemData.damaged || 0) : 0;
+      const extraPortion = itemData.extraPortion;
+      const extraQty = itemData.extraQty || 0;
+      const extraInner = extraPortion === 'inner' ? extraQty : 0;
+      const extraOuter = extraPortion === 'outer' ? extraQty : 0;
+
       sizeData[i] = { qty, borrowed, lost, damaged };
       grandTotal += qty + borrowed + lost + damaged;
 
       totals.sizes[i] = (totals.sizes[i] || 0) + qty + borrowed + lost + damaged;
       totals.grandTotal += qty + borrowed + lost + damaged;
 
-      if (!sizes[i]) sizes[i] = { main: 0, borrowed: 0, total: 0 };
+      if (!sizes[i]) sizes[i] = { main: 0, borrowed: 0, total: 0, inner: 0, outer: 0, pairs: 0 };
       sizes[i].main += (qty + lost + damaged) * multiplier;
       sizes[i].borrowed += borrowed * multiplier;
       sizes[i].total = sizes[i].main + sizes[i].borrowed;
+
+      if (!ironJackBalances[i]) ironJackBalances[i] = { inner: 0, outer: 0 };
+      ironJackBalances[i].inner += (qty + extraInner + (t.type === 'jama' ? lost + damaged : 0)) * multiplier;
+      ironJackBalances[i].outer += (qty + extraOuter + (t.type === 'jama' ? lost + damaged : 0)) * multiplier;
+      sizes[i].inner = ironJackBalances[i].inner;
+      sizes[i].outer = ironJackBalances[i].outer;
+      sizes[i].pairs = Math.max(0, Math.min(sizes[i].inner || 0, sizes[i].outer || 0));
+
+      if (extraPortion !== undefined || itemData.extraQty !== undefined) {
+        sizes[i].main = sizes[i].pairs;
+        sizes[i].total = sizes[i].main + sizes[i].borrowed;
+      }
     });
 
     return {
@@ -185,7 +204,12 @@ function buildLedgerFromTransactions(client: any, rawTransactions: any[]): Clien
     };
   });
 
-  const grandTotal = Object.values(sizes).reduce((sum, s) => sum + s.total, 0);
+  const grandTotal = Object.values(sizes).reduce((sum, s) => {
+    if (s.inner !== undefined && s.outer !== undefined && (s.inner !== s.total || s.outer !== s.total)) {
+      return sum + (s.pairs !== undefined ? s.pairs : Math.max(0, Math.min(s.inner, s.outer))) + s.borrowed;
+    }
+    return sum + s.total;
+  }, 0);
 
   return {
     clientId: client.id,
@@ -211,7 +235,12 @@ const ITEMS_PER_PAGE = 10;
 export default function ClientLedger() {
   const { language } = useLanguage();
   const { enableCategorySeparation, enableCategoryClientSeparation, activeCategory } = useSettings();
-  const { sizes: plateSizes } = usePlateSizes();
+  const { sizes: rawPlateSizes } = usePlateSizes();
+  const plateSizes = useMemo(() => {
+    if (!enableCategorySeparation) return rawPlateSizes;
+    const cat = activeCategory || 'shuttering';
+    return rawPlateSizes.filter(ps => (ps.category || 'shuttering') === cat);
+  }, [rawPlateSizes, enableCategorySeparation, activeCategory]);
   const t = translations[language];
 
   const [allClients, setAllClients] = useState<any[]>([]);

@@ -28,25 +28,27 @@ export default function TransactionTable({
 }: TransactionTableProps) {
   const { language } = useLanguage();
   const t = translations[language];
-  const { enableCategorySeparation, activeCategory } = useSettings();
+  const { enableCategorySeparation, activeCategory, jackMaterialType } = useSettings();
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('asc');
-  const [selectedCategory, setSelectedCategory] = useState<'all' | 'shuttering' | 'jack' | 'other'>(
-    enableCategorySeparation && activeCategory ? (activeCategory as any) : 'all'
+  const [selectedCategory, setSelectedCategory] = useState<'all' | 'shuttering' | 'jack' | 'cuplock' | 'other'>(
+    enableCategorySeparation ? (activeCategory || 'shuttering') : 'all'
   );
   const { sizes: rawPlateSizes } = usePlateSizes();
 
   useEffect(() => {
-    if (enableCategorySeparation && activeCategory) {
-      setSelectedCategory(activeCategory as any);
+    if (enableCategorySeparation) {
+      setSelectedCategory(activeCategory || 'shuttering');
     } else {
       setSelectedCategory('all');
     }
   }, [enableCategorySeparation, activeCategory]);
 
+  const isJackIron = (ps: any) => ps.category === 'jack' && jackMaterialType === 'iron';
+
   const plateSizes = useMemo(() => {
     return rawPlateSizes.filter(size => {
       // Category filter
-      if (selectedCategory !== 'all' && size.category !== selectedCategory) {
+      if (selectedCategory !== 'all' && (size.category || 'shuttering') !== selectedCategory) {
         return false;
       }
       const hasTx = transactions?.some(t => {
@@ -103,74 +105,74 @@ export default function TransactionTable({
         </>
       );
 
-      // Use ReactDOM to render the receipt
-      const root = await import('react-dom/client');
-      const reactRoot = root.createRoot(receiptContainer);
-      await new Promise<void>(resolve => {
-        reactRoot.render(receipt);
-        setTimeout(resolve, 500); // Increased wait time
-      });
+      const ReactDOM = await import('react-dom/client');
+      const root = ReactDOM.createRoot(receiptContainer);
+      root.render(receipt);
 
-      // Generate and download the JPEG with correct dimensions
-      // Width = 1200 + 1200 + 40 (gap) = 2440
-      await generateJPEG(
-        transaction.type as 'udhar' | 'jama',
-        transaction.challanNumber.toString(),
-        new Date(transaction.date).toLocaleDateString('en-GB'),
-        2440,
-        1697
-      );
+      // Wait for rendering and image loading
+      await new Promise(resolve => setTimeout(resolve, 800));
 
-      // Clean up
-      reactRoot.unmount();
+      const filename = `${transaction.type === 'udhar' ? 'Issue' : 'Return'}_Challan_${transaction.challanNumber}.jpg`;
+      await generateJPEG('receipt-template', filename);
+
+      // Cleanup
+      root.unmount();
       document.body.removeChild(node);
-      toast.success(t.challanDownloadSuccess);
+      toast.success(t.receiptDownloaded);
     } catch (error) {
-      console.error('Error downloading challan:', error);
-      toast.error(t.challanDownloadError);
+      console.error('Error generating receipt:', error);
+      toast.error(t.receiptDownloadFailed);
     }
   };
 
-  const sortedTransactions = transactions ? [...transactions].sort((a, b) => {
-    const dateA = new Date(a.date).getTime();
-    const dateB = new Date(b.date).getTime();
-    return sortOrder === 'asc' ? dateA - dateB : dateB - dateA;
-  }) : [];
+  const sortedTransactions = useMemo(() => {
+    if (!transactions) return [];
+    return [...transactions].sort((a, b) => {
+      const dateA = new Date(a.date).getTime();
+      const dateB = new Date(b.date).getTime();
+      return sortOrder === 'asc' ? dateA - dateB : dateB - dateA;
+    });
+  }, [transactions, sortOrder]);
 
   const toggleSort = () => {
     setSortOrder(prev => prev === 'asc' ? 'desc' : 'asc');
   };
 
-  const formatSizeValue = (size?: { qty: number; borrowed: number; lost?: number; damaged?: number }, note?: string | null) => {
-    if (!size) return '-';
-    const lost = size.lost || 0;
-    const damaged = size.damaged || 0;
-    const total = (size.qty || 0) + (size.borrowed || 0);
+  const formatSizeValue = (
+    size?: { qty: number; borrowed: number; lost?: number; damaged?: number },
+    note?: string | null,
+    extraPortion?: 'inner' | 'outer' | null,
+    extraQty?: number
+  ) => {
+    if (!size && (!extraQty || extraQty === 0)) return '-';
+    const lost = size?.lost || 0;
+    const damaged = size?.damaged || 0;
+    const total = (size?.qty || 0) + (size?.borrowed || 0);
 
-    if (total === 0 && lost === 0 && damaged === 0 && !note) return '-';
+    if (total === 0 && lost === 0 && damaged === 0 && !note && (!extraQty || extraQty === 0)) return '-';
 
     let valueDisplay = null;
     if (total > 0) {
-      if ((size.borrowed || 0) === 0) {
+      if ((size?.borrowed || 0) === 0) {
         valueDisplay = (
           <span>
-            <span className="font-medium">{size.qty}</span>
+            <span className="font-medium">{size?.qty}</span>
             {note && <sup className="ml-1 text-xs font-bold text-red-700">({note})</sup>}
           </span>
         );
-      } else if ((size.qty || 0) === 0) {
+      } else if ((size?.qty || 0) === 0) {
         valueDisplay = (
           <span>
-            <span className="font-bold text-red-700">{size.borrowed}</span>
+            <span className="font-bold text-red-700">{size?.borrowed}</span>
             {note && <sup className="ml-1 text-xs font-bold text-red-700">({note})</sup>}
           </span>
         );
       } else {
         valueDisplay = (
           <span>
-            <span className="font-medium">{(size.qty || 0) + (size.borrowed || 0)}</span>
+            <span className="font-medium">{(size?.qty || 0) + (size?.borrowed || 0)}</span>
             <sup className="ml-1 text-xs font-bold text-red-700">
-              {size.borrowed}
+              {size?.borrowed}
               {note && <span>({note})</span>}
             </sup>
           </span>
@@ -183,41 +185,62 @@ export default function TransactionTable({
     }
 
     return (
-      <div>
-        {valueDisplay || (lost > 0 || damaged > 0 ? null : '-')}
-        {lost > 0 && (
-          <sup className="ml-1 text-xs font-bold text-amber-600">ગુમ {lost}</sup>
-        )}
-        {damaged > 0 && (
-          <sup className="ml-1 text-xs font-bold text-rose-600">નુકસાન {damaged}</sup>
-        )}
+      <div className="flex flex-col items-center">
+        <div>
+          {valueDisplay || (lost > 0 || damaged > 0 ? null : (extraQty && extraQty > 0 ? null : '-'))}
+          {lost > 0 && (
+            <sup className="ml-1 text-xs font-bold text-amber-600">ગુમ {lost}</sup>
+          )}
+          {damaged > 0 && (
+            <sup className="ml-1 text-xs font-bold text-rose-600">નુકસાન {damaged}</sup>
+          )}
+        </div>
+        {extraPortion && extraQty && extraQty > 0 ? (
+          <div className="text-[10px] font-bold text-blue-700 whitespace-nowrap">
+            +{extraQty} {extraPortion === 'inner' ? (language === 'gu' ? 'ઈનર' : 'Inner') : (language === 'gu' ? 'આઉટર' : 'Outer')}
+          </div>
+        ) : null}
       </div>
     );
   };
 
-  const formatBalanceValue = (sizeBalance?: { main: number; borrowed: number; total: number }) => {
-    if (!sizeBalance || sizeBalance.total === 0) return '-';
+  const formatBalanceValue = (sizeBalance?: any, isIronJack: boolean = false) => {
+    if (!sizeBalance) return '-';
+    if (sizeBalance.total === 0 && (!sizeBalance.inner || sizeBalance.inner === 0) && (!sizeBalance.outer || sizeBalance.outer === 0)) return '-';
 
+    let mainDisplay = null;
     if (sizeBalance.borrowed === 0) {
-      return <span className="font-bold">{sizeBalance.main}</span>;
-    }
-
-    if (sizeBalance.main === 0) {
-      return (
-        <span className="font-bold text-red-700">
-          {sizeBalance.borrowed}
+      mainDisplay = <span className="font-bold">{sizeBalance.main}</span>;
+    } else if (sizeBalance.main === 0) {
+      mainDisplay = <span className="font-bold text-red-700">{sizeBalance.borrowed}</span>;
+    } else {
+      mainDisplay = (
+        <span>
+          <span className="font-bold">{sizeBalance.main + sizeBalance.borrowed}</span>
+          <sup className="ml-1 text-xs font-bold text-red-700">
+            {sizeBalance.borrowed}
+          </sup>
         </span>
       );
     }
 
-    return (
-      <span>
-        <span className="font-bold">{sizeBalance.main + sizeBalance.borrowed}</span>
-        <sup className="ml-1 text-xs font-bold text-red-700">
-          {sizeBalance.borrowed}
-        </sup>
-      </span>
-    );
+    if (isIronJack && (sizeBalance.inner !== undefined || sizeBalance.outer !== undefined)) {
+      const inners = sizeBalance.inner || 0;
+      const outers = sizeBalance.outer || 0;
+      const pairs = sizeBalance.pairs !== undefined ? sizeBalance.pairs : Math.max(0, Math.min(inners, outers));
+      return (
+        <div className="flex flex-col items-center">
+          <span className="font-bold text-blue-800">{pairs} {language === 'gu' ? 'જોડી' : 'Pairs'}</span>
+          {(inners !== outers || inners !== pairs) && (
+            <span className="text-[10px] text-gray-500 font-medium">
+              {inners} I / {outers} O
+            </span>
+          )}
+        </div>
+      );
+    }
+
+    return mainDisplay;
   };
 
   if (!transactions || transactions.length === 0) {
@@ -233,7 +256,7 @@ export default function TransactionTable({
       {/* Category Tabs */}
       {!enableCategorySeparation && (
         <div className="flex gap-2 bg-gray-100 p-1 rounded-lg w-fit">
-          {(['all', 'shuttering', 'jack', 'other'] as const).map(cat => (
+          {(['all', 'shuttering', 'jack', 'cuplock', 'other'] as const).map(cat => (
             <button
               key={cat}
               onClick={() => setSelectedCategory(cat)}
@@ -300,7 +323,7 @@ export default function TransactionTable({
                 </td>
                 {plateSizes.map(ps => (
                   <td key={ps.id} className="px-2 py-2 text-xs text-center whitespace-nowrap sm:text-sm">
-                    {formatBalanceValue(currentBalance.sizes[ps.id])}
+                    {formatBalanceValue(currentBalance.sizes[ps.id], isJackIron(ps))}
                   </td>
                 ))}
                 <td className="px-2 py-2 text-xs text-gray-500 whitespace-nowrap sm:text-sm">-</td>
@@ -329,10 +352,13 @@ export default function TransactionTable({
                     {transaction.grandTotal}
                   </td>
                   {plateSizes.map(ps => {
-                    const sizeNote = (transaction.items as any)?.[`size_${ps.id}_note`] || (transaction.items as any)?.items?.[ps.id]?.note;
+                    const itemData = (transaction.items as any)?.items?.[ps.id] || (transaction.items as any)?.[ps.id] || (Array.isArray((transaction.items as any)?.items) ? (transaction.items as any)?.items.find((i: any) => i.size_id === ps.id) : null);
+                    const sizeNote = (transaction.items as any)?.[`size_${ps.id}_note`] || itemData?.note;
+                    const extraPortion = itemData?.extraPortion || (transaction.items as any)?.[`size_${ps.id}_extraPortion`];
+                    const extraQty = itemData?.extraQty || (transaction.items as any)?.[`size_${ps.id}_extraQty`];
                     return (
                       <td key={ps.id} className="px-2 py-2 text-xs text-center sm:text-sm">
-                        {formatSizeValue(transaction.sizes[ps.id], sizeNote)}
+                        {formatSizeValue(transaction.sizes[ps.id], sizeNote, extraPortion, extraQty)}
                       </td>
                     );
                   })}

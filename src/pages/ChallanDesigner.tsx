@@ -554,13 +554,27 @@ const ChallanDesigner: React.FC = () => {
   const canUndo = historyRef.current.length > 0;
   const canRedo = redoRef.current.length > 0;
 
+  useEffect(() => {
+    if (confirmState) {
+      document.body.style.overflow = 'hidden';
+      document.documentElement.style.overflow = 'hidden';
+    } else {
+      document.body.style.overflow = '';
+      document.documentElement.style.overflow = '';
+    }
+    return () => {
+      document.body.style.overflow = '';
+      document.documentElement.style.overflow = '';
+    };
+  }, [confirmState]);
+
   return (
     <div className="min-h-screen bg-gray-50 flex flex-col lg:flex-row">
       <Toaster position="top-right" />
       <Navbar />
 
       {confirmState && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4">
           <div className="bg-white rounded-xl shadow-xl max-w-sm w-full p-5 space-y-4">
             <p className="text-sm text-gray-800">{confirmState.message}</p>
             <div className="flex justify-end gap-2">

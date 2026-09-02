@@ -264,6 +264,20 @@ export default function QuickPayments() {
   };
 
   useEffect(() => {
+    if (showPayModal && selectedClient) {
+      document.body.style.overflow = 'hidden';
+      document.documentElement.style.overflow = 'hidden';
+    } else {
+      document.body.style.overflow = '';
+      document.documentElement.style.overflow = '';
+    }
+    return () => {
+      document.body.style.overflow = '';
+      document.documentElement.style.overflow = '';
+    };
+  }, [showPayModal, selectedClient]);
+
+  useEffect(() => {
     loadData();
   }, [enableCategorySeparation, enableCategoryClientSeparation, activeCategory]);
 
@@ -952,7 +966,7 @@ ${businessInfo.name}`;
 
       {/* QUICK PAYMENT ENTRY MODAL */}
       {showPayModal && selectedClient && (
-        <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/60 backdrop-blur-xs animate-fadeIn">
+        <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/60 backdrop-blur-sm animate-fadeIn">
           <div
             className="bg-white w-full sm:max-w-md rounded-t-2xl sm:rounded-2xl shadow-2xl border border-gray-200 flex flex-col max-h-[92vh] sm:max-h-[88vh] overflow-hidden"
             style={{

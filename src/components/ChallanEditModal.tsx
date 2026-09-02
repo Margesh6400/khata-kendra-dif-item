@@ -35,6 +35,7 @@ interface ChallanData {
   items: ItemsData;
   totalItems: number;
   clientId?: string;
+  category?: 'shuttering' | 'jack' | 'cuplock' | 'other';
 }
 
 interface ChallanEditModalProps {
@@ -52,9 +53,26 @@ const ChallanEditModal: React.FC<ChallanEditModalProps> = ({
   onClose,
   onSave,
 }) => {
-  const { t } = useLanguage();
-  const { showExtraCost } = useSettings();
-  const { sizes: plateSizes } = usePlateSizes();
+  const { t, language } = useLanguage();
+  const { showExtraCost, enableCategorySeparation, activeCategory, jackMaterialType } = useSettings();
+  const { sizes: rawPlateSizes } = usePlateSizes();
+
+  const plateSizes = React.useMemo(() => {
+    if (!enableCategorySeparation) return rawPlateSizes;
+    const targetCategory = challan?.category || activeCategory || 'shuttering';
+    return rawPlateSizes.filter(size => (size.category || 'shuttering') === targetCategory);
+  }, [rawPlateSizes, enableCategorySeparation, challan?.category, activeCategory]);
+
+  const getCategoryHeading = () => {
+    if (enableCategorySeparation) {
+      const targetCategory = challan?.category || activeCategory || 'shuttering';
+      if (targetCategory === 'jack') return language === 'gu' ? (jackMaterialType === 'wooden' ? 'ટેકાની વિગતો' : 'જેકની વિગતો') : (jackMaterialType === 'wooden' ? 'Teka Details' : 'Jack Details');
+      if (targetCategory === 'cuplock') return language === 'gu' ? 'કપલોકની વિગતો' : 'Cuplock Details';
+      if (targetCategory === 'other') return language === 'gu' ? 'અન્ય આઈટમ્સની વિગતો' : 'Other Items Details';
+      return language === 'gu' ? 'શટરિંગની વિગતો' : 'Shuttering Details';
+    }
+    return t('itemsDetails');
+  };
   const [loading, setLoading] = useState(false);
   const [date, setDate] = useState('');
   const [driverName, setDriverName] = useState('');
@@ -71,6 +89,7 @@ const ChallanEditModal: React.FC<ChallanEditModalProps> = ({
   const [originalItems, setOriginalItems] = useState<ItemsData>({
     main_note: null,
   });
+  const [showExtraPortion, setShowExtraPortion] = useState(false);
 
   useEffect(() => {
     if (challan && isOpen) {
@@ -89,31 +108,76 @@ const ChallanEditModal: React.FC<ChallanEditModalProps> = ({
         main_note: challan.items.main_note || null,
       };
 
-      // Dynamically map all items: size_X_qty, size_X_borrowed, size_X_note
-      Object.keys(challan.items).forEach((key) => {
-        if (key.startsWith('size_')) {
-          const val = challan.items[key];
-          if (key.endsWith('_qty') || key.endsWith('_borrowed')) {
-            mapped[key] = val === 0 ? null : val;
-          } else {
-            mapped[key] = val || null;
+      if (challan.items.items) {
+        Object.entries(challan.items.items).forEach(([sizeId, val]: [string, any]) => {
+          mapped[`size_${sizeId}_qty`] = val.qty || null;
+          mapped[`size_${sizeId}_borrowed`] = val.borrowed || null;
+          mapped[`size_${sizeId}_lost`] = val.lost || null;
+          mapped[`size_${sizeId}_damaged`] = val.damaged || null;
+          mapped[`size_${sizeId}_note`] = val.note || null;
+          mapped[`size_${sizeId}_extraPortion`] = val.extraPortion || null;
+          mapped[`size_${sizeId}_extraQty`] = val.extraQty || null;
+        });
+      } else {
+        Object.keys(challan.items).forEach((key) => {
+          if (key.startsWith('size_')) {
+            const val = challan.items[key];
+            if (key.endsWith('_qty') || key.endsWith('_borrowed') || key.endsWith('_lost') || key.endsWith('_damaged') || key.endsWith('_extraQty')) {
+              mapped[key] = val === 0 ? null : val;
+            } else {
+              mapped[key] = val || null;
+            }
           }
-        }
-      });
+        });
+      }
+
+      let hasExistingExtra = false;
+      if (challan.items.items) {
+        hasExistingExtra = Object.values(challan.items.items).some((val: any) => val.extraPortion || (val.extraQty || 0) > 0);
+      } else {
+        hasExistingExtra = Object.keys(challan.items).some(k => (k.endsWith('_extraPortion') && challan.items[k]) || (k.endsWith('_extraQty') && Number(challan.items[k]) > 0));
+      }
+      setShowExtraPortion(hasExistingExtra);
 
       setItems(mapped);
     }
   }, [challan, isOpen]);
 
-  if (!isOpen || !challan) return null;
+  useEffect(() => {
+    if (isOpen && challan) {
+      document.body.style.overflow = 'hidden';
+      document.documentElement.style.overflow = 'hidden';
+    } else {
+      document.body.style.overflow = '';
+      document.documentElement.style.overflow = '';
+    }
+    return () => {
+      document.body.style.overflow = '';
+      document.documentElement.style.overflow = '';
+    };
+  }, [isOpen, challan]);
 
-  const handleItemChange = (size: number, field: 'qty' | 'borrowed' | 'lost' | 'damaged' | 'note', value: string | number) => {
+  const isJackIron = (ps: PlateSize) => ps.category === 'jack' && jackMaterialType === 'iron';
+  const hasJackIronRows = React.useMemo(() => plateSizes.some(isJackIron), [plateSizes, jackMaterialType]);
+
+  const handleItemChange = (size: number, field: 'qty' | 'borrowed' | 'lost' | 'damaged' | 'note' | 'extraQty', value: string | number) => {
     setItems(prev => ({
       ...prev,
-      // notes stay string|null, qty/borrowed become number|null
       [`size_${size}_${field}`]: field === 'note' ? (value === '' ? null : value) : (value === '' ? null : Number(value)),
     } as unknown as FormItems));
   };
+
+  const handleExtraPortionToggle = (size: number, portion: 'inner' | 'outer') => {
+    const currentPortion = (items as any)[`size_${size}_extraPortion`];
+    const isDeselecting = currentPortion === portion;
+    setItems(prev => ({
+      ...prev,
+      [`size_${size}_extraPortion`]: isDeselecting ? null : portion,
+      [`size_${size}_extraQty`]: isDeselecting ? null : (prev as any)[`size_${size}_extraQty`] || null,
+    }));
+  };
+
+  if (!isOpen || !challan) return null;
 
   const handleSave = async () => {
     if (!challan?.clientId) {
@@ -126,29 +190,59 @@ const ChallanEditModal: React.FC<ChallanEditModalProps> = ({
       const rpcFunction = type === 'udhar' ? 'update_udhar_challan_with_stock' : 'update_jama_challan_with_stock';
       const dateField = type === 'udhar' ? 'p_udhar_date' : 'p_jama_date';
 
-      // Build old_items JSONB array from the flat originalItems (size_1_qty etc.)
+      // Build old_items JSONB array
       const oldItems: any[] = [];
-      plateSizes.forEach((ps) => {
-        const qty = Number((originalItems as any)[`size_${ps.id}_qty`]) || 0;
-        const borrowed = Number((originalItems as any)[`size_${ps.id}_borrowed`]) || 0;
-        const lost = Number((originalItems as any)[`size_${ps.id}_lost`]) || 0;
-        const damaged = Number((originalItems as any)[`size_${ps.id}_damaged`]) || 0;
-        const note = (originalItems as any)[`size_${ps.id}_note`] || '';
-        if (qty > 0 || borrowed > 0 || lost > 0 || damaged > 0 || note) {
-          oldItems.push({ size_id: ps.id, qty, borrowed, lost, damaged, note });
+      rawPlateSizes.forEach((ps) => {
+        let qty = 0, borrowed = 0, lost = 0, damaged = 0, note = '', extraPortion: any = null, extraQty = 0;
+        if (originalItems.items && originalItems.items[ps.id]) {
+          const item = originalItems.items[ps.id];
+          qty = Number(item.qty) || 0;
+          borrowed = Number(item.borrowed) || 0;
+          lost = Number(item.lost) || 0;
+          damaged = Number(item.damaged) || 0;
+          note = item.note || '';
+          extraPortion = item.extraPortion || null;
+          extraQty = Number(item.extraQty) || 0;
+        } else {
+          qty = Number((originalItems as any)[`size_${ps.id}_qty`]) || 0;
+          borrowed = Number((originalItems as any)[`size_${ps.id}_borrowed`]) || 0;
+          lost = Number((originalItems as any)[`size_${ps.id}_lost`]) || 0;
+          damaged = Number((originalItems as any)[`size_${ps.id}_damaged`]) || 0;
+          note = (originalItems as any)[`size_${ps.id}_note`] || '';
+          extraPortion = (originalItems as any)[`size_${ps.id}_extraPortion`] || null;
+          extraQty = Number((originalItems as any)[`size_${ps.id}_extraQty`]) || 0;
+        }
+        if (qty > 0 || borrowed > 0 || lost > 0 || damaged > 0 || note || extraQty > 0) {
+          oldItems.push({ size_id: ps.id, qty, borrowed, lost, damaged, note, extraPortion, extraQty });
         }
       });
 
       // Build new_items JSONB array from the form state
       const newItems: any[] = [];
-      plateSizes.forEach((ps) => {
-        const qty = Number((items as any)[`size_${ps.id}_qty`]) || 0;
-        const borrowed = Number((items as any)[`size_${ps.id}_borrowed`]) || 0;
-        const lost = Number((items as any)[`size_${ps.id}_lost`]) || 0;
-        const damaged = Number((items as any)[`size_${ps.id}_damaged`]) || 0;
-        const note = (items as any)[`size_${ps.id}_note`] || '';
-        if (qty > 0 || borrowed > 0 || lost > 0 || damaged > 0 || note) {
-          newItems.push({ size_id: ps.id, qty, borrowed, lost, damaged, note });
+      rawPlateSizes.forEach((ps) => {
+        const isVisible = plateSizes.some(p => p.id === ps.id);
+        const source = isVisible ? items : originalItems;
+        let qty = 0, borrowed = 0, lost = 0, damaged = 0, note = '', extraPortion: any = null, extraQty = 0;
+        if (!isVisible && (source as any).items && (source as any).items[ps.id]) {
+          const item = (source as any).items[ps.id];
+          qty = Number(item.qty) || 0;
+          borrowed = Number(item.borrowed) || 0;
+          lost = Number(item.lost) || 0;
+          damaged = Number(item.damaged) || 0;
+          note = item.note || '';
+          extraPortion = item.extraPortion || null;
+          extraQty = Number(item.extraQty) || 0;
+        } else {
+          qty = Number((source as any)[`size_${ps.id}_qty`]) || 0;
+          borrowed = Number((source as any)[`size_${ps.id}_borrowed`]) || 0;
+          lost = Number((source as any)[`size_${ps.id}_lost`]) || 0;
+          damaged = Number((source as any)[`size_${ps.id}_damaged`]) || 0;
+          note = (source as any)[`size_${ps.id}_note`] || '';
+          extraPortion = (source as any)[`size_${ps.id}_extraPortion`] || null;
+          extraQty = Number((source as any)[`size_${ps.id}_extraQty`]) || 0;
+        }
+        if (qty > 0 || borrowed > 0 || lost > 0 || damaged > 0 || note || extraQty > 0) {
+          newItems.push({ size_id: ps.id, qty, borrowed, lost, damaged, note, extraPortion, extraQty });
         }
       });
 
@@ -337,7 +431,7 @@ const ChallanEditModal: React.FC<ChallanEditModalProps> = ({
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-3 bg-black bg-opacity-50 sm:p-4">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-3 bg-black/50 backdrop-blur-sm sm:p-4">
       <div className="bg-white rounded-lg shadow-xl w-full max-w-4xl max-h-[90vh] overflow-y-auto">
         <div className="sticky top-0 flex items-center justify-between gap-2 px-4 py-3 bg-white border-b border-gray-200 sm:px-6 sm:py-4">
           <h2 className="flex-1 text-lg font-bold text-gray-900 sm:text-2xl">
@@ -505,8 +599,21 @@ const ChallanEditModal: React.FC<ChallanEditModalProps> = ({
           </div>
 
           <div className="p-4 bg-white border border-gray-200 rounded-lg">
-            <h3 className="mb-3 text-lg font-semibold text-gray-900">{t('itemsDetails')}</h3>
-            
+            <div className="flex items-center justify-between mb-3">
+              <h3 className="text-lg font-semibold text-gray-900">{getCategoryHeading()}</h3>
+              {hasJackIronRows && (
+                <button
+                  type="button"
+                  onClick={() => setShowExtraPortion(!showExtraPortion)}
+                  className="inline-flex items-center gap-1.5 px-2.5 py-1.5 text-xs font-medium text-blue-600 transition-colors rounded-lg bg-blue-50 hover:bg-blue-100 touch-manipulation active:scale-95 border border-blue-100"
+                  title={language === 'gu' ? 'વધારે (ઈનર/આઉટર)' : 'Extra (Inner/Outer)'}
+                >
+                  {!showExtraPortion ? <EyeOff className="w-3.5 h-3.5" /> : <Eye className="w-3.5 h-3.5" />}
+                  <span>{language === 'gu' ? 'વધારે (ઈનર/આઉટર)' : 'Extra (Inner/Outer)'}</span>
+                </button>
+              )}
+            </div>
+
             {/* Desktop Table */}
             <div className="hidden overflow-x-auto md:block">
               <table className="min-w-full divide-y divide-gray-200">
@@ -518,6 +625,11 @@ const ChallanEditModal: React.FC<ChallanEditModalProps> = ({
                     <th className="px-4 py-2 text-xs font-medium text-left text-gray-500 uppercase">
                       {t('quantity')}
                     </th>
+                    {hasJackIronRows && showExtraPortion && (
+                      <th className="px-4 py-2 text-xs font-semibold text-center text-blue-700 uppercase bg-blue-50/50 min-w-[130px]">
+                        {t('extraPortion') || 'ઈનર/આઉટર'}
+                      </th>
+                    )}
                     {type === 'jama' && (
                       <>
                         <th className="px-4 py-2 text-xs font-medium text-left text-amber-700 uppercase">
@@ -552,6 +664,48 @@ const ChallanEditModal: React.FC<ChallanEditModalProps> = ({
                           className="w-24 px-3 py-2.5 text-sm text-center border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent min-h-[44px]"
                         />
                       </td>
+                      {hasJackIronRows && showExtraPortion && (
+                        <td className="px-3 py-2 text-center whitespace-nowrap bg-blue-50/20">
+                          {isJackIron(ps) ? (
+                            <div className="flex flex-col items-center gap-1">
+                              <div className="inline-flex rounded-md shadow-xs border border-gray-300 text-xs font-bold overflow-hidden">
+                                <button
+                                  type="button"
+                                  onClick={() => handleExtraPortionToggle(ps.id, 'inner')}
+                                  className={`px-2 py-1 transition-colors ${(items as any)[`size_${ps.id}_extraPortion`] === 'inner'
+                                      ? 'bg-blue-600 text-white'
+                                      : 'bg-white text-gray-500 hover:bg-gray-50'
+                                    }`}
+                                >
+                                  {t('inner') || 'Inner'}
+                                </button>
+                                <button
+                                  type="button"
+                                  onClick={() => handleExtraPortionToggle(ps.id, 'outer')}
+                                  className={`px-2 py-1 border-l border-gray-300 transition-colors ${(items as any)[`size_${ps.id}_extraPortion`] === 'outer'
+                                      ? 'bg-blue-600 text-white'
+                                      : 'bg-white text-gray-500 hover:bg-gray-50'
+                                    }`}
+                                >
+                                  {t('outer') || 'Outer'}
+                                </button>
+                              </div>
+                              <input
+                                type="number"
+                                min="0"
+                                inputMode="numeric"
+                                disabled={!(items as any)[`size_${ps.id}_extraPortion`]}
+                                value={(items as any)[`size_${ps.id}_extraQty`] ?? ''}
+                                onChange={(e) => handleItemChange(ps.id, 'extraQty', e.target.value)}
+                                placeholder="0"
+                                className="w-16 px-2 py-1 text-xs text-center border border-gray-300 rounded focus:ring-1 focus:ring-blue-500 disabled:bg-gray-100 disabled:opacity-50"
+                              />
+                            </div>
+                          ) : (
+                            <span className="text-gray-300">-</span>
+                          )}
+                        </td>
+                      )}
                       {type === 'jama' && (
                         <>
                           <td className="px-4 py-2 whitespace-nowrap">
@@ -614,6 +768,11 @@ const ChallanEditModal: React.FC<ChallanEditModalProps> = ({
                           <th className="px-1 py-1.5 text-[10px] sm:text-xs font-semibold text-center text-gray-700 border-r border-gray-200 min-w-[60px] sm:min-w-[70px]">
                             {t('quantity')}
                           </th>
+                          {hasJackIronRows && showExtraPortion && (
+                            <th className="px-1 py-1.5 text-[10px] sm:text-xs font-semibold text-center text-blue-700 bg-blue-50/50 border-r border-gray-200 min-w-[80px]">
+                              {t('extra') || 'Extra'}
+                            </th>
+                          )}
                           {type === 'jama' && (
                             <>
                               <th className="px-1 py-1.5 text-[10px] sm:text-xs font-semibold text-center text-amber-700 border-r border-gray-200 min-w-[60px] sm:min-w-[70px]">
@@ -634,7 +793,7 @@ const ChallanEditModal: React.FC<ChallanEditModalProps> = ({
                       </thead>
                       <tbody className="bg-white divide-y divide-gray-200">
                         {plateSizes.map((ps, index) => (
-                          <tr 
+                          <tr
                             key={ps.id}
                             className={index % 2 === 0 ? 'bg-white' : 'bg-gray-50'}
                           >
@@ -651,6 +810,48 @@ const ChallanEditModal: React.FC<ChallanEditModalProps> = ({
                                 className="w-full px-2 py-2 text-[13px] sm:text-sm text-center border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent min-h-[40px] sm:min-h-[44px] touch-manipulation active:scale-[0.97]"
                               />
                             </td>
+                            {hasJackIronRows && showExtraPortion && (
+                              <td className="px-1 py-1 text-center border-r border-gray-200 bg-blue-50/20">
+                                {isJackIron(ps) ? (
+                                  <div className="flex flex-col items-center gap-0.5">
+                                    <div className="inline-flex rounded border border-gray-300 text-[10px] font-bold overflow-hidden">
+                                      <button
+                                        type="button"
+                                        onClick={() => handleExtraPortionToggle(ps.id, 'inner')}
+                                        className={`px-1.5 py-0.5 ${(items as any)[`size_${ps.id}_extraPortion`] === 'inner'
+                                            ? 'bg-blue-600 text-white'
+                                            : 'bg-white text-gray-500'
+                                          }`}
+                                      >
+                                        I
+                                      </button>
+                                      <button
+                                        type="button"
+                                        onClick={() => handleExtraPortionToggle(ps.id, 'outer')}
+                                        className={`px-1.5 py-0.5 border-l border-gray-300 ${(items as any)[`size_${ps.id}_extraPortion`] === 'outer'
+                                            ? 'bg-blue-600 text-white'
+                                            : 'bg-white text-gray-500'
+                                          }`}
+                                      >
+                                        O
+                                      </button>
+                                    </div>
+                                    <input
+                                      type="number"
+                                      min="0"
+                                      inputMode="numeric"
+                                      disabled={!(items as any)[`size_${ps.id}_extraPortion`]}
+                                      value={(items as any)[`size_${ps.id}_extraQty`] ?? ''}
+                                      onChange={(e) => handleItemChange(ps.id, 'extraQty', e.target.value)}
+                                      placeholder="0"
+                                      className="w-12 px-1 py-0.5 text-[11px] text-center border border-gray-300 rounded disabled:bg-gray-100 disabled:opacity-50"
+                                    />
+                                  </div>
+                                ) : (
+                                  <span className="text-gray-300">-</span>
+                                )}
+                              </td>
+                            )}
                             {type === 'jama' && (
                               <>
                                 <td className="px-1 py-1.5 border-r border-gray-200">

@@ -3,6 +3,7 @@ import { Transaction, ClientBalance } from '../utils/ledgerCalculations';
 import { useLanguage } from '../contexts/LanguageContext';
 import { translations } from '../utils/translations';
 import { usePlateSizes } from '../hooks/usePlateSizes';
+import { useSettings } from '../contexts/SettingsContext';
 
 interface ClientLedgerDownloadProps {
   clientNicName: string;
@@ -29,6 +30,7 @@ export default function ClientLedgerDownload({
 }: ClientLedgerDownloadProps) {
   const { language } = useLanguage();
   const t = translations[language];
+  const { enableCategorySeparation, activeCategory, jackMaterialType } = useSettings();
   const { sizes: rawPlateSizes } = usePlateSizes();
 
   // Determine active mode
@@ -36,6 +38,10 @@ export default function ClientLedgerDownload({
 
   const activePlateSizes = useMemo(() => {
     return rawPlateSizes.filter(size => {
+      if (enableCategorySeparation) {
+        const cat = activeCategory || 'shuttering';
+        if ((size.category || 'shuttering') !== cat) return false;
+      }
       const hasTx = transactions?.some(t => {
         const sz = t.sizes[size.id];
         return sz && ((sz.qty || 0) !== 0 || (sz.borrowed || 0) !== 0);
@@ -44,21 +50,26 @@ export default function ClientLedgerDownload({
       const hasBal = bal && ((bal.main || 0) !== 0 || (bal.borrowed || 0) !== 0 || (bal.total || 0) !== 0);
       return !!(hasTx || hasBal);
     });
-  }, [rawPlateSizes, transactions, currentBalance]);
+  }, [rawPlateSizes, transactions, currentBalance, enableCategorySeparation, activeCategory]);
+
+  const isJackIron = (ps: any) => ps.category === 'jack' && jackMaterialType === 'iron';
 
   const SIZE_INDICES: number[] = activePlateSizes.map(s => s.id);
   const PLATE_SIZES: string[] = activePlateSizes.map(s => s.name);
 
   const formatSizeValue = (
-    size: { qty: number; borrowed: number },
-    note?: string | null
+    size: { qty: number; borrowed: number; lost?: number; damaged?: number },
+    note?: string | null,
+    extraPortion?: 'inner' | 'outer' | null,
+    extraQty?: number
   ) => {
     const total = (size?.qty || 0) + (size?.borrowed || 0);
-    if (total === 0 && !note) return '-';
+    if (total === 0 && !note && (!extraQty || extraQty === 0)) return '-';
 
+    let mainVal = null;
     if (total > 0) {
       if (size.borrowed === 0) {
-        return (
+        mainVal = (
           <span>
             <span className="font-medium">{size.qty}</span>
             {note && (
@@ -68,10 +79,8 @@ export default function ClientLedgerDownload({
             )}
           </span>
         );
-      }
-
-      if (size.qty === 0) {
-        return (
+      } else if (size.qty === 0) {
+        mainVal = (
           <span>
             <span className="font-bold text-red-700">{size.borrowed}</span>
             {note && (
@@ -81,59 +90,80 @@ export default function ClientLedgerDownload({
             )}
           </span>
         );
+      } else {
+        mainVal = (
+          <span>
+            <span className="font-medium">{size.qty + size.borrowed}</span>
+            <sup className="ml-1 text-[10px] font-bold text-red-700">
+              {size.borrowed}
+              {note && <span>({note})</span>}
+            </sup>
+          </span>
+        );
       }
-
-      return (
-        <span>
-          <span className="font-medium">{size.qty + size.borrowed}</span>
-          <sup className="ml-1 text-[10px] font-bold text-red-700">
-            {size.borrowed}
-            {note && <span>({note})</span>}
-          </sup>
-        </span>
-      );
-    }
-
-    if (note) {
-      return (
+    } else if (note) {
+      mainVal = (
         <sup className="text-[10px] font-bold text-red-700">
           ({note})
         </sup>
       );
     }
 
-    return '-';
+    return (
+      <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+        <div>{mainVal || '-'}</div>
+        {extraPortion && extraQty && extraQty > 0 ? (
+          <div style={{ fontSize: '9px', fontWeight: 700, color: '#1d4ed8', whiteSpace: 'nowrap' }}>
+            +{extraQty} {extraPortion === 'inner' ? (language === 'gu' ? 'ઈનર' : 'Inner') : (language === 'gu' ? 'આઉટર' : 'Outer')}
+          </div>
+        ) : null}
+      </div>
+    );
   };
 
-  const formatBalanceValue = (sizeBalance: {
-    main: number;
-    borrowed: number;
-    total: number;
-  }) => {
-    if (!sizeBalance || sizeBalance.total === 0) return '-';
+  const formatBalanceValue = (sizeBalance: any, isIron: boolean = false) => {
+    if (!sizeBalance) return '-';
+    if (sizeBalance.total === 0 && (!sizeBalance.inner || sizeBalance.inner === 0) && (!sizeBalance.outer || sizeBalance.outer === 0)) return '-';
 
+    let mainDisplay = null;
     if (sizeBalance.borrowed === 0) {
-      return <span className="font-bold">{sizeBalance.main}</span>;
-    }
-
-    if (sizeBalance.main === 0) {
-      return (
+      mainDisplay = <span className="font-bold">{sizeBalance.main}</span>;
+    } else if (sizeBalance.main === 0) {
+      mainDisplay = (
         <span className="font-bold text-red-700">
           {sizeBalance.borrowed}
         </span>
       );
+    } else {
+      mainDisplay = (
+        <span>
+          <span className="font-bold">
+            {sizeBalance.main + sizeBalance.borrowed}
+          </span>
+          <sup className="ml-1 text-[10px] font-bold text-red-700">
+            {sizeBalance.borrowed}
+          </sup>
+        </span>
+      );
     }
 
-    return (
-      <span>
-        <span className="font-bold">
-          {sizeBalance.main + sizeBalance.borrowed}
-        </span>
-        <sup className="ml-1 text-[10px] font-bold text-red-700">
-          {sizeBalance.borrowed}
-        </sup>
-      </span>
-    );
+    if (isIron && (sizeBalance.inner !== undefined || sizeBalance.outer !== undefined)) {
+      const inners = sizeBalance.inner || 0;
+      const outers = sizeBalance.outer || 0;
+      const pairs = sizeBalance.pairs !== undefined ? sizeBalance.pairs : Math.max(0, Math.min(inners, outers));
+      return (
+        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+          <span style={{ fontWeight: 700, color: '#1e40af' }}>{pairs} {language === 'gu' ? 'જોડી' : 'Pairs'}</span>
+          {(inners !== outers || inners !== pairs) && (
+            <span style={{ fontSize: '9px', color: '#6b7280', fontWeight: 500 }}>
+              {inners} I / {outers} O
+            </span>
+          )}
+        </div>
+      );
+    }
+
+    return mainDisplay;
   };
 
   const sortedTransactions = [...transactions].sort(
@@ -200,10 +230,14 @@ export default function ClientLedgerDownload({
                   {transaction.grandTotal}
                 </td>
                 {activeMode !== 'simple' && SIZE_INDICES.map(sizeIndex => {
-                  const sizeNote = transaction.items?.[`size_${sizeIndex}_note`] || transaction.items?.items?.[sizeIndex]?.note;
+                  const ps = activePlateSizes.find(s => s.id === sizeIndex);
+                  const itemData = (transaction.items as any)?.items?.[sizeIndex] || (transaction.items as any)?.[sizeIndex] || (Array.isArray((transaction.items as any)?.items) ? (transaction.items as any)?.items.find((i: any) => i.size_id === sizeIndex) : null);
+                  const sizeNote = transaction.items?.[`size_${sizeIndex}_note`] || itemData?.note;
+                  const extraPortion = itemData?.extraPortion || (transaction.items as any)?.[`size_${sizeIndex}_extraPortion`];
+                  const extraQty = itemData?.extraQty || (transaction.items as any)?.[`size_${sizeIndex}_extraQty`];
                   return (
                     <td key={sizeIndex} style={{ padding: '6px 4px', textAlign: 'center' }}>
-                      {formatSizeValue(transaction.sizes[sizeIndex], sizeNote)}
+                      {formatSizeValue(transaction.sizes[sizeIndex], sizeNote, extraPortion, extraQty)}
                     </td>
                   );
                 })}
@@ -374,11 +408,14 @@ export default function ClientLedgerDownload({
                   {currentBalance.grandTotal}
                 </td>
 
-                {activeMode !== 'simple' && SIZE_INDICES.map(sizeIndex => (
-                  <td key={sizeIndex} style={{ padding: '10px 4px', borderBottom: '1px solid #d1d5db', textAlign: 'center' }}>
-                    {formatBalanceValue(currentBalance.sizes[sizeIndex])}
-                  </td>
-                ))}
+                {activeMode !== 'simple' && SIZE_INDICES.map(sizeIndex => {
+                  const ps = activePlateSizes.find(s => s.id === sizeIndex);
+                  return (
+                    <td key={sizeIndex} style={{ padding: '10px 4px', borderBottom: '1px solid #d1d5db', textAlign: 'center' }}>
+                      {formatBalanceValue(currentBalance.sizes[sizeIndex], isJackIron(ps))}
+                    </td>
+                  );
+                })}
 
                 <td style={{ padding: '10px 8px', borderBottom: '1px solid #d1d5db', color: '#6b7280' }}>-</td>
                 <td style={{ padding: '10px 8px', borderBottom: '1px solid #d1d5db', color: '#6b7280' }}>-</td>
@@ -404,10 +441,14 @@ export default function ClientLedgerDownload({
                     </td>
 
                     {activeMode !== 'simple' && SIZE_INDICES.map(sizeIndex => {
-                      const sizeNote = transaction.items?.[`size_${sizeIndex}_note`] || transaction.items?.items?.[sizeIndex]?.note;
+                      const ps = activePlateSizes.find(s => s.id === sizeIndex);
+                      const itemData = (transaction.items as any)?.items?.[sizeIndex] || (transaction.items as any)?.[sizeIndex] || (Array.isArray((transaction.items as any)?.items) ? (transaction.items as any)?.items.find((i: any) => i.size_id === sizeIndex) : null);
+                      const sizeNote = transaction.items?.[`size_${sizeIndex}_note`] || itemData?.note;
+                      const extraPortion = itemData?.extraPortion || (transaction.items as any)?.[`size_${sizeIndex}_extraPortion`];
+                      const extraQty = itemData?.extraQty || (transaction.items as any)?.[`size_${sizeIndex}_extraQty`];
                       return (
                         <td key={sizeIndex} style={{ padding: '8px 4px', textAlign: 'center' }}>
-                          {formatSizeValue(transaction.sizes[sizeIndex], sizeNote)}
+                          {formatSizeValue(transaction.sizes[sizeIndex], sizeNote, extraPortion, extraQty)}
                         </td>
                       );
                     })}
@@ -433,20 +474,22 @@ export default function ClientLedgerDownload({
       >
         <div style={{ flex: 1, padding: '16px', backgroundColor: '#fef2f2', border: '1px solid #fecaca', borderRadius: '8px' }}>
           <p style={{ fontWeight: 600, color: '#b91c1c', marginBottom: '8px' }}>
-            {t.udhar || 'ઉધાર ચલણ'}
+            {language === 'gu' ? 'કુલ ઉધાર ચલણ' : (t.udhar || 'Udhar Challans')}
           </p>
           <p style={{ fontSize: '24px', fontWeight: 700, color: '#991b1b' }}>{udharCount}</p>
         </div>
 
         <div style={{ flex: 1, padding: '16px', backgroundColor: '#f0fdf4', border: '1px solid #bbf7d0', borderRadius: '8px' }}>
           <p style={{ fontWeight: 600, color: '#15803d', marginBottom: '8px' }}>
-            {t.jama || 'જમા ચલણ'}
+            {language === 'gu' ? 'કુલ જમા ચલણ' : (t.jama || 'Jama Challans')}
           </p>
           <p style={{ fontSize: '24px', fontWeight: 700, color: '#166534' }}>{jamaCount}</p>
         </div>
 
         <div style={{ flex: 1, padding: '16px', backgroundColor: '#dbeafe', border: '1px solid #bfdbfe', borderRadius: '8px' }}>
-          <p style={{ fontWeight: 600, color: '#1e40af', marginBottom: '8px' }}>બાકી બાલેન્સ</p>
+          <p style={{ fontWeight: 600, color: '#1e40af', marginBottom: '8px' }}>
+            {language === 'gu' ? 'બાકી બેલેન્સ' : 'Pending Balance'}
+          </p>
           <p style={{ fontSize: '24px', fontWeight: 700, color: '#1e3a8a' }}>{currentBalance.grandTotal}</p>
         </div>
       </section>

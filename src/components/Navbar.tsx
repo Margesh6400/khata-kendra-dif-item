@@ -96,17 +96,20 @@ const Navbar: React.FC = () => {
     },
   ];
 
-  // Prevent background scroll when mobile menu drawer is open
+  // Prevent background scroll when mobile menu drawer or dropdown is open
   useEffect(() => {
-    if (mobileMenuOpen) {
+    if (mobileMenuOpen || mobileDropdownOpen || dropdownOpen) {
       document.body.style.overflow = 'hidden';
+      document.documentElement.style.overflow = 'hidden';
     } else {
       document.body.style.overflow = '';
+      document.documentElement.style.overflow = '';
     }
     return () => {
       document.body.style.overflow = '';
+      document.documentElement.style.overflow = '';
     };
-  }, [mobileMenuOpen]);
+  }, [mobileMenuOpen, mobileDropdownOpen, dropdownOpen]);
 
   const handleLogout = () => {
     logout();
@@ -264,7 +267,7 @@ const Navbar: React.FC = () => {
             {dropdownOpen && (
               <>
                 <div 
-                  className="fixed inset-0 z-40 bg-transparent" 
+                  className="fixed inset-0 z-40 bg-black/40 backdrop-blur-sm transition-opacity" 
                   onClick={() => setDropdownOpen(false)}
                 />
                 
@@ -453,7 +456,7 @@ const Navbar: React.FC = () => {
             {mobileDropdownOpen && (
               <>
                 <div 
-                  className="fixed inset-0 z-40 bg-black/20 backdrop-blur-xs" 
+                  className="fixed inset-0 z-40 bg-black/40 backdrop-blur-sm transition-opacity" 
                   onClick={() => setMobileDropdownOpen(false)}
                 />
                 <div 
@@ -519,7 +522,7 @@ const Navbar: React.FC = () => {
       {mobileMenuOpen && (
         <>
           <div
-            className="fixed inset-0 z-[100] lg:hidden bg-slate-900/60 backdrop-blur-xs transition-opacity"
+            className="fixed inset-0 z-[100] lg:hidden bg-slate-900/60 backdrop-blur-sm transition-opacity"
             onClick={() => setMobileMenuOpen(false)}
           />
 

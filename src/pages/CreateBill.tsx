@@ -139,8 +139,9 @@ export default function CreateBill() {
   const businessInfo = getBusinessInfo({ useCustomBusinessInfo, businessName, businessPhone, businessAddress }, language);
   const { sizes: rawPlateSizes } = usePlateSizes();
   const plateSizes = useMemo(() => {
-    if (enableCategorySeparation && activeCategory) {
-      return rawPlateSizes.filter(size => (size.category || 'shuttering') === activeCategory);
+    if (enableCategorySeparation) {
+      const cat = activeCategory || 'shuttering';
+      return rawPlateSizes.filter(size => (size.category || 'shuttering') === cat);
     }
     return rawPlateSizes;
   }, [rawPlateSizes, enableCategorySeparation, activeCategory]);
@@ -199,6 +200,20 @@ export default function CreateBill() {
   const [pendingAmount, setPendingAmount] = useState<number>(0);
   const [lastUnpaidBillNumber, setLastUnpaidBillNumber] = useState<string>("");
   // billingMode is standard
+
+  useEffect(() => {
+    if (showPreview) {
+      document.body.style.overflow = 'hidden';
+      document.documentElement.style.overflow = 'hidden';
+    } else {
+      document.body.style.overflow = '';
+      document.documentElement.style.overflow = '';
+    }
+    return () => {
+      document.body.style.overflow = '';
+      document.documentElement.style.overflow = '';
+    };
+  }, [showPreview]);
 
   useEffect(() => {
     if (clientId) {
@@ -2426,7 +2441,7 @@ export default function CreateBill() {
 
       {/* Preview Modal */}
       {showPreview && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black bg-opacity-50">
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm">
           <div className="relative w-full max-w-4xl max-h-[90vh] bg-white rounded-lg shadow-xl flex flex-col">
             <div className="flex items-center justify-between p-4 border-b">
               <h3 className="text-lg font-semibold">બિલ પ્રિવ્યુ</h3>

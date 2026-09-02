@@ -255,6 +255,8 @@ interface ChallanDetailsStepProps {
   showSuccess: boolean;
   hideExtraColumns: boolean;
   setHideExtraColumns: (value: boolean) => void;
+  showExtraPortion: boolean;
+  setShowExtraPortion: (value: boolean) => void;
   driverPhone: string;
   setDriverPhone: (val: string) => void;
   vehicleNumber: string;
@@ -290,6 +292,8 @@ const ChallanDetailsStep: React.FC<ChallanDetailsStepProps> = ({
   showSuccess,
   hideExtraColumns,
   setHideExtraColumns,
+  showExtraPortion,
+  setShowExtraPortion,
   stockData,
   driverPhone,
   setDriverPhone,
@@ -298,13 +302,30 @@ const ChallanDetailsStep: React.FC<ChallanDetailsStepProps> = ({
   loadingUnloadingCharges,
   setLoadingUnloadingCharges,
   vehicleRent,
-  setVehicleRent,
   deposit,
   setDeposit
 }) => {
-  const { t } = useLanguage();
-  const { showDriverDetails, showExtraCost } = useSettings();
+  const { t, language } = useLanguage();
+  const { showDriverDetails, showExtraCost, enableCategorySeparation, activeCategory, jackMaterialType } = useSettings();
+  const { sizes: rawPlateSizes } = usePlateSizes();
+  const plateSizes = React.useMemo(() => {
+    if (!enableCategorySeparation) return rawPlateSizes;
+    const cat = activeCategory || 'shuttering';
+    return rawPlateSizes.filter(ps => (ps.category || 'shuttering') === cat);
+  }, [rawPlateSizes, enableCategorySeparation, activeCategory]);
+  const hasJackIronRows = React.useMemo(() => plateSizes.some(ps => ps.category === 'jack' && jackMaterialType === 'iron'), [plateSizes, jackMaterialType]);
   const navigate = useNavigate();
+
+  const getCategoryHeading = () => {
+    if (enableCategorySeparation) {
+      const cat = activeCategory || 'shuttering';
+      if (cat === 'jack') return language === 'gu' ? (jackMaterialType === 'wooden' ? 'ટેકાની વિગતો' : 'જેકની વિગતો') : (jackMaterialType === 'wooden' ? 'Teka Details' : 'Jack Details');
+      if (cat === 'cuplock') return language === 'gu' ? 'કપલોકની વિગતો' : 'Cuplock Details';
+      if (cat === 'other') return language === 'gu' ? 'અન્ય આઈટમ્સની વિગતો' : 'Other Items Details';
+      return language === 'gu' ? 'શટરિંગની વિગતો' : 'Shuttering Details';
+    }
+    return t('itemsDetails');
+  };
 
   return (
     <div className="space-y-3 sm:space-y-4 lg:space-y-6">
@@ -405,6 +426,23 @@ const ChallanDetailsStep: React.FC<ChallanDetailsStepProps> = ({
                     {t('columns2')}
                   </span>
                 </button>
+                {hasJackIronRows && (
+                  <button
+                    type="button"
+                    onClick={() => setShowExtraPortion(!showExtraPortion)}
+                    className="inline-flex items-center gap-1 sm:gap-1.5 px-2 py-2 sm:px-3 text-xs sm:text-xs font-medium text-blue-600 transition-colors rounded-lg bg-blue-50 hover:bg-blue-100 touch-manipulation active:scale-95 border border-blue-100 whitespace-nowrap"
+                    title={language === 'gu' ? 'વધારે (ઈનર/આઉટર)' : 'Extra (Inner/Outer)'}
+                  >
+                    {!showExtraPortion ? (
+                      <EyeOff className="w-3.5 h-3.5" />
+                    ) : (
+                      <Eye className="w-3.5 h-3.5" />
+                    )}
+                    <span>
+                      {language === 'gu' ? 'વધારે' : 'Extra'}
+                    </span>
+                  </button>
+                )}
               </div>
               {errors.challanNumber && (
                 <p className="flex items-center gap-1 mt-1 text-xs text-red-600 sm:text-xs">
@@ -514,7 +552,7 @@ const ChallanDetailsStep: React.FC<ChallanDetailsStepProps> = ({
             <div className="p-1.5 sm:p-2 bg-green-100 rounded-md sm:rounded-lg">
               <Package className="w-4 h-4 text-green-600 sm:w-4.5 sm:h-4.5 lg:w-5 lg:h-5" />
             </div>
-            <h3 className="text-sm font-semibold text-gray-900 sm:text-base lg:text-lg">{t('itemsDetails')}</h3>
+            <h3 className="text-sm font-semibold text-gray-900 sm:text-base lg:text-lg">{getCategoryHeading()}</h3>
           </div>
           {errors.items && (
             <div className="p-2 mb-3 border border-red-200 rounded-lg sm:p-3 sm:mb-4 bg-red-50">
@@ -527,6 +565,7 @@ const ChallanDetailsStep: React.FC<ChallanDetailsStepProps> = ({
             items={items}
             onChange={setItems}
             hideColumns={hideExtraColumns}
+            showExtraPortion={showExtraPortion}
             stockData={stockData}
             showAvailable={true}
           />
@@ -688,9 +727,15 @@ const ChallanDetailsStep: React.FC<ChallanDetailsStepProps> = ({
 const UdharChallan: React.FC = () => {
   const navigate = useNavigate();
   const location = useLocation();
-  const { t } = useLanguage();
-  const { sizes: plateSizes } = usePlateSizes();
+  const { t, language } = useLanguage();
+  const { sizes: rawPlateSizes } = usePlateSizes();
   const { enableCategorySeparation, enableCategoryClientSeparation, enableCategoryChallanSeparation, activeCategory } = useSettings();
+
+  const plateSizes = React.useMemo(() => {
+    if (!enableCategorySeparation) return rawPlateSizes;
+    const cat = activeCategory || 'shuttering';
+    return rawPlateSizes.filter(ps => (ps.category || 'shuttering') === cat);
+  }, [rawPlateSizes, enableCategorySeparation, activeCategory]);
 
   // Step management
   const [currentStep, setCurrentStep] = useState<Step>('client-selection');
@@ -716,6 +761,7 @@ const UdharChallan: React.FC = () => {
   const [errors, setErrors] = useState<{ [key: string]: string }>({});
   const [showSuccess, setShowSuccess] = useState(false);
   const [hideExtraColumns, setHideExtraColumns] = useState(true);
+  const [showExtraPortion, setShowExtraPortion] = useState(false);
   const [driverPhone, setDriverPhone] = useState('');
   const [vehicleNumber, setVehicleNumber] = useState('');
   const [loadingUnloadingCharges, setLoadingUnloadingCharges] = useState('');
@@ -1082,19 +1128,19 @@ const UdharChallan: React.FC = () => {
         const client = clients.find((c) => c.id === selectedClientId);
         const exported = client
           ? await tryExportChallanDesign({
-              challanType: 'udhar',
-              challanNumber,
-              date: formattedDate,
-              plateSizes,
-              items,
-              clientName: client.client_name,
-              clientNicName: client.client_nic_name,
-              site: alternativeSite || client.site,
-              phone: secondaryPhone || client.primary_phone_number,
-              driverName,
-              driverPhone,
-              vehicleNumber,
-            })
+            challanType: 'udhar',
+            challanNumber,
+            date: formattedDate,
+            plateSizes,
+            items,
+            clientName: client.client_name,
+            clientNicName: client.client_nic_name,
+            site: alternativeSite || client.site,
+            phone: secondaryPhone || client.primary_phone_number,
+            driverName,
+            driverPhone,
+            vehicleNumber,
+          })
           : false;
         if (!exported) {
           await generateJPEG('udhar', challanNumber, date, 2440, 1697);
@@ -1230,6 +1276,8 @@ const UdharChallan: React.FC = () => {
                 showSuccess={showSuccess}
                 hideExtraColumns={hideExtraColumns}
                 setHideExtraColumns={setHideExtraColumns}
+                showExtraPortion={showExtraPortion}
+                setShowExtraPortion={setShowExtraPortion}
                 stockData={stockData}
                 driverPhone={driverPhone}
                 setDriverPhone={setDriverPhone}

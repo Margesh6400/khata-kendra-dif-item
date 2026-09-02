@@ -70,6 +70,20 @@ export default function Billing() {
   const [selectedClientIds, setSelectedClientIds] = useState<Set<string>>(new Set());
 
   useEffect(() => {
+    if (showClientPicker) {
+      document.body.style.overflow = 'hidden';
+      document.documentElement.style.overflow = 'hidden';
+    } else {
+      document.body.style.overflow = '';
+      document.documentElement.style.overflow = '';
+    }
+    return () => {
+      document.body.style.overflow = '';
+      document.documentElement.style.overflow = '';
+    };
+  }, [showClientPicker]);
+
+  useEffect(() => {
     fetchClients();
   }, [enableCategorySeparation, enableCategoryClientSeparation, activeCategory]);
 
@@ -303,7 +317,7 @@ export default function Billing() {
 
       {/* Client picker for bulk bill generation */}
       {showClientPicker && (
-        <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/50 sm:items-center" onClick={() => setShowClientPicker(false)}>
+        <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/50 backdrop-blur-sm sm:items-center" onClick={() => setShowClientPicker(false)}>
           <div
             className="flex flex-col w-full max-w-lg bg-white rounded-t-2xl sm:rounded-2xl max-h-[85dvh] shadow-xl"
             onClick={(e) => e.stopPropagation()}

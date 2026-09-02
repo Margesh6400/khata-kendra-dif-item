@@ -18,7 +18,7 @@ import { useSettings } from '../contexts/SettingsContext';
 import { getBusinessInfo } from '../utils/businessInfo';
 import Navbar from '../components/Navbar';
 import { Toaster } from 'react-hot-toast';
-import { format } from 'date-fns';
+import { format, subDays } from 'date-fns';
 import '../styles/wave.css';
 import TodayChallans from '../components/TodayChallans';
 import JournalSection from '../components/JournalSection';
@@ -159,8 +159,9 @@ const Dashboard: React.FC = () => {
 
   // Get dates for calendar pages
   const today = new Date();
-  const currentDate = today.getDate();
-  const currentMonth = format(today, 'MMM');
+  const day3Ago = subDays(today, 3);
+  const day2Ago = subDays(today, 2);
+  const day1Ago = subDays(today, 1);
 
   return (
     <div className="relative flex min-h-screen bg-gradient-to-br from-gray-50 to-gray-100">
@@ -410,32 +411,32 @@ const Dashboard: React.FC = () => {
                     {/* Page 1 - 3 days ago */}
                     <div className="calendar-flip-page calendar-flip-page-1">
                       <div className="calendar-date-card calendar-date-card-mobile">
-                        <div className="calendar-date-number calendar-date-number-mobile">{currentDate - 3}</div>
-                        <div className="calendar-date-month calendar-date-month-mobile">{currentMonth}</div>
+                        <div className="calendar-date-number calendar-date-number-mobile">{day3Ago.getDate()}</div>
+                        <div className="calendar-date-month calendar-date-month-mobile">{format(day3Ago, 'MMM')}</div>
                       </div>
                     </div>
 
                     {/* Page 2 - 2 days ago */}
                     <div className="calendar-flip-page calendar-flip-page-2">
                       <div className="calendar-date-card calendar-date-card-mobile">
-                        <div className="calendar-date-number calendar-date-number-mobile">{currentDate - 2}</div>
-                        <div className="calendar-date-month calendar-date-month-mobile">{currentMonth}</div>
+                        <div className="calendar-date-number calendar-date-number-mobile">{day2Ago.getDate()}</div>
+                        <div className="calendar-date-month calendar-date-month-mobile">{format(day2Ago, 'MMM')}</div>
                       </div>
                     </div>
 
                     {/* Page 3 - Yesterday */}
                     <div className="calendar-flip-page calendar-flip-page-3">
                       <div className="calendar-date-card calendar-date-card-mobile">
-                        <div className="calendar-date-number calendar-date-number-mobile">{currentDate - 1}</div>
-                        <div className="calendar-date-month calendar-date-month-mobile">{currentMonth}</div>
+                        <div className="calendar-date-number calendar-date-number-mobile">{day1Ago.getDate()}</div>
+                        <div className="calendar-date-month calendar-date-month-mobile">{format(day1Ago, 'MMM')}</div>
                       </div>
                     </div>
 
                     {/* Base - Today */}
                     <div className="calendar-base-page">
                       <div className="calendar-date-card calendar-date-card-mobile">
-                        <div className="calendar-date-number calendar-date-number-mobile">{currentDate}</div>
-                        <div className="calendar-date-month calendar-date-month-mobile">{currentMonth}</div>
+                        <div className="calendar-date-number calendar-date-number-mobile">{today.getDate()}</div>
+                        <div className="calendar-date-month calendar-date-month-mobile">{format(today, 'MMM')}</div>
                       </div>
                     </div>
                   </div>
@@ -454,32 +455,32 @@ const Dashboard: React.FC = () => {
                     {/* Page 1 - 3 days ago */}
                     <div className="calendar-flip-page calendar-flip-page-1">
                       <div className="calendar-date-card">
-                        <div className="calendar-date-number">{currentDate - 3}</div>
-                        <div className="calendar-date-month">{currentMonth}</div>
+                        <div className="calendar-date-number">{day3Ago.getDate()}</div>
+                        <div className="calendar-date-month">{format(day3Ago, 'MMM')}</div>
                       </div>
                     </div>
 
                     {/* Page 2 - 2 days ago */}
                     <div className="calendar-flip-page calendar-flip-page-2">
                       <div className="calendar-date-card">
-                        <div className="calendar-date-number">{currentDate - 2}</div>
-                        <div className="calendar-date-month">{currentMonth}</div>
+                        <div className="calendar-date-number">{day2Ago.getDate()}</div>
+                        <div className="calendar-date-month">{format(day2Ago, 'MMM')}</div>
                       </div>
                     </div>
 
                     {/* Page 3 - Yesterday */}
                     <div className="calendar-flip-page calendar-flip-page-3">
                       <div className="calendar-date-card">
-                        <div className="calendar-date-number">{currentDate - 1}</div>
-                        <div className="calendar-date-month">{currentMonth}</div>
+                        <div className="calendar-date-number">{day1Ago.getDate()}</div>
+                        <div className="calendar-date-month">{format(day1Ago, 'MMM')}</div>
                       </div>
                     </div>
 
                     {/* Base - Today */}
                     <div className="calendar-base-page">
                       <div className="calendar-date-card">
-                        <div className="calendar-date-number">{currentDate}</div>
-                        <div className="calendar-date-month">{currentMonth}</div>
+                        <div className="calendar-date-number">{today.getDate()}</div>
+                        <div className="calendar-date-month">{format(today, 'MMM')}</div>
                       </div>
                     </div>
                   </div>

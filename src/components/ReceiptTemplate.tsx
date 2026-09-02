@@ -1,5 +1,6 @@
 import React from 'react';
 import { usePlateSizes } from '../hooks/usePlateSizes';
+import { useSettings } from '../contexts/SettingsContext';
 import { ItemsData } from './ItemsTable';
 import udharTemplate from '../assets/UdharReceiptTemplate_11zon.jpg';
 import jamaTemplate from '../assets/JamaReceiptTemplate_11zon.jpg';
@@ -14,6 +15,7 @@ interface ReceiptTemplateProps {
   phone: string;
   driverName?: string;
   items: ItemsData;
+  category?: 'shuttering' | 'jack' | 'cuplock' | 'other';
 }
 
 const ReceiptTemplate: React.FC<ReceiptTemplateProps> = ({
@@ -25,9 +27,19 @@ const ReceiptTemplate: React.FC<ReceiptTemplateProps> = ({
   site,
   phone,
   driverName,
-  items
+  items,
+  category,
 }) => {
-  const { sizes: plateSizes } = usePlateSizes();
+  const { sizes: rawPlateSizes } = usePlateSizes();
+  const { enableCategorySeparation, activeCategory } = useSettings();
+
+  const plateSizes = React.useMemo(() => {
+    if (enableCategorySeparation) {
+      const targetCategory = category || activeCategory || 'shuttering';
+      return rawPlateSizes.filter(ps => (ps.category || 'shuttering') === targetCategory);
+    }
+    return rawPlateSizes;
+  }, [rawPlateSizes, enableCategorySeparation, category, activeCategory]);
   const getQtyOrZero = (qty: number | undefined) => qty ? qty.toString() : '';
 
   // Helper function to convert coordinates to pixel positions
@@ -63,13 +75,18 @@ const ReceiptTemplate: React.FC<ReceiptTemplateProps> = ({
     let damaged = 0;
     let note = '';
 
+    let extraPortion = '';
+    let extraQty = 0;
+
     if (items.items) {
       const itemData = items.items[ps.id] || { qty: 0, borrowed: 0, lost: 0, damaged: 0, note: '' };
-      qty = itemData.qty;
-      borrowedStock = itemData.borrowed;
+      qty = itemData.qty || 0;
+      borrowedStock = itemData.borrowed || 0;
       lost = itemData.lost || 0;
       damaged = itemData.damaged || 0;
-      note = itemData.note;
+      note = itemData.note || '';
+      extraPortion = itemData.extraPortion || '';
+      extraQty = itemData.extraQty || 0;
     } else {
       qty = (items as any)[`size_${ps.id}_qty`] || 0;
       borrowedStock = (items as any)[`size_${ps.id}_borrowed`] || 0;
@@ -78,9 +95,10 @@ const ReceiptTemplate: React.FC<ReceiptTemplateProps> = ({
       note = (items as any)[`size_${ps.id}_note`] || '';
     }
 
-    const total = (qty || 0) + (borrowedStock || 0);
-    // Fixed-coordinate template has no lost/damaged columns; surface them in the note text
-    const extras = [lost > 0 ? `ગુમ: ${lost}` : '', damaged > 0 ? `નુકસાન: ${damaged}` : ''].filter(Boolean).join(' | ');
+    const total = (qty || 0) + (borrowedStock || 0) + (qty === 0 ? extraQty : 0);
+    // Surface lost/damaged and loose inner/outer portions in note text
+    const portionText = extraPortion && extraQty > 0 ? (extraPortion === 'inner' ? `ઈનર: ${extraQty}` : `આઉટર: ${extraQty}`) : '';
+    const extras = [lost > 0 ? `ગુમ: ${lost}` : '', damaged > 0 ? `નુકસાન: ${damaged}` : '', portionText].filter(Boolean).join(' | ');
     const noteWithLost = extras ? `${note ? note + ' | ' : ''}${extras}` : note;
 
     return {

@@ -257,6 +257,8 @@ interface ChallanDetailsStepProps {
   setVehicleNumber: (val: string) => void;
   showLostAndDamaged: boolean;
   setShowLostAndDamaged: (value: boolean) => void;
+  showExtraPortion: boolean;
+  setShowExtraPortion: (value: boolean) => void;
   loadingUnloadingCharges: string;
   setLoadingUnloadingCharges: (val: string) => void;
   vehicleRent: string;
@@ -298,6 +300,8 @@ const ChallanDetailsStep: React.FC<ChallanDetailsStepProps> = ({
   setVehicleNumber,
   showLostAndDamaged,
   setShowLostAndDamaged,
+  showExtraPortion,
+  setShowExtraPortion,
   loadingUnloadingCharges,
   setLoadingUnloadingCharges,
   vehicleRent,
@@ -306,8 +310,26 @@ const ChallanDetailsStep: React.FC<ChallanDetailsStepProps> = ({
   setDeposit
 }) => {
   const { t, language } = useLanguage();
-  const { showDriverDetails, showExtraCost } = useSettings();
+  const { showDriverDetails, showExtraCost, enableCategorySeparation, activeCategory, jackMaterialType } = useSettings();
+  const { sizes: rawPlateSizes } = usePlateSizes();
+  const plateSizes = React.useMemo(() => {
+    if (!enableCategorySeparation) return rawPlateSizes;
+    const cat = activeCategory || 'shuttering';
+    return rawPlateSizes.filter(ps => (ps.category || 'shuttering') === cat);
+  }, [rawPlateSizes, enableCategorySeparation, activeCategory]);
+  const hasJackIronRows = React.useMemo(() => plateSizes.some(ps => ps.category === 'jack' && jackMaterialType === 'iron'), [plateSizes, jackMaterialType]);
   const navigate = useNavigate();
+
+  const getCategoryHeading = () => {
+    if (enableCategorySeparation) {
+      const cat = activeCategory || 'shuttering';
+      if (cat === 'jack') return language === 'gu' ? (jackMaterialType === 'wooden' ? 'ટેકાની વિગતો' : 'જેકની વિગતો') : (jackMaterialType === 'wooden' ? 'Teka Details' : 'Jack Details');
+      if (cat === 'cuplock') return language === 'gu' ? 'કપલોકની વિગતો' : 'Cuplock Details';
+      if (cat === 'other') return language === 'gu' ? 'અન્ય આઈટમ્સની વિગતો' : 'Other Items Details';
+      return language === 'gu' ? 'શટરિંગની વિગતો' : 'Shuttering Details';
+    }
+    return t('items');
+  };
 
 
   return (
@@ -421,6 +443,20 @@ const ChallanDetailsStep: React.FC<ChallanDetailsStepProps> = ({
                     <span className="hidden sm:inline">{t('lostDamaged')}</span>
                   </span>
                 </button>
+                {hasJackIronRows && (
+                  <button
+                    type="button"
+                    onClick={() => setShowExtraPortion(!showExtraPortion)}
+                    className="inline-flex items-center gap-1 px-1.5 py-1.5 sm:px-3 sm:py-2.5 text-xs font-medium text-blue-600 transition-colors rounded-md sm:rounded-lg bg-blue-50 hover:bg-blue-100 touch-manipulation active:scale-95 border border-blue-100 whitespace-nowrap"
+                    title={language === 'gu' ? 'વધારે (ઈનર/આઉટર)' : 'Extra (Inner/Outer)'}
+                  >
+                    {!showExtraPortion ? <EyeOff className="w-3.5 h-3.5 text-blue-500" /> : <Eye className="w-3.5 h-3.5 text-blue-600" />}
+                    <span>
+                      <span className="sm:hidden">{language === 'gu' ? 'વધારે' : 'Extra'}</span>
+                      <span className="hidden sm:inline">{language === 'gu' ? 'વધારે' : 'Extra (I/O)'}</span>
+                    </span>
+                  </button>
+                )}
               </div>
               {errors.challanNumber && (
                 <p className="mt-1 text-xs sm:text-xs text-red-600 flex items-center gap-1">
@@ -532,7 +568,7 @@ const ChallanDetailsStep: React.FC<ChallanDetailsStepProps> = ({
             <div className="p-1.5 sm:p-2 bg-green-100 rounded-md sm:rounded-lg">
               <Package className="w-4 h-4 text-green-600 sm:w-4.5 sm:h-4.5 lg:w-5 lg:h-5" />
             </div>
-            <h3 className="text-sm font-semibold text-gray-900 sm:text-base lg:text-lg">{t('items')}</h3>
+            <h3 className="text-sm font-semibold text-gray-900 sm:text-base lg:text-lg">{getCategoryHeading()}</h3>
           </div>
           {errors.items && (
             <div className="p-2 mb-3 border border-red-200 rounded-lg sm:p-3 sm:mb-4 bg-red-50">
@@ -549,6 +585,7 @@ const ChallanDetailsStep: React.FC<ChallanDetailsStepProps> = ({
             innerOutstandingBalances={innerOutstanding}
             outerOutstandingBalances={outerOutstanding}
             hideColumns={hideExtraColumns}
+            showExtraPortion={showExtraPortion}
             stockData={stockData}
             showAvailable={false}
             showLost={showLostAndDamaged}
@@ -653,8 +690,14 @@ const JamaChallan: React.FC = () => {
   const navigate = useNavigate();
   const location = useLocation();
   const { t, language } = useLanguage();
-  const { sizes: plateSizes } = usePlateSizes();
+  const { sizes: rawPlateSizes } = usePlateSizes();
   const { enableCategorySeparation, enableCategoryClientSeparation, enableCategoryChallanSeparation, activeCategory, jackMaterialType } = useSettings();
+
+  const plateSizes = React.useMemo(() => {
+    if (!enableCategorySeparation) return rawPlateSizes;
+    const cat = activeCategory || 'shuttering';
+    return rawPlateSizes.filter(ps => (ps.category || 'shuttering') === cat);
+  }, [rawPlateSizes, enableCategorySeparation, activeCategory]);
 
 
   // Step management
@@ -731,6 +774,7 @@ const JamaChallan: React.FC = () => {
   };
   const [hideExtraColumns, setHideExtraColumns] = useState(true);
   const [showLostAndDamaged, setShowLostAndDamaged] = useState(false);
+  const [showExtraPortion, setShowExtraPortion] = useState(false);
 
 
   const [items, setItems] = useState<ItemsData>({ items: {}, main_note: '' });
@@ -942,6 +986,11 @@ const JamaChallan: React.FC = () => {
         });
       });
 
+      plateSizes.forEach(ps => {
+        if (ps.category === 'jack' && jackMaterialType === 'iron') {
+          balances[ps.id] = Math.max(0, Math.min(innerBal[ps.id] || 0, outerBal[ps.id] || 0));
+        }
+      });
 
       setOutstandingBalances(balances);
       setBorrowedOutstanding(borrowedBal);
@@ -1103,11 +1152,12 @@ const JamaChallan: React.FC = () => {
     }
 
     const hasQuantities = Object.values(items.items || {}).some(item => (item.qty || 0) > 0);
+    const hasExtraItems = Object.values(items.items || {}).some(item => (item.extraQty || 0) > 0 && !!item.extraPortion);
     const hasBorrowedItems = Object.values(items.items || {}).some(item => (item.borrowed || 0) > 0);
     const hasLostItems = Object.values(items.items || {}).some(item => (item.lost || 0) > 0);
     const hasDamagedItems = Object.values(items.items || {}).some(item => (item.damaged || 0) > 0);
 
-    if (!hasQuantities && !hasBorrowedItems && !hasLostItems && !hasDamagedItems) {
+    if (!hasQuantities && !hasExtraItems && !hasBorrowedItems && !hasLostItems && !hasDamagedItems) {
       newErrors.items = 'At least one item quantity or borrowed quantity must be greater than 0';
       hasErrors = true;
     }
@@ -1265,7 +1315,7 @@ const JamaChallan: React.FC = () => {
       toast.success('Challan created successfully');
       if (extraNotes.length > 0) {
         toast.success(
-          (language === 'gu' ? 'નોંધ કરેલ વધારાનું પરત: ' : 'Extra returned, recorded for next time: ') + extraNotes.join(' | '),
+          (language === 'gu' ? 'નોંધ કરેલ વધારે પરત: ' : 'Extra returned, recorded for next time: ') + extraNotes.join(' | '),
           { duration: 7000 }
         );
       }
@@ -1283,19 +1333,19 @@ const JamaChallan: React.FC = () => {
           });
           const exported = selectedClient
             ? await tryExportChallanDesign({
-                challanType: 'jama',
-                challanNumber,
-                date: formattedDate,
-                plateSizes,
-                items,
-                clientName: selectedClient.client_name,
-                clientNicName: selectedClient.client_nic_name,
-                site: selectedClient.site,
-                phone: selectedClient.primary_phone_number,
-                driverName,
-                driverPhone,
-                vehicleNumber,
-              })
+              challanType: 'jama',
+              challanNumber,
+              date: formattedDate,
+              plateSizes,
+              items,
+              clientName: selectedClient.client_name,
+              clientNicName: selectedClient.client_nic_name,
+              site: selectedClient.site,
+              phone: selectedClient.primary_phone_number,
+              driverName,
+              driverPhone,
+              vehicleNumber,
+            })
             : false;
           if (!exported) {
             await generateJPEG('jama', challanNumber, date, 2440, 1697);
@@ -1401,6 +1451,8 @@ const JamaChallan: React.FC = () => {
                 setVehicleNumber={setVehicleNumber}
                 showLostAndDamaged={showLostAndDamaged}
                 setShowLostAndDamaged={setShowLostAndDamaged}
+                showExtraPortion={showExtraPortion}
+                setShowExtraPortion={setShowExtraPortion}
                 loadingUnloadingCharges={loadingUnloadingCharges}
                 setLoadingUnloadingCharges={setLoadingUnloadingCharges}
                 vehicleRent={vehicleRent}

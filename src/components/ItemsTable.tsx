@@ -75,6 +75,7 @@ interface ItemsTableProps {
   stockData?: StockData[];
   showAvailable?: boolean;
   showLost?: boolean;
+  showExtraPortion?: boolean;
 }
 
 const ItemsTable: React.FC<ItemsTableProps> = ({
@@ -89,6 +90,7 @@ const ItemsTable: React.FC<ItemsTableProps> = ({
   stockData = [],
   showAvailable = false,
   showLost = false,
+  showExtraPortion = false,
 }) => {
   const { t } = useLanguage();
   const { sizes: hookPlateSizes } = usePlateSizes();
@@ -105,14 +107,18 @@ const ItemsTable: React.FC<ItemsTableProps> = ({
   };
   const plateSizes = React.useMemo(() => {
     const rawSizes = propPlateSizes || hookPlateSizes || [];
-    if (!enableCategorySeparation || !globalActiveCategory) return rawSizes;
-    return rawSizes.filter(ps => (ps.category || 'shuttering') === globalActiveCategory);
+    if (!enableCategorySeparation) return rawSizes;
+    const cat = globalActiveCategory || 'shuttering';
+    return rawSizes.filter(ps => (ps.category || 'shuttering') === cat);
   }, [propPlateSizes, hookPlateSizes, enableCategorySeparation, globalActiveCategory]);
 
   // Whether the "Extra" column (loose Inner/Outer jack pieces) should be
   // shown at all — only relevant when at least one visible row is an Iron
-  // jack.
+  // jack, and toggled on via showExtraPortion.
   const hasJackIronRows = React.useMemo(() => plateSizes.some(isJackIron), [plateSizes, jackMaterialType]);
+  const isExtraPortionVisible = React.useMemo(() => {
+    return Boolean(hasJackIronRows && showExtraPortion);
+  }, [hasJackIronRows, showExtraPortion]);
 
   const [collapsedSections, setCollapsedSections] = React.useState<Record<string, boolean>>({
     shuttering: false,
@@ -133,13 +139,25 @@ const ItemsTable: React.FC<ItemsTableProps> = ({
   }, [items, plateSizes]);
 
   React.useEffect(() => {
-    if (outstandingBalances || borrowedOutstanding) {
+    if (enableCategorySeparation) {
+      setCollapsedSections({
+        shuttering: false,
+        jack: false,
+        cuplock: false,
+        other: false,
+      });
+      return;
+    }
+
+    if (outstandingBalances || borrowedOutstanding || innerOutstandingBalances || outerOutstandingBalances) {
       const categoriesWithOutstanding = new Set<string>();
 
       plateSizes.forEach(size => {
         const rentOut = outstandingBalances ? outstandingBalances[size.id] || 0 : 0;
         const borrowOut = borrowedOutstanding ? borrowedOutstanding[size.id] || 0 : 0;
-        if (rentOut > 0 || borrowOut > 0) {
+        const innerOut = innerOutstandingBalances ? innerOutstandingBalances[size.id] || 0 : 0;
+        const outerOut = outerOutstandingBalances ? outerOutstandingBalances[size.id] || 0 : 0;
+        if (rentOut > 0 || borrowOut > 0 || innerOut !== 0 || outerOut !== 0) {
           categoriesWithOutstanding.add(size.category || 'shuttering');
         }
       });
@@ -151,7 +169,7 @@ const ItemsTable: React.FC<ItemsTableProps> = ({
         other: !categoriesWithOutstanding.has('other'),
       });
     }
-  }, [outstandingBalances, borrowedOutstanding, plateSizes]);
+  }, [outstandingBalances, borrowedOutstanding, innerOutstandingBalances, outerOutstandingBalances, plateSizes, enableCategorySeparation]);
 
   const toggleSection = (section: string) => {
     setCollapsedSections(prev => ({
@@ -226,16 +244,28 @@ const ItemsTable: React.FC<ItemsTableProps> = ({
           >
             {outstandingBalances[ps.id] || 0}
           </div>
-          {isJackIron(ps) && innerOutstandingBalances && outerOutstandingBalances && (innerOutstandingBalances[ps.id] || 0) !== (outerOutstandingBalances[ps.id] || 0) && (
-            <div className="flex flex-col gap-1 items-center mt-1.5">
-              <span className={`px-2 py-0.5 text-[10px] font-semibold rounded ${formatPortionBalance(innerOutstandingBalances[ps.id] || 0).className}`}>
-                {t('inner') || 'Inner'}: {formatPortionBalance(innerOutstandingBalances[ps.id] || 0).text}
-              </span>
-              <span className={`px-2 py-0.5 text-[10px] font-semibold rounded ${formatPortionBalance(outerOutstandingBalances[ps.id] || 0).className}`}>
-                {t('outer') || 'Outer'}: {formatPortionBalance(outerOutstandingBalances[ps.id] || 0).text}
-              </span>
-            </div>
-          )}
+          {isJackIron(ps) && innerOutstandingBalances && outerOutstandingBalances && (() => {
+            const inner = innerOutstandingBalances[ps.id] || 0;
+            const outer = outerOutstandingBalances[ps.id] || 0;
+            if (inner === outer) return null;
+            if (inner > outer) {
+              return (
+                <div className="mt-1">
+                  <span className="px-1.5 py-0.5 text-[10px] font-bold rounded bg-amber-50 text-amber-800 border border-amber-200 whitespace-nowrap">
+                    +{inner - outer} {t('inner') || 'ઈનર'}
+                  </span>
+                </div>
+              );
+            } else {
+              return (
+                <div className="mt-1">
+                  <span className="px-1.5 py-0.5 text-[10px] font-bold rounded bg-purple-50 text-purple-800 border border-purple-200 whitespace-nowrap">
+                    +{outer - inner} {t('outer') || 'આઉટર'}
+                  </span>
+                </div>
+              );
+            }
+          })()}
         </td>
       )}
       {showAvailable && (
@@ -262,7 +292,7 @@ const ItemsTable: React.FC<ItemsTableProps> = ({
           className="w-24 px-3 py-2 text-center border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
         />
       </td>
-      {hasJackIronRows && (
+      {isExtraPortionVisible && (
         <td className="px-4 py-4 text-center whitespace-nowrap">
           {isJackIron(ps) ? (
             <div className="flex flex-col gap-1 items-center">
@@ -384,16 +414,28 @@ const ItemsTable: React.FC<ItemsTableProps> = ({
           >
             {outstandingBalances[ps.id] || 0}
           </div>
-          {isJackIron(ps) && innerOutstandingBalances && outerOutstandingBalances && (innerOutstandingBalances[ps.id] || 0) !== (outerOutstandingBalances[ps.id] || 0) && (
-            <div className="flex flex-col gap-0.5 items-center mt-1">
-              <span className={`px-1 py-0.5 text-[9px] font-semibold rounded whitespace-nowrap ${formatPortionBalance(innerOutstandingBalances[ps.id] || 0).className}`}>
-                {t('inner') || 'In'}: {formatPortionBalance(innerOutstandingBalances[ps.id] || 0).text}
-              </span>
-              <span className={`px-1 py-0.5 text-[9px] font-semibold rounded whitespace-nowrap ${formatPortionBalance(outerOutstandingBalances[ps.id] || 0).className}`}>
-                {t('outer') || 'Out'}: {formatPortionBalance(outerOutstandingBalances[ps.id] || 0).text}
-              </span>
-            </div>
-          )}
+          {isJackIron(ps) && innerOutstandingBalances && outerOutstandingBalances && (() => {
+            const inner = innerOutstandingBalances[ps.id] || 0;
+            const outer = outerOutstandingBalances[ps.id] || 0;
+            if (inner === outer) return null;
+            if (inner > outer) {
+              return (
+                <div className="mt-0.5">
+                  <span className="px-1 py-0.5 text-[9px] font-bold rounded bg-amber-50 text-amber-800 border border-amber-200 whitespace-nowrap">
+                    +{inner - outer} {t('inner') || 'ઈનર'}
+                  </span>
+                </div>
+              );
+            } else {
+              return (
+                <div className="mt-0.5">
+                  <span className="px-1 py-0.5 text-[9px] font-bold rounded bg-purple-50 text-purple-800 border border-purple-200 whitespace-nowrap">
+                    +{outer - inner} {t('outer') || 'આઉટર'}
+                  </span>
+                </div>
+              );
+            }
+          })()}
         </td>
       )}
       {showAvailable && (
@@ -423,7 +465,7 @@ const ItemsTable: React.FC<ItemsTableProps> = ({
           className="w-full px-2 py-2 text-[13px] sm:text-sm text-center border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent min-h-[40px] sm:min-h-[44px] touch-manipulation active:scale-[0.97]"
         />
       </td>
-      {hasJackIronRows && (
+      {isExtraPortionVisible && (
         <td className="px-1 py-1.5 border-r border-gray-200">
           {isJackIron(ps) ? (
             <div className="flex flex-col gap-1 items-center">
@@ -561,7 +603,7 @@ const ItemsTable: React.FC<ItemsTableProps> = ({
               <th className="px-4 py-3 text-xs font-medium tracking-wider text-center text-gray-500 uppercase">
                 {t("quantity")}
               </th>
-              {hasJackIronRows && (
+              {isExtraPortionVisible && (
                 <th className="px-4 py-3 text-xs font-medium tracking-wider text-center text-blue-600 uppercase">
                   {t("extra") || 'Extra'} ({t('inner') || 'In'}/{t('outer') || 'Out'})
                 </th>
@@ -595,7 +637,7 @@ const ItemsTable: React.FC<ItemsTableProps> = ({
           </thead>
           <tbody className="bg-white divide-y divide-gray-200">
             {/* Shuttering Plates Section */}
-            {(!enableCategorySeparation || globalActiveCategory === 'shuttering') && (
+            {(!enableCategorySeparation || (globalActiveCategory || 'shuttering') === 'shuttering') && (
               <>
                 {!enableCategorySeparation && (
                 <tr
@@ -614,7 +656,7 @@ const ItemsTable: React.FC<ItemsTableProps> = ({
                   </td>
                 </tr>
                 )}
-                {!collapsedSections.shuttering && plateSizes.filter(ps => (ps.category || 'shuttering') === 'shuttering').map(renderDesktopRow)}
+                {(!enableCategorySeparation ? !collapsedSections.shuttering : true) && plateSizes.filter(ps => (ps.category || 'shuttering') === 'shuttering').map(renderDesktopRow)}
               </>
             )}
 
@@ -638,7 +680,7 @@ const ItemsTable: React.FC<ItemsTableProps> = ({
                   </td>
                 </tr>
                 )}
-                {!collapsedSections.jack && plateSizes.filter(ps => ps.category === 'jack').map(renderDesktopRow)}
+                {(!enableCategorySeparation ? !collapsedSections.jack : true) && plateSizes.filter(ps => ps.category === 'jack').map(renderDesktopRow)}
               </>
             )}
 
@@ -662,7 +704,7 @@ const ItemsTable: React.FC<ItemsTableProps> = ({
                   </td>
                 </tr>
                 )}
-                {!collapsedSections.cuplock && plateSizes.filter(ps => ps.category === 'cuplock').map(renderDesktopRow)}
+                {(!enableCategorySeparation ? !collapsedSections.cuplock : true) && plateSizes.filter(ps => ps.category === 'cuplock').map(renderDesktopRow)}
               </>
             )}
 
@@ -686,7 +728,7 @@ const ItemsTable: React.FC<ItemsTableProps> = ({
                   </td>
                 </tr>
                 )}
-                {!collapsedSections.other && plateSizes.filter(ps => ps.category === 'other').map(renderDesktopRow)}
+                {(!enableCategorySeparation ? !collapsedSections.other : true) && plateSizes.filter(ps => ps.category === 'other').map(renderDesktopRow)}
               </>
             )}
           </tbody>
@@ -717,7 +759,7 @@ const ItemsTable: React.FC<ItemsTableProps> = ({
                     <th className="px-1 py-1.5 text-xs sm:text-sm font-semibold text-center text-gray-700 border-r border-gray-200 min-w-[70px] sm:min-w-[80px]">
                       {t("quantity")}
                     </th>
-                    {hasJackIronRows && (
+                    {isExtraPortionVisible && (
                       <th className="px-1 py-1.5 text-xs sm:text-sm font-semibold text-center text-blue-700 border-r border-gray-200 min-w-[70px] sm:min-w-[80px]">
                         {t("extra") || 'Extra'}
                       </th>
@@ -751,7 +793,7 @@ const ItemsTable: React.FC<ItemsTableProps> = ({
                 </thead>
                 <tbody className="bg-white divide-y divide-gray-200">
                   {/* Shuttering Plates Section */}
-                  {(!enableCategorySeparation || globalActiveCategory === 'shuttering') && (
+                  {(!enableCategorySeparation || (globalActiveCategory || 'shuttering') === 'shuttering') && (
                     <>
                       {!enableCategorySeparation && (
                       <tr
@@ -770,7 +812,7 @@ const ItemsTable: React.FC<ItemsTableProps> = ({
                         </td>
                       </tr>
                       )}
-                      {!collapsedSections.shuttering && plateSizes.filter(ps => (ps.category || 'shuttering') === 'shuttering').map((ps, idx) => renderMobileRow(ps, idx))}
+                      {(!enableCategorySeparation ? !collapsedSections.shuttering : true) && plateSizes.filter(ps => (ps.category || 'shuttering') === 'shuttering').map((ps, idx) => renderMobileRow(ps, idx))}
                     </>
                   )}
 
@@ -794,7 +836,7 @@ const ItemsTable: React.FC<ItemsTableProps> = ({
                         </td>
                       </tr>
                       )}
-                      {!collapsedSections.jack && plateSizes.filter(ps => ps.category === 'jack').map((ps, idx) => renderMobileRow(ps, idx))}
+                      {(!enableCategorySeparation ? !collapsedSections.jack : true) && plateSizes.filter(ps => ps.category === 'jack').map((ps, idx) => renderMobileRow(ps, idx))}
                     </>
                   )}
 
@@ -818,7 +860,7 @@ const ItemsTable: React.FC<ItemsTableProps> = ({
                         </td>
                       </tr>
                       )}
-                      {!collapsedSections.cuplock && plateSizes.filter(ps => ps.category === 'cuplock').map((ps, idx) => renderMobileRow(ps, idx))}
+                      {(!enableCategorySeparation ? !collapsedSections.cuplock : true) && plateSizes.filter(ps => ps.category === 'cuplock').map((ps, idx) => renderMobileRow(ps, idx))}
                     </>
                   )}
 
@@ -842,7 +884,7 @@ const ItemsTable: React.FC<ItemsTableProps> = ({
                         </td>
                       </tr>
                       )}
-                      {!collapsedSections.other && plateSizes.filter(ps => ps.category === 'other').map((ps, idx) => renderMobileRow(ps, idx))}
+                      {(!enableCategorySeparation ? !collapsedSections.other : true) && plateSizes.filter(ps => ps.category === 'other').map((ps, idx) => renderMobileRow(ps, idx))}
                     </>
                   )}
                   {/* Totals Summary Row */}
@@ -865,7 +907,7 @@ const ItemsTable: React.FC<ItemsTableProps> = ({
                         {Object.values(items.items || {}).reduce((sum, item) => sum + (item.qty || 0) + (item.borrowed || 0), 0)} કુલ
                       </div>
                     </td>
-                    {hasJackIronRows && (
+                    {isExtraPortionVisible && (
                       <td className="px-1 py-3 text-center border-r border-gray-200">
                         -
                       </td>

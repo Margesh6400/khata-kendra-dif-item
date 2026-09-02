@@ -8,6 +8,7 @@ import { supabase } from "../utils/supabase";
 import toast, { Toaster } from "react-hot-toast";
 
 import { useLanguage } from "../contexts/LanguageContext";
+import { useSettings } from "../contexts/SettingsContext";
 
 interface StockHistoryItem {
     id: string;
@@ -21,7 +22,13 @@ interface StockHistoryItem {
 }
 
 const StockHistory: React.FC = () => {
-    const { sizes: plateSizes } = usePlateSizes();
+    const { sizes: rawPlateSizes } = usePlateSizes();
+    const { enableCategorySeparation, activeCategory } = useSettings();
+    const plateSizes = React.useMemo(() => {
+        if (!enableCategorySeparation) return rawPlateSizes;
+        const cat = activeCategory || 'shuttering';
+        return rawPlateSizes.filter(ps => (ps.category || 'shuttering') === cat);
+    }, [rawPlateSizes, enableCategorySeparation, activeCategory]);
     const { t } = useLanguage();
     const [history, setHistory] = useState<StockHistoryItem[]>([]);
     const [loading, setLoading] = useState(true);

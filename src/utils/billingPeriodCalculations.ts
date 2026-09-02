@@ -254,6 +254,7 @@ export function calculateBillingPeriodsFIFO(
 ): BillingPeriodResult {
   const periods: BillingPeriod[] = [];
   let totalRent = 0;
+  const isIronJack = entries.some((e: any) => e.isIronJack);
 
   // Filter entries to strictly exclude anything after the bill date
   const filteredEntries = entries.filter(entry => entry.date <= billDate);
@@ -268,61 +269,128 @@ export function calculateBillingPeriodsFIFO(
     .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
 
   // Outstanding deliveries queue
-  const outstandingDeliveries = udhars.map(u => ({
-    date: u.date,
-    remainingQty: u.plateCount,
-    challanNumber: u.challanNumber
-  }));
+  const outstandingDeliveries = udhars.map(u => {
+    const inner = (u as any).innerCount !== undefined ? (u as any).innerCount : u.plateCount;
+    const outer = (u as any).outerCount !== undefined ? (u as any).outerCount : u.plateCount;
+    const initialPairs = Math.min(inner, outer);
+    return {
+      date: u.date,
+      initialInner: inner,
+      initialOuter: outer,
+      initialPairs,
+      remainingInner: inner,
+      remainingOuter: outer,
+      completedPairs: 0,
+      remainingQty: u.plateCount,
+      challanNumber: u.challanNumber
+    };
+  });
 
   // Match returns (jamas)
   jamas.forEach(jama => {
     let returnQty = jama.plateCount;
+    let returnInner = (jama as any).innerCount !== undefined ? (jama as any).innerCount : jama.plateCount;
+    let returnOuter = (jama as any).outerCount !== undefined ? (jama as any).outerCount : jama.plateCount;
     const jamaDate = jama.date;
 
     for (let i = 0; i < outstandingDeliveries.length; i++) {
       const delivery = outstandingDeliveries[i];
-      if (delivery.remainingQty <= 0) continue;
+      if (isIronJack) {
+        if (delivery.remainingInner <= 0 && delivery.remainingOuter <= 0) continue;
+      } else {
+        if (delivery.remainingQty <= 0) continue;
+      }
       if (new Date(delivery.date).getTime() > new Date(jamaDate).getTime()) {
         // Cannot match returns to deliveries that happen in the future
         break;
       }
 
-      const matchQty = Math.min(returnQty, delivery.remainingQty);
-      if (matchQty > 0) {
-        const startDate = delivery.date;
-        const endDate = jamaDate;
+      if (isIronJack) {
+        const addInner = Math.min(returnInner, delivery.remainingInner);
+        const addOuter = Math.min(returnOuter, delivery.remainingOuter);
 
-        // Calculate days inclusive (Standard/Inclusive)
-        const days = differenceInDays(parseISO(endDate), parseISO(startDate)) + 1;
+        delivery.remainingInner -= addInner;
+        delivery.remainingOuter -= addOuter;
+        returnInner -= addInner;
+        returnOuter -= addOuter;
 
-        // Rent calculation
-        const rent = Math.round(matchQty * days * dailyRate * 100) / 100;
+        const totalReturnedInner = delivery.initialInner - delivery.remainingInner;
+        const totalReturnedOuter = delivery.initialOuter - delivery.remainingOuter;
+        const totalCompletePairsNow = Math.min(totalReturnedInner, totalReturnedOuter);
+        const newlyCompletedPairs = totalCompletePairsNow - delivery.completedPairs;
 
-        periods.push({
-          startDate,
-          endDate,
-          plateCount: matchQty,
-          days,
-          rent,
-          causeType: 'jama',
-          challanNumber: jama.challanNumber,
-          txnQty: matchQty,
-          jamaQty: matchQty,
-          jamaDetails: [{ challanNumber: jama.challanNumber, qty: matchQty }]
-        });
+        if (newlyCompletedPairs > 0) {
+          const startDate = delivery.date;
+          const endDate = jamaDate;
 
-        totalRent += rent;
-        returnQty -= matchQty;
-        delivery.remainingQty -= matchQty;
+          // Calculate days inclusive (Standard/Inclusive)
+          const days = differenceInDays(parseISO(endDate), parseISO(startDate)) + 1;
 
-        if (returnQty === 0) break;
+          // Rent calculation
+          const rent = Math.round(newlyCompletedPairs * days * dailyRate * 100) / 100;
+
+          periods.push({
+            startDate,
+            endDate,
+            plateCount: newlyCompletedPairs,
+            days,
+            rent,
+            causeType: 'jama',
+            challanNumber: jama.challanNumber,
+            txnQty: newlyCompletedPairs,
+            jamaQty: newlyCompletedPairs,
+            jamaDetails: [{ challanNumber: jama.challanNumber, qty: newlyCompletedPairs }]
+          });
+
+          totalRent += rent;
+          delivery.completedPairs = totalCompletePairsNow;
+        }
+
+        delivery.remainingQty = Math.max(0, delivery.initialPairs - delivery.completedPairs);
+
+        if (returnInner <= 0 && returnOuter <= 0) break;
+      } else {
+        const matchQty = Math.min(returnQty, delivery.remainingQty);
+        if (matchQty > 0) {
+          const startDate = delivery.date;
+          const endDate = jamaDate;
+
+          // Calculate days inclusive (Standard/Inclusive)
+          const days = differenceInDays(parseISO(endDate), parseISO(startDate)) + 1;
+
+          // Rent calculation
+          const rent = Math.round(matchQty * days * dailyRate * 100) / 100;
+
+          periods.push({
+            startDate,
+            endDate,
+            plateCount: matchQty,
+            days,
+            rent,
+            causeType: 'jama',
+            challanNumber: jama.challanNumber,
+            txnQty: matchQty,
+            jamaQty: matchQty,
+            jamaDetails: [{ challanNumber: jama.challanNumber, qty: matchQty }]
+          });
+
+          totalRent += rent;
+          returnQty -= matchQty;
+          delivery.remainingQty -= matchQty;
+
+          if (returnQty === 0) break;
+        }
       }
     }
   });
 
   // Remaining outstanding deliveries at the end of the bill period
   outstandingDeliveries.forEach(delivery => {
-    if (delivery.remainingQty > 0) {
+    const remainingCount = isIronJack
+      ? Math.max(0, delivery.initialPairs - delivery.completedPairs)
+      : delivery.remainingQty;
+
+    if (remainingCount > 0) {
       const startDate = delivery.date;
       const endDate = billDate;
 
@@ -330,19 +398,19 @@ export function calculateBillingPeriodsFIFO(
       const days = differenceInDays(parseISO(endDate), parseISO(startDate)) + 1;
 
       // Rent calculation
-      const rent = Math.round(delivery.remainingQty * days * dailyRate * 100) / 100;
+      const rent = Math.round(remainingCount * days * dailyRate * 100) / 100;
 
       periods.push({
         startDate,
         endDate,
-        plateCount: delivery.remainingQty,
+        plateCount: remainingCount,
         days,
         rent,
         causeType: 'udhar',
         challanNumber: delivery.challanNumber,
-        txnQty: delivery.remainingQty,
-        udharQty: delivery.remainingQty,
-        udharDetails: [{ challanNumber: delivery.challanNumber, qty: delivery.remainingQty }]
+        txnQty: remainingCount,
+        udharQty: remainingCount,
+        udharDetails: [{ challanNumber: delivery.challanNumber, qty: remainingCount }]
       });
 
       totalRent += rent;
@@ -366,13 +434,13 @@ export function calculateBillingPeriods(
   dailyRate: number
 ): BillingPeriodResult {
   let currentBalance = 0;
+  let currentInner = 0;
+  let currentOuter = 0;
+  const isIronJack = entries.some((e: any) => e.isIronJack);
   const periods: BillingPeriod[] = [];
   let totalRent = 0;
 
   // First sort entries by date and priority
-  // This ensures when Udhar and Jama happen on the same date:
-  // 1. Process Udhar first (priority 1) - Add plates to balance
-  // 2. Then process Jama (priority 2) - Remove plates from balance
   entries.sort((a, b) => {
     const dateCompare = new Date(a.date).getTime() - new Date(b.date).getTime();
     return dateCompare === 0 ? (a.sortPriority - b.sortPriority) : dateCompare;
@@ -381,19 +449,11 @@ export function calculateBillingPeriods(
   const ledger = buildTransactionLedger(entries);
 
   // Filter entries to strictly exclude anything after the bill date
-  // This ensures the bill stops exactly at the "To Date"
   const filteredEntries = entries.filter(entry => entry.date <= billDate);
 
-  // Group changes by effective date (when balance actually changes)
-  // For billing calculations:
-  // - Udhar: Use issue date (balance changes immediately)
-  // - Jama: Use next day (balance changes day after return)
+  // Group changes by effective date
   const balanceChanges = filteredEntries.reduce((acc, entry) => {
-    // Use effectiveDate for balance changes:
-    // Udhar: Same as transaction date
-    // Jama: Next day after return
     const date = entry.effectiveDate;
-
     if (!acc[date]) {
       acc[date] = [];
     }
@@ -412,21 +472,30 @@ export function calculateBillingPeriods(
     const sortedChanges = [...balanceChanges[currentDate]].sort((a, b) => a.sortPriority - b.sortPriority);
 
     sortedChanges.forEach(change => {
-      // Validate plate count
-      if (change.plateCount <= 0) {
-        console.warn(`Invalid plate count in ${change.type} challan ${change.challanNumber}`);
-        return;
-      }
+      const isIron = (change as any).isIronJack;
+      const innerQty = (change as any).innerCount !== undefined ? (change as any).innerCount : change.plateCount;
+      const outerQty = (change as any).outerCount !== undefined ? (change as any).outerCount : change.plateCount;
 
       if (change.type === 'udhar') {
-        currentBalance += change.plateCount;  // Add plates from Udhar
-      } else {
-        // Prevent negative balance from Jama
-        if (currentBalance < change.plateCount) {
-          console.warn(`Warning: Jama ${change.plateCount} plates exceeds current balance of ${currentBalance}`);
-          currentBalance = 0;  // Set to zero instead of negative
+        if (isIron) {
+          currentInner += innerQty;
+          currentOuter += outerQty;
+          currentBalance = Math.max(0, Math.max(currentInner, currentOuter));
         } else {
-          currentBalance -= change.plateCount;  // Remove plates from Jama
+          currentBalance += change.plateCount;
+        }
+      } else {
+        if (isIron) {
+          currentInner = Math.max(0, currentInner - innerQty);
+          currentOuter = Math.max(0, currentOuter - outerQty);
+          currentBalance = Math.max(0, Math.max(currentInner, currentOuter));
+        } else {
+          if (currentBalance < change.plateCount) {
+            console.warn(`Warning: Jama ${change.plateCount} plates exceeds current balance of ${currentBalance}`);
+            currentBalance = 0;
+          } else {
+            currentBalance -= change.plateCount;
+          }
         }
       }
     });
@@ -556,7 +625,15 @@ export function calculateBillingPeriods(
   };
 }
 
-export function getQtyForSize(challan: any, sizeId: number): { qty: number, borrowed: number, lost: number, damaged: number, note: string | null } {
+export function getQtyForSize(challan: any, sizeId: number): {
+  qty: number;
+  borrowed: number;
+  lost: number;
+  damaged: number;
+  note: string | null;
+  extraPortion?: 'inner' | 'outer';
+  extraQty?: number;
+} {
   const raw = challan.items;
   const row = Array.isArray(raw) ? (raw[0] || {}) : (raw || {});
 
@@ -567,7 +644,20 @@ export function getQtyForSize(challan: any, sizeId: number): { qty: number, borr
       borrowed: matchedItem?.borrowed || 0,
       lost: matchedItem?.lost || 0,
       damaged: matchedItem?.damaged || 0,
-      note: matchedItem?.note || null
+      note: matchedItem?.note || null,
+      extraPortion: matchedItem?.extraPortion,
+      extraQty: matchedItem?.extraQty || 0,
+    };
+  } else if (row.items && typeof row.items === 'object') {
+    const matchedItem = row.items[sizeId];
+    return {
+      qty: matchedItem?.qty || 0,
+      borrowed: matchedItem?.borrowed || 0,
+      lost: matchedItem?.lost || 0,
+      damaged: matchedItem?.damaged || 0,
+      note: matchedItem?.note || null,
+      extraPortion: matchedItem?.extraPortion,
+      extraQty: matchedItem?.extraQty || 0,
     };
   } else {
     return {
@@ -575,7 +665,9 @@ export function getQtyForSize(challan: any, sizeId: number): { qty: number, borr
       borrowed: row[`size_${sizeId}_borrowed`] || 0,
       lost: row[`size_${sizeId}_lost`] || 0,
       damaged: row[`size_${sizeId}_damaged`] || 0,
-      note: row[`size_${sizeId}_note`] || null
+      note: row[`size_${sizeId}_note`] || null,
+      extraPortion: row[`size_${sizeId}_extraPortion`],
+      extraQty: row[`size_${sizeId}_extraQty`] || 0,
     };
   }
 }
@@ -604,30 +696,38 @@ export function calculateBill(
 } {
   // localStorage is absent when this runs server-side (monthly bill cron)
   const storedSortMethod = typeof localStorage !== 'undefined' ? localStorage.getItem('dateSortingMethod') : 'n/a (server)';
+  const jackMaterialType = typeof localStorage !== 'undefined' ? (localStorage.getItem('jackMaterialType') || 'iron') : 'iron';
   console.log('[calculateBill] jamaFirst =', jamaFirst, '| dateSortingMethod from localStorage =', storedSortMethod);
   const entries = createCombinedEntryList(udharChallans, jamaReturns, jamaFirst);
 
-  // Helper: build ChallanEntry list for a specific set of sizeIds
-  function buildSizeEntries(sizeId: number): ChallanEntry[] {
+  // Helper: build ChallanEntry list for a specific size
+  function buildSizeEntries(sizeId: number, isIronJack: boolean = false): ChallanEntry[] {
     const sizeEntries: ChallanEntry[] = [];
     udharChallans.forEach(ch => {
       const details = getQtyForSize(ch, sizeId);
       const qty = details.qty + details.borrowed;
-      if (qty > 0) {
+      const extraInner = details.extraPortion === 'inner' ? (details.extraQty || 0) : 0;
+      const extraOuter = details.extraPortion === 'outer' ? (details.extraQty || 0) : 0;
+      if (qty > 0 || (details.extraQty || 0) > 0) {
         sizeEntries.push({
           date: ch.udhar_date,
           effectiveDate: ch.udhar_date,
           type: 'udhar',
           plateCount: qty,
+          innerCount: qty + extraInner,
+          outerCount: qty + extraOuter,
+          isIronJack,
           challanNumber: ch.udhar_challan_number,
           sortPriority: getSortPriority('udhar', jamaFirst)
-        });
+        } as any);
       }
     });
     jamaReturns.forEach(ch => {
       const details = getQtyForSize(ch, sizeId);
       const qty = details.qty + details.borrowed + details.lost + details.damaged;
-      if (qty > 0) {
+      const extraInner = details.extraPortion === 'inner' ? (details.extraQty || 0) : 0;
+      const extraOuter = details.extraPortion === 'outer' ? (details.extraQty || 0) : 0;
+      if (qty > 0 || (details.extraQty || 0) > 0) {
         const effectiveDate = jamaFirst
           ? ch.jama_date
           : format(addDays(parseISO(ch.jama_date), 1), 'yyyy-MM-dd');
@@ -636,9 +736,12 @@ export function calculateBill(
           effectiveDate,
           type: 'jama',
           plateCount: qty,
+          innerCount: qty + extraInner,
+          outerCount: qty + extraOuter,
+          isIronJack,
           challanNumber: ch.jama_challan_number,
           sortPriority: getSortPriority('jama', jamaFirst)
-        });
+        } as any);
       }
     });
     sizeEntries.sort((a, b) => {
@@ -661,7 +764,8 @@ export function calculateBill(
         }
       }
       const rate = customRate !== null ? customRate : dailyRate;
-      const sizeEntries = buildSizeEntries(ps.id);
+      const isIronJack = ps.category === 'jack' && jackMaterialType === 'iron';
+      const sizeEntries = buildSizeEntries(ps.id, isIronJack);
       if (sizeEntries.length > 0) {
         const sizeResult = jamaFirst
           ? calculateBillingPeriodsFIFO(sizeEntries, billDate, rate)

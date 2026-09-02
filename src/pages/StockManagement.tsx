@@ -23,9 +23,12 @@ import {
   Trash2,
   Edit2,
   GripVertical,
+  Camera,
 } from "lucide-react";
 import { fetchUdharChallansForClient, fetchJamaChallansForClient } from "../utils/challanFetching";
 import Navbar from "../components/Navbar";
+import StockPhotoTemplate, { StockPhotoRow } from "../components/StockPhotoTemplate";
+import { generateStockPhoto } from "../utils/generateStockJPEG";
 import toast, { Toaster } from "react-hot-toast";
 
 interface StockData {
@@ -221,6 +224,24 @@ const StockManagement: React.FC = () => {
     data: [],
   });
 
+  // State for bulk stock update
+  const [bulkAction, setBulkAction] = useState<{
+    isOpen: boolean;
+    type: "add" | "remove" | "lost-add" | "lost-remove" | "damaged-add" | "damaged-remove";
+    quantities: { [key: number]: number };
+    partyName: string;
+    note: string;
+    amount: string;
+    date: string;
+  }>({
+    isOpen: false,
+    type: "add",
+    quantities: {},
+    partyName: "",
+    note: "",
+    amount: "",
+    date: new Date().toISOString().split('T')[0],
+  });
 
   const [calculatedStocks, setCalculatedStocks] = useState<Map<number, { rent: number; borrowed: number }>>(new Map());
 
@@ -278,6 +299,20 @@ const StockManagement: React.FC = () => {
   }, []);
 
   useEffect(() => {
+    if (bulkAction.isOpen || distributionModal.isOpen || isAddingSize || isReordering) {
+      document.body.style.overflow = 'hidden';
+      document.documentElement.style.overflow = 'hidden';
+    } else {
+      document.body.style.overflow = '';
+      document.documentElement.style.overflow = '';
+    }
+    return () => {
+      document.body.style.overflow = '';
+      document.documentElement.style.overflow = '';
+    };
+  }, [bulkAction.isOpen, distributionModal.isOpen, isAddingSize, isReordering]);
+
+  useEffect(() => {
     fetchStock();
     fetchCalculatedStocks();
   }, [fetchCalculatedStocks, plateSizes, activeCategory, selectedCategory]);
@@ -305,25 +340,6 @@ const StockManagement: React.FC = () => {
     setLoading(false);
     setRefreshing(false);
   };
-
-  // State for bulk stock update
-  const [bulkAction, setBulkAction] = useState<{
-    isOpen: boolean;
-    type: "add" | "remove" | "lost-add" | "lost-remove" | "damaged-add" | "damaged-remove";
-    quantities: { [key: number]: number };
-    partyName: string;
-    note: string;
-    amount: string;
-    date: string;
-  }>({
-    isOpen: false,
-    type: "add",
-    quantities: {},
-    partyName: "",
-    note: "",
-    amount: "",
-    date: new Date().toISOString().split('T')[0],
-  });
 
   const handleActionClick = (type: "add" | "remove" | "lost-add" | "lost-remove" | "damaged-add" | "damaged-remove") => {
     setBulkAction({
@@ -609,6 +625,75 @@ const StockManagement: React.FC = () => {
       });
   }, [stocks, sortField, sortOrder, plateSizes, selectedCategory, calculatedStocks]);
 
+  const STOCK_PHOTO_ELEMENT_ID = "stock-photo-download";
+
+  // Kept in state so the picture carries the moment the user asked for it.
+  const [photoCapturedAt, setPhotoCapturedAt] = useState<Date | null>(null);
+  const [isDownloadingPhoto, setIsDownloadingPhoto] = useState(false);
+
+  const categoryLabel = useMemo(() => {
+    const labels: Record<string, string> = {
+      shuttering: t("shuttering"),
+      jack: t("jack"),
+      cuplock: language === "gu" ? "કપલોક" : "Cuplock",
+      other: t("other"),
+    };
+    return labels[selectedCategory] || selectedCategory;
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [selectedCategory, language]);
+
+  const photoRows: StockPhotoRow[] = useMemo(() => {
+    return filteredAndSortedStocks.map((stock) => {
+      const calculated = calculatedStocks.get(stock.size) || { rent: 0, borrowed: 0 };
+      const damaged = stock.damaged_stock || 0;
+      return {
+        sizeName:
+          plateSizes.find((p) => p.id === stock.size)?.name || `Size ${stock.size}`,
+        total: stock.total_stock,
+        available: Math.max(
+          0,
+          stock.total_stock - calculated.rent - stock.lost_stock - damaged
+        ),
+        onRent: calculated.rent,
+        borrowed: calculated.borrowed,
+        lost: stock.lost_stock,
+        damaged,
+      };
+    });
+  }, [filteredAndSortedStocks, calculatedStocks, plateSizes]);
+
+  const handleDownloadPhoto = async () => {
+    if (isDownloadingPhoto) return;
+    if (photoRows.length === 0) {
+      toast.error(t("noStockFound"));
+      return;
+    }
+
+    const capturedAt = new Date();
+    setPhotoCapturedAt(capturedAt);
+    setIsDownloadingPhoto(true);
+
+    const loadingToast = toast.loading(t("generatingStockPhoto"));
+    try {
+      // Let the off-screen template paint with the new timestamp before capture.
+      await new Promise((resolve) =>
+        requestAnimationFrame(() => requestAnimationFrame(() => resolve(null)))
+      );
+      if (document.fonts?.ready) await document.fonts.ready;
+
+      await generateStockPhoto(STOCK_PHOTO_ELEMENT_ID, selectedCategory, capturedAt);
+      toast.success(t("stockPhotoDownloaded"));
+    } catch (error) {
+      console.error("Error generating stock photo:", error);
+      toast.error(t("stockPhotoFailed"));
+    } finally {
+      toast.dismiss(loadingToast);
+      setIsDownloadingPhoto(false);
+      setPhotoCapturedAt(null);
+    }
+  };
+
+
 
 
   const SkeletonRow = () => (
@@ -703,6 +788,18 @@ const StockManagement: React.FC = () => {
               >
                 <Package className="w-4 h-4" />
                 {t("lostDamaged")}
+              </button>
+              <button
+                onClick={handleDownloadPhoto}
+                disabled={isDownloadingPhoto || loading}
+                className="inline-flex items-center gap-1.5 px-3 py-2 text-sm font-medium text-white bg-slate-700 rounded-lg hover:bg-slate-800 transition-colors shadow-sm disabled:opacity-50"
+              >
+                {isDownloadingPhoto ? (
+                  <Loader2 className="w-4 h-4 animate-spin" />
+                ) : (
+                  <Camera className="w-4 h-4" />
+                )}
+                {t("downloadStockPhoto")}
               </button>
               <Link
                 to="/stock-history"
@@ -1242,6 +1339,18 @@ const StockManagement: React.FC = () => {
             <ArrowUpDown className="w-3.5 h-3.5 flex-shrink-0" />
             {t('reorderSizesButton')}
           </button>
+          <button
+            onClick={handleDownloadPhoto}
+            disabled={isDownloadingPhoto || loading}
+            className="flex-1 inline-flex items-center justify-center gap-1.5 px-2 py-2 text-xs font-semibold text-slate-700 bg-slate-100 border border-slate-200 rounded-xl active:scale-95 transition-all disabled:opacity-50"
+          >
+            {isDownloadingPhoto ? (
+              <Loader2 className="w-3.5 h-3.5 flex-shrink-0 animate-spin" />
+            ) : (
+              <Camera className="w-3.5 h-3.5 flex-shrink-0" />
+            )}
+            {t("downloadStockPhoto")}
+          </button>
           <Link
             to="/stock-history"
             className="flex-1 inline-flex items-center justify-center gap-1.5 px-2 py-2 text-xs font-semibold text-gray-700 bg-gray-50 border border-gray-200 rounded-xl active:scale-95 transition-all"
@@ -1777,6 +1886,30 @@ const StockManagement: React.FC = () => {
               </div>
             </div>
           </div>
+        </div>
+      )}
+
+      {/* Off-screen snapshot captured by the "download photo" action */}
+      {photoCapturedAt && (
+        <div style={{ position: "absolute", left: "-9999px", top: 0 }}>
+          <StockPhotoTemplate
+            elementId={STOCK_PHOTO_ELEMENT_ID}
+            title={t("stockManagement")}
+            categoryLabel={categoryLabel}
+            rows={photoRows}
+            generatedAt={photoCapturedAt}
+            labels={{
+              size: t("size"),
+              total: t("total_stock"),
+              available: t("available_stock"),
+              onRent: t("on_rent_stock"),
+              borrowed: t("borrowed_stock"),
+              lost: t("lost_stock"),
+              damaged: t("damaged_stock"),
+              totalRow: t("total") || "Total",
+              dateTime: t("stockPhotoDateTime"),
+            }}
+          />
         </div>
       )}
     </div>

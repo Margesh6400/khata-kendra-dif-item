@@ -84,6 +84,20 @@ export default function Payments() {
     };
 
     useEffect(() => {
+        if (showModal && selectedBill) {
+            document.body.style.overflow = 'hidden';
+            document.documentElement.style.overflow = 'hidden';
+        } else {
+            document.body.style.overflow = '';
+            document.documentElement.style.overflow = '';
+        }
+        return () => {
+            document.body.style.overflow = '';
+            document.documentElement.style.overflow = '';
+        };
+    }, [showModal, selectedBill]);
+
+    useEffect(() => {
         loadData();
     }, [enableCategorySeparation, activeCategory]);
 
@@ -698,7 +712,7 @@ ${businessInfo.name}`;
 
             {/* View Bill Modal */}
             {showModal && selectedBill && (
-                <div className="fixed inset-0 z-50 overflow-y-auto bg-black bg-opacity-75 flex items-center justify-center p-4">
+                <div className="fixed inset-0 z-50 overflow-y-auto bg-black/75 backdrop-blur-sm flex items-center justify-center p-4">
                     <div className="relative bg-white rounded-lg shadow-xl w-full max-w-5xl h-[90vh] flex flex-col">
                         <div className="flex items-center justify-between p-4 border-b">
                             <h3 className="text-lg font-medium text-gray-900 truncate pr-2">

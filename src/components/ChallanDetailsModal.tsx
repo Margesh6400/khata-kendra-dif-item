@@ -28,6 +28,7 @@ interface ChallanData {
   isSecondaryPhone: boolean;
   items: ItemsData;
   totalItems: number;
+  category?: 'shuttering' | 'jack' | 'cuplock' | 'other';
 }
 
 interface ChallanDetailsModalProps {
@@ -45,32 +46,47 @@ const ChallanDetailsModal: React.FC<ChallanDetailsModalProps> = ({
   onClose,
   onDownload,
 }) => {
-  const { t } = useLanguage();
+  const { t, language } = useLanguage();
   const { sizes: rawPlateSizes } = usePlateSizes();
-  const { enableCategorySeparation, activeCategory } = useSettings();
+  const { enableCategorySeparation, activeCategory, jackMaterialType } = useSettings();
 
   const plateSizes = React.useMemo(() => {
-    if (enableCategorySeparation && activeCategory) {
-      return rawPlateSizes.filter(size => (size.category || 'shuttering') === activeCategory);
+    if (enableCategorySeparation) {
+      const targetCategory = challan?.category || activeCategory || 'shuttering';
+      return rawPlateSizes.filter(size => (size.category || 'shuttering') === targetCategory);
     }
     return rawPlateSizes;
-  }, [rawPlateSizes, enableCategorySeparation, activeCategory]);
+  }, [rawPlateSizes, enableCategorySeparation, challan?.category, activeCategory]);
+
+  const getCategoryHeading = () => {
+    if (enableCategorySeparation) {
+      const targetCategory = challan?.category || activeCategory || 'shuttering';
+      if (targetCategory === 'jack') return language === 'gu' ? (jackMaterialType === 'wooden' ? 'ટેકાની વિગતો' : 'જેકની વિગતો') : (jackMaterialType === 'wooden' ? 'Teka Details' : 'Jack Details');
+      if (targetCategory === 'cuplock') return language === 'gu' ? 'કપલોકની વિગતો' : 'Cuplock Details';
+      if (targetCategory === 'other') return language === 'gu' ? 'અન્ય આઈટમ્સની વિગતો' : 'Other Items Details';
+      return language === 'gu' ? 'શટરિંગની વિગતો' : 'Shuttering Details';
+    }
+    return t('items');
+  };
 
   React.useEffect(() => {
     if (isOpen && challan) {
       document.body.style.overflow = 'hidden';
+      document.documentElement.style.overflow = 'hidden';
     } else {
       document.body.style.overflow = '';
+      document.documentElement.style.overflow = '';
     }
     return () => {
       document.body.style.overflow = '';
+      document.documentElement.style.overflow = '';
     };
   }, [isOpen, challan]);
 
   if (!isOpen || !challan) return null;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black bg-opacity-50">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm">
       <div className="bg-white rounded-lg shadow-xl max-w-4xl w-full max-h-[90vh] overflow-y-auto">
         <div className="sticky top-0 flex items-center justify-between px-3 md:px-6 py-2 md:py-4 bg-white border-b border-gray-200">
           <h2 className="text-base md:text-2xl font-bold text-gray-900">
@@ -219,7 +235,7 @@ const ChallanDetailsModal: React.FC<ChallanDetailsModalProps> = ({
 
           {/* Items Section */}
           <div className="p-3 md:p-4 bg-white border border-gray-200 rounded-lg">
-            <h3 className="mb-2 md:mb-3 text-sm md:text-lg font-semibold text-gray-900">{t('items')}</h3>
+            <h3 className="mb-2 md:mb-3 text-sm md:text-lg font-semibold text-gray-900">{getCategoryHeading()}</h3>
 
             {(() => {
               const getItemDetails = (psId: number) => {
@@ -293,7 +309,7 @@ const ChallanDetailsModal: React.FC<ChallanDetailsModalProps> = ({
                       <tbody className="bg-white divide-y divide-gray-200">
                         {plateSizes.map((ps) => {
                           const { qty, borrowed, lost, damaged, note, extraReturned, extraPortion, extraQty } = getItemDetails(ps.id);
-                          const showRow = qty > 0 || (hasBorrowed && borrowed > 0) || (hasLost && lost > 0) || (hasDamaged && damaged > 0) || (hasNote && !!note);
+                          const showRow = qty > 0 || (extraQty || 0) > 0 || (hasBorrowed && borrowed > 0) || (hasLost && lost > 0) || (hasDamaged && damaged > 0) || (hasNote && !!note);
                           if (!showRow) return null;
                           const hasExtra = extraReturned > 0 || (!!extraPortion && extraQty > 0);
 
@@ -303,13 +319,23 @@ const ChallanDetailsModal: React.FC<ChallanDetailsModalProps> = ({
                                 {ps.name}
                               </td>
                               <td className="px-2 py-2 text-[11px] sm:text-sm text-gray-900 whitespace-nowrap text-center sm:px-4">
-                                <span className="inline-block min-w-[40px] px-2 py-1 bg-blue-50 rounded">
-                                  {qty}
-                                </span>
-                                {hasExtra && (
+                                {qty > 0 ? (
+                                  <span className="inline-block min-w-[40px] px-2 py-1 bg-blue-50 rounded">
+                                    {qty}
+                                  </span>
+                                ) : extraPortion && extraQty > 0 ? (
+                                  <span className="inline-block min-w-[40px] px-2 py-1 bg-blue-50 text-blue-800 font-semibold rounded">
+                                    {extraQty} ({extraPortion === 'inner' ? (language === 'gu' ? 'ઈનર' : 'Inner') : (language === 'gu' ? 'આઉટર' : 'Outer')})
+                                  </span>
+                                ) : (
+                                  <span className="inline-block min-w-[40px] px-2 py-1 bg-gray-50 text-gray-400 rounded">
+                                    0
+                                  </span>
+                                )}
+                                {hasExtra && qty > 0 && (
                                   <div className="text-[10px] font-bold text-emerald-700 mt-1 whitespace-nowrap">
                                     {extraReturned > 0 && `+${extraReturned} ${t('extra') || 'extra'}`}
-                                    {extraPortion && extraQty > 0 && ` +${extraQty} ${extraPortion === 'inner' ? (t('inner') || 'Inner') : (t('outer') || 'Outer')} ${t('extra') || 'extra'}`}
+                                    {extraPortion && extraQty > 0 && ` +${extraQty} ${extraPortion === 'inner' ? (language === 'gu' ? 'ઈનર' : 'Inner') : (language === 'gu' ? 'આઉટર' : 'Outer')}`}
                                   </div>
                                 )}
                               </td>
@@ -382,7 +408,7 @@ const ChallanDetailsModal: React.FC<ChallanDetailsModalProps> = ({
                       <tbody className="bg-white divide-y divide-gray-200">
                         {plateSizes.map((ps) => {
                           const { qty, borrowed, lost, damaged, note, extraReturned, extraPortion, extraQty } = getItemDetails(ps.id);
-                          const showRow = qty > 0 || (hasBorrowed && borrowed > 0) || (hasLost && lost > 0) || (hasDamaged && damaged > 0) || (hasNote && !!note);
+                          const showRow = qty > 0 || (extraQty || 0) > 0 || (hasBorrowed && borrowed > 0) || (hasLost && lost > 0) || (hasDamaged && damaged > 0) || (hasNote && !!note);
                           if (!showRow) return null;
                           const hasExtra = extraReturned > 0 || (!!extraPortion && extraQty > 0);
 
@@ -392,10 +418,20 @@ const ChallanDetailsModal: React.FC<ChallanDetailsModalProps> = ({
                                 {ps.name}
                               </td>
                               <td className="px-2 py-1.5 text-xs text-center text-gray-900 whitespace-nowrap border-r border-gray-200">
-                                <span className="inline-block min-w-[28px] px-1.5 py-0.5 bg-blue-100 text-blue-800 rounded text-[10px] font-semibold">
-                                  {qty}
-                                </span>
-                                {hasExtra && (
+                                {qty > 0 ? (
+                                  <span className="inline-block min-w-[28px] px-1.5 py-0.5 bg-blue-100 text-blue-800 rounded text-[10px] font-semibold">
+                                    {qty}
+                                  </span>
+                                ) : extraPortion && extraQty > 0 ? (
+                                  <span className="inline-block min-w-[28px] px-1.5 py-0.5 bg-blue-100 text-blue-800 rounded text-[10px] font-semibold">
+                                    {extraQty}{extraPortion === 'inner' ? 'I' : 'O'}
+                                  </span>
+                                ) : (
+                                  <span className="inline-block min-w-[28px] px-1.5 py-0.5 bg-gray-100 text-gray-400 rounded text-[10px] font-semibold">
+                                    0
+                                  </span>
+                                )}
+                                {hasExtra && qty > 0 && (
                                   <div className="text-[9px] font-bold text-emerald-700 mt-0.5 whitespace-nowrap">
                                     {extraReturned > 0 && `+${extraReturned}`}
                                     {extraPortion && extraQty > 0 && ` +${extraQty}${extraPortion === 'inner' ? 'I' : 'O'}`}

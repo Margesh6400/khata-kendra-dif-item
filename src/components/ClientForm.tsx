@@ -248,8 +248,8 @@ const ClientForm: React.FC<ClientFormProps> = ({ initialData, onSubmit, onCancel
           const selectedCategory = formData.category || activeCategory;
           const visibleCategoryEntries = Object.entries(groupedSizes).filter(([category, sizes]) => {
             if (!sizes || sizes.length === 0) return false;
-            // When separate client lists per category is ON, show only the active/selected category
-            if (enableCategoryClientSeparation && selectedCategory) {
+            // When separate client lists per category or separate business categories is ON, show only the active/selected category
+            if ((enableCategoryClientSeparation || enableCategorySeparation) && selectedCategory) {
               return category === selectedCategory;
             }
             // When separate client lists per category is OFF, show all custom rent categories (Jack, Cuplock, Other)

@@ -48,17 +48,18 @@ interface ChallanData {
   items: ItemsData;
   totalItems: number;
   clientId?: string;
+  category?: 'shuttering' | 'jack' | 'cuplock' | 'other';
 }
 
 const ITEMS_PER_PAGE = 10;
 
 const ITEMS_SELECT = 'items, main_note';
 
-const convertJSONToFlatItems = (jsonItemsArray: any[], mainNote: string | null): ItemsData => {
-  const result: any = { main_note: mainNote };
+const convertJSONToFlatItems = (jsonItems: any, mainNote: string | null): ItemsData => {
+  const result: any = { main_note: mainNote, items: {} };
   
-  if (Array.isArray(jsonItemsArray)) {
-    jsonItemsArray.forEach((item: any) => {
+  if (Array.isArray(jsonItems)) {
+    jsonItems.forEach((item: any) => {
       const sizeId = item.size_id;
       if (sizeId >= 1) {
         result[`size_${sizeId}_qty`] = item.qty || 0;
@@ -66,6 +67,40 @@ const convertJSONToFlatItems = (jsonItemsArray: any[], mainNote: string | null):
         result[`size_${sizeId}_lost`] = item.lost || 0;
         result[`size_${sizeId}_damaged`] = item.damaged || 0;
         result[`size_${sizeId}_note`] = item.note || null;
+        result[`size_${sizeId}_extraPortion`] = item.extraPortion || null;
+        result[`size_${sizeId}_extraQty`] = item.extraQty || 0;
+        result.items[sizeId] = {
+          qty: item.qty || 0,
+          borrowed: item.borrowed || 0,
+          lost: item.lost || 0,
+          damaged: item.damaged || 0,
+          note: item.note || '',
+          extraPortion: item.extraPortion || undefined,
+          extraQty: item.extraQty || 0,
+        };
+      }
+    });
+  } else if (jsonItems && typeof jsonItems === 'object') {
+    const itemsMap = jsonItems.items || jsonItems;
+    Object.entries(itemsMap).forEach(([key, val]: [string, any]) => {
+      const sizeId = parseInt(key.replace('size_', ''), 10);
+      if (!isNaN(sizeId) && sizeId >= 1 && val && typeof val === 'object') {
+        result[`size_${sizeId}_qty`] = val.qty || 0;
+        result[`size_${sizeId}_borrowed`] = val.borrowed || 0;
+        result[`size_${sizeId}_lost`] = val.lost || 0;
+        result[`size_${sizeId}_damaged`] = val.damaged || 0;
+        result[`size_${sizeId}_note`] = val.note || null;
+        result[`size_${sizeId}_extraPortion`] = val.extraPortion || null;
+        result[`size_${sizeId}_extraQty`] = val.extraQty || 0;
+        result.items[sizeId] = {
+          qty: val.qty || 0,
+          borrowed: val.borrowed || 0,
+          lost: val.lost || 0,
+          damaged: val.damaged || 0,
+          note: val.note || '',
+          extraPortion: val.extraPortion || undefined,
+          extraQty: val.extraQty || 0,
+        };
       }
     });
   }
@@ -78,7 +113,7 @@ const convertJSONToFlatItems = (jsonItemsArray: any[], mainNote: string | null):
 function flatToDesignItemsData(flat: ItemsData): DesignItemsData {
   const nested: DesignItemsData = { items: {}, main_note: flat.main_note || '' };
   Object.keys(flat).forEach(key => {
-    if (key.startsWith('size_') && key.endsWith('_qty')) {
+    if (key.startsWith('size_') && key.endsWith('_qty') && !key.includes('extra')) {
       const sizeId = parseInt(key.split('_')[1], 10);
       if (!nested.items[sizeId]) {
         nested.items[sizeId] = { qty: 0, borrowed: 0, lost: 0, damaged: 0, note: '' };
@@ -88,6 +123,8 @@ function flatToDesignItemsData(flat: ItemsData): DesignItemsData {
       nested.items[sizeId].lost = (flat as any)[`size_${sizeId}_lost`] || 0;
       nested.items[sizeId].damaged = (flat as any)[`size_${sizeId}_damaged`] || 0;
       nested.items[sizeId].note = (flat as any)[`size_${sizeId}_note`] || '';
+      (nested.items[sizeId] as any).extraPortion = (flat as any)[`size_${sizeId}_extraPortion`] || undefined;
+      (nested.items[sizeId] as any).extraQty = (flat as any)[`size_${sizeId}_extraQty`] || 0;
     }
   });
   return nested;
@@ -96,9 +133,14 @@ function flatToDesignItemsData(flat: ItemsData): DesignItemsData {
 function calcTotalItems(items: ItemsData): number {
   let total = 0;
   Object.keys(items).forEach(key => {
-    if (key.endsWith('_qty') && key.startsWith('size_')) {
+    if (key.endsWith('_qty') && key.startsWith('size_') && !key.includes('extra')) {
       const sizeId = key.split('_')[1];
-      total += ((items as any)[key] || 0) + ((items as any)[`size_${sizeId}_borrowed`] || 0) + ((items as any)[`size_${sizeId}_lost`] || 0) + ((items as any)[`size_${sizeId}_damaged`] || 0);
+      const mainQty = (items as any)[key] || 0;
+      const borrowed = (items as any)[`size_${sizeId}_borrowed`] || 0;
+      const lost = (items as any)[`size_${sizeId}_lost`] || 0;
+      const damaged = (items as any)[`size_${sizeId}_damaged`] || 0;
+      const extraQty = (items as any)[`size_${sizeId}_extraQty`] || 0;
+      total += mainQty + borrowed + lost + damaged + (mainQty === 0 ? extraQty : 0);
     }
   });
   return total;
@@ -131,7 +173,7 @@ async function fetchChallansPage(
   let query = supabase
     .from(table)
     .select(
-      `${numField}, ${dateField}, created_at, driver_name, driver_mobile, vehicle_number,
+      `${numField}, ${dateField}, created_at, category, driver_name, driver_mobile, vehicle_number,
        loading_unloading_charges, vehicle_rent, deposit,
        alternative_site, secondary_phone_number, client_id,
        client:${clientRel} ( id, client_nic_name, client_name, site, primary_phone_number ),
@@ -178,6 +220,7 @@ async function fetchChallansPage(
       challanNumber: ch[numField],
       date: ch[dateField],
       createdAt: ch.created_at,
+      category: ch.category || 'shuttering',
       driverName: ch.driver_name,
       driverMobile: ch.driver_mobile,
       vehicleNumber: ch.vehicle_number,
