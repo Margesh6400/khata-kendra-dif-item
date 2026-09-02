@@ -410,19 +410,19 @@ const ChallanDetailsStep: React.FC<ChallanDetailsStepProps> = ({
                 <FileText className="w-3 h-3 sm:w-3.5 sm:h-3.5" />
                 {t('challanNumber')} <span className="text-red-500">*</span>
               </label>
-              <div className="flex items-center gap-1 sm:gap-2">
+              <div className="flex items-center gap-1.5 sm:gap-2 w-full">
                 <input
                   type="text"
                   value={challanNumber}
                   onChange={(e) => setChallanNumber(e.target.value)}
                   placeholder="#"
-                  className={`w-14 sm:w-24 md:w-36 flex-shrink-0 px-1.5 py-1.5 sm:px-3 sm:py-2.5 border rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent text-sm text-center font-semibold ${errors.challanNumber ? 'border-red-500' : 'border-gray-300'
+                  className={`w-14 sm:w-20 md:w-28 flex-shrink-0 h-10 sm:h-11 px-1.5 border rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent text-sm sm:text-base text-center font-bold ${errors.challanNumber ? 'border-red-500' : 'border-gray-300'
                     }`}
                 />
                 <button
                   type="button"
                   onClick={() => setHideExtraColumns(!hideExtraColumns)}
-                  className="inline-flex items-center gap-1 px-1.5 py-1.5 sm:px-3 sm:py-2.5 text-xs font-medium text-green-600 transition-colors rounded-md sm:rounded-lg bg-green-50 hover:bg-green-100 touch-manipulation active:scale-95 border border-green-100 whitespace-nowrap"
+                  className="flex-1 h-10 sm:h-11 inline-flex items-center justify-center gap-1 px-1.5 sm:px-3 text-xs font-medium text-green-600 transition-colors rounded-lg bg-green-50 hover:bg-green-100 touch-manipulation active:scale-95 border border-green-100 whitespace-nowrap"
                   title={t('columns2')}
                 >
                   {hideExtraColumns ? <EyeOff className="w-3.5 h-3.5" /> : <Eye className="w-3.5 h-3.5" />}
@@ -434,7 +434,7 @@ const ChallanDetailsStep: React.FC<ChallanDetailsStepProps> = ({
                 <button
                   type="button"
                   onClick={() => setShowLostAndDamaged(!showLostAndDamaged)}
-                  className="inline-flex items-center gap-1 px-1.5 py-1.5 sm:px-3 sm:py-2.5 text-xs font-medium text-amber-600 transition-colors rounded-md sm:rounded-lg bg-amber-50 hover:bg-amber-100 touch-manipulation active:scale-95 border border-amber-100 whitespace-nowrap"
+                  className="flex-1 h-10 sm:h-11 inline-flex items-center justify-center gap-1 px-1.5 sm:px-3 text-xs font-medium text-amber-600 transition-colors rounded-lg bg-amber-50 hover:bg-amber-100 touch-manipulation active:scale-95 border border-amber-100 whitespace-nowrap"
                   title={t('lostDamaged')}
                 >
                   {!showLostAndDamaged ? <EyeOff className="w-3.5 h-3.5 text-amber-500" /> : <Eye className="w-3.5 h-3.5 text-amber-600" />}
@@ -447,13 +447,13 @@ const ChallanDetailsStep: React.FC<ChallanDetailsStepProps> = ({
                   <button
                     type="button"
                     onClick={() => setShowExtraPortion(!showExtraPortion)}
-                    className="inline-flex items-center gap-1 px-1.5 py-1.5 sm:px-3 sm:py-2.5 text-xs font-medium text-blue-600 transition-colors rounded-md sm:rounded-lg bg-blue-50 hover:bg-blue-100 touch-manipulation active:scale-95 border border-blue-100 whitespace-nowrap"
-                    title={language === 'gu' ? 'વધારે (ઈનર/આઉટર)' : 'Extra (Inner/Outer)'}
+                    className="flex-1 h-10 sm:h-11 inline-flex items-center justify-center gap-1 px-1.5 sm:px-3 text-xs font-medium text-blue-600 transition-colors rounded-lg bg-blue-50 hover:bg-blue-100 touch-manipulation active:scale-95 border border-blue-100 whitespace-nowrap"
+                    title={language === 'gu' ? 'વધારાનું (ઈનર/આઉટર)' : 'Extra (Inner/Outer)'}
                   >
                     {!showExtraPortion ? <EyeOff className="w-3.5 h-3.5 text-blue-500" /> : <Eye className="w-3.5 h-3.5 text-blue-600" />}
                     <span>
-                      <span className="sm:hidden">{language === 'gu' ? 'વધારે' : 'Extra'}</span>
-                      <span className="hidden sm:inline">{language === 'gu' ? 'વધારે' : 'Extra (I/O)'}</span>
+                      <span className="sm:hidden">{language === 'gu' ? 'વધારાનું' : 'Extra'}</span>
+                      <span className="hidden sm:inline">{language === 'gu' ? 'વધારાનું (ઈ/આ)' : 'Extra (I/O)'}</span>
                     </span>
                   </button>
                 )}

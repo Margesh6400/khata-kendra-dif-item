@@ -92,7 +92,7 @@ const ItemsTable: React.FC<ItemsTableProps> = ({
   showLost = false,
   showExtraPortion = false,
 }) => {
-  const { t } = useLanguage();
+  const { t, language } = useLanguage();
   const { sizes: hookPlateSizes } = usePlateSizes();
   const { activeCategory: globalActiveCategory, enableCategorySeparation, jackMaterialType } = useSettings();
   const isJackIron = (ps: PlateSize) => ps.category === 'jack' && jackMaterialType === 'iron';
@@ -466,21 +466,29 @@ const ItemsTable: React.FC<ItemsTableProps> = ({
         />
       </td>
       {isExtraPortionVisible && (
-        <td className="px-1 py-1.5 border-r border-gray-200 min-w-[96px]">
+        <td className="px-1 py-1.5 border-r border-gray-200 min-w-[68px] sm:min-w-[76px]">
           {isJackIron(ps) ? (
-            <div className="flex flex-col gap-1 items-center w-full">
-              <div className="flex rounded-md overflow-hidden border border-gray-300 text-[10px] font-bold w-full max-w-[90px] shadow-sm">
+            <div className="flex flex-col gap-1 items-center justify-center">
+              <div className="inline-flex w-full rounded-md border border-gray-300 bg-gray-100 p-0.5 text-[10px] font-semibold">
                 <button
                   type="button"
                   onClick={() => handleExtraPortionToggle(ps.id, 'inner')}
-                  className={`flex-1 py-1 text-center transition-colors ${items.items[ps.id]?.extraPortion === 'inner' ? 'bg-blue-600 text-white' : 'bg-gray-50 text-gray-700 active:bg-gray-200'}`}
+                  className={`flex-1 py-0.5 rounded text-center transition-all ${
+                    items.items[ps.id]?.extraPortion === 'inner'
+                      ? 'bg-blue-600 text-white shadow-xs font-bold'
+                      : 'text-gray-600 hover:text-gray-900'
+                  }`}
                 >
                   {language === 'gu' ? 'ઈનર' : 'In'}
                 </button>
                 <button
                   type="button"
                   onClick={() => handleExtraPortionToggle(ps.id, 'outer')}
-                  className={`flex-1 py-1 text-center border-l border-gray-300 transition-colors ${items.items[ps.id]?.extraPortion === 'outer' ? 'bg-blue-600 text-white' : 'bg-gray-50 text-gray-700 active:bg-gray-200'}`}
+                  className={`flex-1 py-0.5 rounded text-center transition-all ${
+                    items.items[ps.id]?.extraPortion === 'outer'
+                      ? 'bg-blue-600 text-white shadow-xs font-bold'
+                      : 'text-gray-600 hover:text-gray-900'
+                  }`}
                 >
                   {language === 'gu' ? 'આઉટર' : 'Out'}
                 </button>
@@ -493,7 +501,7 @@ const ItemsTable: React.FC<ItemsTableProps> = ({
                 value={items.items[ps.id]?.extraQty === 0 || items.items[ps.id]?.extraQty === undefined ? "" : items.items[ps.id]?.extraQty}
                 onChange={(e) => handleChange(ps.id, 'extraQty', e.target.value)}
                 placeholder="0"
-                className="w-full max-w-[90px] px-1 py-1 text-[13px] text-center font-semibold border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent min-h-[34px] touch-manipulation active:scale-[0.97] disabled:bg-gray-50 disabled:text-gray-300"
+                className="w-full px-1 py-1 text-xs text-center font-semibold border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent min-h-[30px] touch-manipulation disabled:bg-gray-100 disabled:text-gray-300"
               />
             </div>
           ) : (
@@ -760,8 +768,8 @@ const ItemsTable: React.FC<ItemsTableProps> = ({
                       {t("quantity")}
                     </th>
                     {isExtraPortionVisible && (
-                      <th className="px-1 py-1.5 text-xs sm:text-sm font-semibold text-center text-blue-700 border-r border-gray-200 min-w-[96px] sm:min-w-[110px]">
-                        {language === 'gu' ? 'વધારે (ઈ/આ)' : 'Extra (In/Out)'}
+                      <th className="px-1 py-1.5 text-xs sm:text-sm font-semibold text-center text-blue-700 border-r border-gray-200 min-w-[68px] sm:min-w-[76px]">
+                        {language === 'gu' ? 'વધારાનું' : (t('extraPortion') || 'Extra')}
                       </th>
                     )}
                     {showLost && (
