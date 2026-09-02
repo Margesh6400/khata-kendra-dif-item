@@ -1,4 +1,4 @@
--- Lost/Damaged items (ગુમ/નુકસાન) support
+-- Lost/Damaged items (ગુમ/નુ.) support
 -- 1. stock_history gains a 'lost' entry type (signed quantities in items JSONB).
 -- 2. adjust_lost_stock RPC: signed delta on stock.lost_stock (positive = mark lost, negative = recover).
 -- 3. Jama challan update/delete RPCs become lost-aware: on_rent reverses by qty + lost,

@@ -409,8 +409,8 @@ const ChallanDetailsStep: React.FC<ChallanDetailsStepProps> = ({
                   type="text"
                   value={challanNumber}
                   onChange={(e) => setChallanNumber(e.target.value)}
-                  placeholder="Challan #"
-                  className={`flex-1 px-2.5 py-2 sm:px-3 sm:py-2.5 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm sm:text-sm ${errors.challanNumber ? 'border-red-500' : 'border-gray-300'
+                  placeholder="#"
+                  className={`w-24 sm:w-32 md:w-40 flex-shrink-0 px-2.5 py-2 sm:px-3 sm:py-2.5 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm font-semibold ${errors.challanNumber ? 'border-red-500' : 'border-gray-300'
                     }`}
                 />
                 <button

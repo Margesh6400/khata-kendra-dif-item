@@ -212,7 +212,7 @@ export const translations = {
     outstanding: 'બાકી',
     lost: 'ગુમ',
     damaged: 'નુકસાન',
-    lostDamaged: 'ગુમ/નુકસાન',
+    lostDamaged: 'ગુમ/નુ.',
     adjustLostStock: 'ગુમ સ્ટોક સુધારો',
     adjustDamagedStock: 'નુકસાન સ્ટોક સુધારો',
     lostRecovered: 'પરત મળેલ',

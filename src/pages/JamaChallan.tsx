@@ -410,13 +410,13 @@ const ChallanDetailsStep: React.FC<ChallanDetailsStepProps> = ({
                 <FileText className="w-3 h-3 sm:w-3.5 sm:h-3.5" />
                 {t('challanNumber')} <span className="text-red-500">*</span>
               </label>
-              <div className="flex items-center gap-1.5 sm:gap-2">
+              <div className="flex items-center gap-1 sm:gap-2">
                 <input
                   type="text"
                   value={challanNumber}
                   onChange={(e) => setChallanNumber(e.target.value)}
-                  placeholder="Challan #"
-                  className={`flex-1 min-w-[80px] px-2 py-2 sm:px-3 sm:py-2.5 border rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent text-sm ${errors.challanNumber ? 'border-red-500' : 'border-gray-300'
+                  placeholder="#"
+                  className={`w-14 sm:w-24 md:w-36 flex-shrink-0 px-1.5 py-1.5 sm:px-3 sm:py-2.5 border rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent text-sm text-center font-semibold ${errors.challanNumber ? 'border-red-500' : 'border-gray-300'
                     }`}
                 />
                 <button
@@ -439,7 +439,7 @@ const ChallanDetailsStep: React.FC<ChallanDetailsStepProps> = ({
                 >
                   {!showLostAndDamaged ? <EyeOff className="w-3.5 h-3.5 text-amber-500" /> : <Eye className="w-3.5 h-3.5 text-amber-600" />}
                   <span>
-                    <span className="sm:hidden">{language === 'gu' ? 'ગુમ/નુકસાન' : 'L/D'}</span>
+                    <span className="sm:hidden">{language === 'gu' ? 'ગુમ/નુ.' : 'L/D'}</span>
                     <span className="hidden sm:inline">{t('lostDamaged')}</span>
                   </span>
                 </button>
