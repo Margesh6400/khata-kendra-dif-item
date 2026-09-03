@@ -4,6 +4,7 @@ import { supabase } from '../utils/supabase';
 export type DateSortingMethod = 'standard' | 'jamaFirst';
 export type LedgerDownloadFormat = 'detailed' | 'simple' | 'split';
 export type ShareBillMode = 'image' | 'text';
+export type BillFormat = 'jpg' | 'pdf';
 export type BusinessCategory = 'shuttering' | 'jack' | 'cuplock' | 'other';
 export type QuickActionsSortMethod = 'default' | 'alphabetical' | 'mostUsed';
 // The three real business lines that the password-gated "lock to one category"
@@ -73,6 +74,17 @@ interface SettingsContextType {
   setBusinessPhone: (phone: string) => void;
   businessAddress: string;
   setBusinessAddress: (address: string) => void;
+  businessSubtitle: string;
+  setBusinessSubtitle: (subtitle: string) => void;
+  enableCategoryBusinessInfo: boolean;
+  setEnableCategoryBusinessInfo: (val: boolean) => void;
+  categoryBusinessInfo: Record<string, { name?: string; phone?: string; address?: string; subtitle?: string }>;
+  setCategoryBusinessInfoItem: (category: string, field: 'name' | 'phone' | 'address' | 'subtitle', value: string) => void;
+  defaultBillFormat: BillFormat;
+  setDefaultBillFormat: (format: BillFormat) => void;
+  categoryBillFormats: Record<string, BillFormat>;
+  setCategoryBillFormat: (category: string, format: BillFormat) => void;
+  getBillFormatForCategory: (category?: string | null) => BillFormat;
 }
 
 const SettingsContext = createContext<SettingsContextType | undefined>(undefined);
@@ -169,6 +181,32 @@ export const SettingsProvider: React.FC<{ children: ReactNode }> = ({ children }
   const [businessName, setBusinessNameState] = useState<string>(() => localStorage.getItem('businessName') || '');
   const [businessPhone, setBusinessPhoneState] = useState<string>(() => localStorage.getItem('businessPhone') || '');
   const [businessAddress, setBusinessAddressState] = useState<string>(() => localStorage.getItem('businessAddress') || '');
+  const [businessSubtitle, setBusinessSubtitleState] = useState<string>(() => localStorage.getItem('businessSubtitle') || '');
+  const [enableCategoryBusinessInfo, setEnableCategoryBusinessInfoState] = useState<boolean>(() => {
+    return localStorage.getItem('enableCategoryBusinessInfo') === 'true';
+  });
+  const [categoryBusinessInfo, setCategoryBusinessInfoState] = useState<Record<string, { name?: string; phone?: string; address?: string; subtitle?: string }>>(() => {
+    try {
+      const saved = localStorage.getItem('categoryBusinessInfo');
+      return saved ? JSON.parse(saved) : {};
+    } catch {
+      return {};
+    }
+  });
+
+  const [defaultBillFormat, setDefaultBillFormatState] = useState<BillFormat>(() => {
+    const saved = localStorage.getItem('defaultBillFormat');
+    return saved === 'pdf' ? 'pdf' : 'jpg';
+  });
+
+  const [categoryBillFormats, setCategoryBillFormatsState] = useState<Record<string, BillFormat>>(() => {
+    try {
+      const saved = localStorage.getItem('categoryBillFormats');
+      return saved ? JSON.parse(saved) : {};
+    } catch {
+      return {};
+    }
+  });
 
   // Helper to push setting updates to Supabase app_settings
   const syncAppSetting = (key: string, value: string) => {
@@ -298,6 +336,46 @@ export const SettingsProvider: React.FC<{ children: ReactNode }> = ({ children }
           setBusinessAddressState(value);
           localStorage.setItem('businessAddress', value);
           break;
+        case 'business_subtitle':
+          setBusinessSubtitleState(value);
+          localStorage.setItem('businessSubtitle', value);
+          break;
+        case 'enable_category_business_info': {
+          const val = value === 'true';
+          setEnableCategoryBusinessInfoState(val);
+          localStorage.setItem('enableCategoryBusinessInfo', String(val));
+          break;
+        }
+        case 'category_business_info': {
+          try {
+            const parsed = JSON.parse(value);
+            if (parsed && typeof parsed === 'object') {
+              setCategoryBusinessInfoState(parsed);
+              localStorage.setItem('categoryBusinessInfo', JSON.stringify(parsed));
+            }
+          } catch {
+            // ignore
+          }
+          break;
+        }
+        case 'default_bill_format': {
+          const fmt = value === 'pdf' ? 'pdf' : 'jpg';
+          setDefaultBillFormatState(fmt);
+          localStorage.setItem('defaultBillFormat', fmt);
+          break;
+        }
+        case 'category_bill_formats': {
+          try {
+            const parsed = JSON.parse(value);
+            if (parsed && typeof parsed === 'object') {
+              setCategoryBillFormatsState(parsed);
+              localStorage.setItem('categoryBillFormats', JSON.stringify(parsed));
+            }
+          } catch {
+            // ignore
+          }
+          break;
+        }
       }
     };
 
@@ -593,6 +671,59 @@ export const SettingsProvider: React.FC<{ children: ReactNode }> = ({ children }
     syncAppSetting('business_address', address);
   };
 
+  const setBusinessSubtitle = (subtitle: string) => {
+    setBusinessSubtitleState(subtitle);
+    localStorage.setItem('businessSubtitle', subtitle);
+    syncAppSetting('business_subtitle', subtitle);
+  };
+
+  const setEnableCategoryBusinessInfo = (val: boolean) => {
+    setEnableCategoryBusinessInfoState(val);
+    localStorage.setItem('enableCategoryBusinessInfo', String(val));
+    syncAppSetting('enable_category_business_info', String(val));
+  };
+
+  const setCategoryBusinessInfoItem = (
+    category: string,
+    field: 'name' | 'phone' | 'address' | 'subtitle',
+    value: string
+  ) => {
+    setCategoryBusinessInfoState(prev => {
+      const updated = {
+        ...prev,
+        [category]: {
+          ...(prev[category] || {}),
+          [field]: value,
+        },
+      };
+      localStorage.setItem('categoryBusinessInfo', JSON.stringify(updated));
+      syncAppSetting('category_business_info', JSON.stringify(updated));
+      return updated;
+    });
+  };
+
+  const setDefaultBillFormat = (format: BillFormat) => {
+    setDefaultBillFormatState(format);
+    localStorage.setItem('defaultBillFormat', format);
+    syncAppSetting('default_bill_format', format);
+  };
+
+  const setCategoryBillFormat = (category: string, format: BillFormat) => {
+    setCategoryBillFormatsState(prev => {
+      const updated = { ...prev, [category]: format };
+      localStorage.setItem('categoryBillFormats', JSON.stringify(updated));
+      syncAppSetting('category_bill_formats', JSON.stringify(updated));
+      return updated;
+    });
+  };
+
+  const getBillFormatForCategory = (category?: string | null): BillFormat => {
+    if (category && categoryBillFormats[category]) {
+      return categoryBillFormats[category];
+    }
+    return defaultBillFormat;
+  };
+
   return (
     <SettingsContext.Provider value={{
       dateSortingMethod,
@@ -638,6 +769,17 @@ export const SettingsProvider: React.FC<{ children: ReactNode }> = ({ children }
       setBusinessPhone,
       businessAddress,
       setBusinessAddress,
+      businessSubtitle,
+      setBusinessSubtitle,
+      enableCategoryBusinessInfo,
+      setEnableCategoryBusinessInfo,
+      categoryBusinessInfo,
+      setCategoryBusinessInfoItem,
+      defaultBillFormat,
+      setDefaultBillFormat,
+      categoryBillFormats,
+      setCategoryBillFormat,
+      getBillFormatForCategory,
     }}>
       {children}
     </SettingsContext.Provider>

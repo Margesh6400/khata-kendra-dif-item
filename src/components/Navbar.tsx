@@ -43,11 +43,15 @@ const Navbar: React.FC = () => {
     businessName,
     businessPhone,
     businessAddress,
+    businessSubtitle,
+    enableCategoryBusinessInfo,
+    categoryBusinessInfo,
   } = useSettings();
   const isCategoryLocked = categoryLockEnabled && !!lockedCategory;
   const businessInfo = getBusinessInfo(
-    { useCustomBusinessInfo, businessName, businessPhone, businessAddress },
-    language
+    { useCustomBusinessInfo, businessName, businessPhone, businessAddress, businessSubtitle, enableCategoryBusinessInfo, categoryBusinessInfo },
+    language,
+    activeCategory
   );
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [dropdownOpen, setDropdownOpen] = useState(false);
@@ -219,7 +223,7 @@ const Navbar: React.FC = () => {
           </div>
           <div className="truncate">
             <h1 className="text-base font-bold text-white leading-tight truncate">{businessInfo.name}</h1>
-            <p className="text-[11px] truncate text-slate-400 font-medium">{t('Rental_Management')}</p>
+            <p className="text-[11px] truncate text-slate-400 font-medium">{businessInfo.subtitle || t('Rental_Management')}</p>
           </div>
         </div>
 

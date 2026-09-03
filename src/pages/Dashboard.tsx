@@ -33,10 +33,15 @@ const Dashboard: React.FC = () => {
     businessName,
     businessPhone,
     businessAddress,
+    businessSubtitle,
+    enableCategoryBusinessInfo,
+    categoryBusinessInfo,
+    activeCategory,
   } = useSettings();
   const businessInfo = getBusinessInfo(
-    { useCustomBusinessInfo, businessName, businessPhone, businessAddress },
-    language
+    { useCustomBusinessInfo, businessName, businessPhone, businessAddress, businessSubtitle, enableCategoryBusinessInfo, categoryBusinessInfo },
+    language,
+    activeCategory
   );
   const [greeting, setGreeting] = useState('');
 

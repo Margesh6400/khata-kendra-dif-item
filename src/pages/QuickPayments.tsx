@@ -63,8 +63,13 @@ export default function QuickPayments() {
   const {
     enableCategorySeparation, enableCategoryClientSeparation, activeCategory,
     useCustomBusinessInfo, businessName, businessPhone, businessAddress,
+    businessSubtitle, enableCategoryBusinessInfo, categoryBusinessInfo,
   } = useSettings();
-  const businessInfo = getBusinessInfo({ useCustomBusinessInfo, businessName, businessPhone, businessAddress }, language);
+  const businessInfo = getBusinessInfo(
+    { useCustomBusinessInfo, businessName, businessPhone, businessAddress, businessSubtitle, enableCategoryBusinessInfo, categoryBusinessInfo },
+    language,
+    activeCategory
+  );
   const navigate = useNavigate();
 
   const [activeTab, setActiveTab] = useState<'cards' | 'ledger'>('cards');

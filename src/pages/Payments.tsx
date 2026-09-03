@@ -7,6 +7,7 @@ import BillCard, { BillRecord } from '../components/BillCard';
 import { useLanguage } from '../contexts/LanguageContext';
 import { useSettings } from '../contexts/SettingsContext';
 import { generateBillJPEG } from '../utils/generateBillJPEG';
+import { generateBillPDF } from '../utils/generateBillPDF';
 import BillInvoiceTemplate from '../components/BillInvoiceTemplate';
 import toast, { Toaster } from 'react-hot-toast';
 import * as periodCalculations from "../utils/billingPeriodCalculations";
@@ -21,8 +22,14 @@ export default function Payments() {
     const {
         dateSortingMethod, shareBillMode, enableCategorySeparation, activeCategory,
         useCustomBusinessInfo, businessName, businessPhone, businessAddress,
+        businessSubtitle, enableCategoryBusinessInfo, categoryBusinessInfo,
+        getBillFormatForCategory,
     } = useSettings();
-    const businessInfo = getBusinessInfo({ useCustomBusinessInfo, businessName, businessPhone, businessAddress }, language);
+    const businessInfo = getBusinessInfo(
+        { useCustomBusinessInfo, businessName, businessPhone, businessAddress, businessSubtitle, enableCategoryBusinessInfo, categoryBusinessInfo },
+        language,
+        activeCategory
+    );
     const navigate = useNavigate();
     const { sizes: plateSizes } = usePlateSizes();
     const [activeTab, setActiveTab] = useState<Tab>('pending');
@@ -437,14 +444,28 @@ export default function Payments() {
     const handleDownloadBill = async (bill: BillRecord) => {
         const details = await fetchBillDetails(bill);
         if (details) {
-            const dataUrl = await generateBillJPEG(bill.bill_number, details);
-            const link = document.createElement('a');
-            link.download = `Bill_${bill.bill_number}.jpg`;
-            link.href = dataUrl;
-            document.body.appendChild(link);
-            link.click();
-            document.body.removeChild(link);
-            toast.success("Bill downloaded successfully");
+            const billCategory = (bill as any).category || activeCategory || null;
+            const targetFormat = getBillFormatForCategory(billCategory);
+
+            if (targetFormat === 'pdf') {
+                const pdfDataUrl = await generateBillPDF(bill.bill_number, details);
+                const link = document.createElement('a');
+                link.download = `Bill_${bill.bill_number}.pdf`;
+                link.href = pdfDataUrl;
+                document.body.appendChild(link);
+                link.click();
+                document.body.removeChild(link);
+                toast.success("Bill PDF downloaded successfully");
+            } else {
+                const dataUrl = await generateBillJPEG(bill.bill_number, details);
+                const link = document.createElement('a');
+                link.download = `Bill_${bill.bill_number}.jpg`;
+                link.href = dataUrl;
+                document.body.appendChild(link);
+                link.click();
+                document.body.removeChild(link);
+                toast.success("Bill downloaded successfully");
+            }
         }
     };
 

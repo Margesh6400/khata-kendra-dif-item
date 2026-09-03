@@ -117,6 +117,7 @@ const BillInvoiceTemplate: React.FC<BillInvoiceProps> = ({
     name: companyDetails?.name || DEFAULT_COMPANY_DETAILS.name,
     address: companyDetails?.address || DEFAULT_COMPANY_DETAILS.address,
     phone: companyDetails?.phone || DEFAULT_COMPANY_DETAILS.phone,
+    subtitle: (companyDetails as any)?.subtitle || 'જેક ટેકા * સ્પેન * પ્લેટ * ઝુલા',
   };
 
   const formatLocalDate = (dateStr?: string) => {
@@ -158,7 +159,7 @@ const BillInvoiceTemplate: React.FC<BillInvoiceProps> = ({
                 {company.name}
               </div>
               <div style={{ fontSize: '12px', fontWeight: 'bold', marginTop: '4px' }}>
-                જેક ટેકા * સ્પેન * પ્લેટ * ઝુલા
+                {company.subtitle}
               </div>
             </div>
 

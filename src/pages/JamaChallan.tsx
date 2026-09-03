@@ -1094,62 +1094,7 @@ const JamaChallan: React.FC = () => {
       hasErrors = true;
     }
 
-    // Reconcile against outstanding balances. Returning more of an item
-    // than is on record as outstanding used to be a hard error that
-    // blocked the save outright — which meant a perfectly real over-return
-    // (e.g. a client handing back 2 more Outer jack pieces than we had
-    // logged as lent to them) could never be recorded at all. Instead, the
-    // surplus is now saved as an explicit "extra" on the item — it is
-    // called out to the person saving the challan, printed on the challan
-    // itself, and — because outstanding balances are always recomputed
-    // from a client's full transaction history — automatically remembered
-    // and netted off the next time this client borrows or returns this
-    // item/portion.
-    const itemsWithExtras: typeof items.items = { ...items.items };
-    const extraNotes: string[] = [];
-    let hasBorrowedOverage = false;
 
-    for (const ps of plateSizes) {
-      const sizeId = ps.id;
-      const detail = items.items?.[sizeId];
-      if (!detail) continue;
-
-      const qty = detail.qty || 0;
-      const borrowed = detail.borrowed || 0;
-      const lost = detail.lost || 0;
-      const damaged = detail.damaged || 0;
-
-      const currentBorrowedBalance = borrowedOutstanding[sizeId] || 0;
-      if (borrowed > 0 && borrowed > currentBorrowedBalance) {
-        // "બીજો ડેપો" (borrowed-from-another-depot) stock is a distinct,
-        // tightly-tracked concept — over-returning it usually means a
-        // data-entry mistake, so this stays a hard stop.
-        toast.error(`Cannot return more than borrowed stock for Size ${ps.name}. Available: ${currentBorrowedBalance}`);
-        hasBorrowedOverage = true;
-        continue;
-      }
-
-      // Pair count over-return (applies the same way to every item,
-      // jack included — a jack's qty is its pair count, exactly like any
-      // other size).
-      const currentBalance = outstandingBalances[sizeId] || 0;
-      const extra = Math.max(0, qty + lost + damaged - currentBalance);
-      if (extra > 0) {
-        itemsWithExtras[sizeId] = { ...itemsWithExtras[sizeId], extraReturned: extra };
-        extraNotes.push(`${ps.name}: +${extra}`);
-      }
-
-      // Iron jacks: a loose, unpaired Inner/Outer piece the user flagged
-      // directly on this line — just call it out, no computation needed.
-      if (ps.category === 'jack' && jackMaterialType === 'iron' && detail.extraPortion && (detail.extraQty || 0) > 0) {
-        const portionLabel = detail.extraPortion === 'inner' ? (t('inner') || 'Inner') : (t('outer') || 'Outer');
-        extraNotes.push(`${ps.name}: +${detail.extraQty} ${portionLabel}`);
-      }
-    }
-
-    if (hasBorrowedOverage) {
-      return;
-    }
 
     const hasQuantities = Object.values(items.items || {}).some(item => (item.qty || 0) > 0);
     const hasExtraItems = Object.values(items.items || {}).some(item => (item.extraQty || 0) > 0 && !!item.extraPortion);
@@ -1220,7 +1165,7 @@ const JamaChallan: React.FC = () => {
 
       const itemsPayload: any = {
         jama_challan_number: challanNumber,
-        items: mapRecordToArray({ ...items, items: itemsWithExtras }),
+        items: mapRecordToArray(items),
         main_note: items.main_note || null,
       };
       if (enableCategorySeparation || activeCategory) {

@@ -849,7 +849,7 @@ const UdharChallan: React.FC = () => {
 
       if (stockResponse.error) throw stockResponse.error;
 
-      // Calculate rent stock dynamically
+      // Calculate rent stock dynamically (matching StockManagement calculation)
       const calculations = new Map<number, number>();
 
       // Process Udhar
@@ -857,9 +857,8 @@ const UdharChallan: React.FC = () => {
         const itemMap = challan.items?.items || {};
         Object.entries(itemMap).forEach(([sizeIdStr, item]: [string, any]) => {
           const sizeId = parseInt(sizeIdStr);
-          const qty = item.qty || 0;
-          const borrowed = item.borrowed || 0;
-          calculations.set(sizeId, (calculations.get(sizeId) || 0) + qty + borrowed);
+          const qty = Number(item.qty) || 0;
+          calculations.set(sizeId, (calculations.get(sizeId) || 0) + qty);
         });
       });
 
@@ -868,11 +867,10 @@ const UdharChallan: React.FC = () => {
         const itemMap = challan.items?.items || {};
         Object.entries(itemMap).forEach(([sizeIdStr, item]: [string, any]) => {
           const sizeId = parseInt(sizeIdStr);
-          const qty = item.qty || 0;
-          const borrowed = item.borrowed || 0;
-          const lost = item.lost || 0;
-          const damaged = item.damaged || 0;
-          calculations.set(sizeId, (calculations.get(sizeId) || 0) - (qty + borrowed + lost + damaged));
+          const qty = Number(item.qty) || 0;
+          const lost = Number(item.lost) || 0;
+          const damaged = Number(item.damaged) || 0;
+          calculations.set(sizeId, (calculations.get(sizeId) || 0) - (qty + lost + damaged));
         });
       });
 
@@ -1009,18 +1007,6 @@ const UdharChallan: React.FC = () => {
       return;
     }
 
-    // Validate against available stock
-    for (const stockItem of stockData) {
-      const sizeId = stockItem.size;
-      const qty = items.items?.[sizeId]?.qty || 0;
-      const available = stockItem.available_stock || 0;
-
-      if (qty > 0 && qty > available) {
-        const sizeName = plateSizes.find(p => p.id === sizeId)?.name || `Size ${sizeId}`;
-        toast.error(`Cannot issue more than available stock for Size ${sizeName}. Available: ${available}, Entered: ${qty}`);
-        return;
-      }
-    }
 
     let dupQuery = supabase
       .from('udhar_challans')

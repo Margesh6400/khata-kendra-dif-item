@@ -3,6 +3,7 @@ import { useParams, useNavigate, useSearchParams } from "react-router-dom";
 import { format, parseISO, differenceInDays, addDays } from "date-fns";
 import { formatLocalDate, safeParseLocalDate } from "../utils/dateUtils";
 import { generateBillJPEG } from '../utils/generateBillJPEG';
+import { generateBillPDF } from '../utils/generateBillPDF';
 import BillInvoiceTemplate from '../components/BillInvoiceTemplate';
 import {
   ArrowLeft,
@@ -135,8 +136,14 @@ export default function CreateBill() {
   const {
     dateSortingMethod, enableCategorySeparation, enableCategoryClientSeparation, activeCategory, showExtraCost,
     useCustomBusinessInfo, businessName, businessPhone, businessAddress,
+    businessSubtitle, enableCategoryBusinessInfo, categoryBusinessInfo,
+    getBillFormatForCategory,
   } = useSettings();
-  const businessInfo = getBusinessInfo({ useCustomBusinessInfo, businessName, businessPhone, businessAddress }, language);
+  const businessInfo = getBusinessInfo(
+    { useCustomBusinessInfo, businessName, businessPhone, businessAddress, businessSubtitle, enableCategoryBusinessInfo, categoryBusinessInfo },
+    language,
+    activeCategory
+  );
   const { sizes: rawPlateSizes } = usePlateSizes();
   const plateSizes = useMemo(() => {
     if (enableCategorySeparation) {
@@ -814,26 +821,38 @@ export default function CreateBill() {
         toast.success("Bill generated successfully!");
       }
 
-      // Generate and download bill JPEG
+      // Generate and download bill in configured format (PDF or JPG)
       try {
-        const dataUrl = await generateBillJPEG(billData.billNumber, invoiceProps);
-        const link = document.createElement('a');
-        link.download = `Bill_${billData.billNumber}.jpg`;
-        link.href = dataUrl;
-        document.body.appendChild(link);
-        link.click();
-        document.body.removeChild(link);
-        toast.success(isEditMode ? 'Bill JPEG updated successfully' : 'Bill JPEG generated successfully');
+        const billCategory = activeCategory || client?.category || null;
+        const targetFormat = getBillFormatForCategory(billCategory);
+
+        if (targetFormat === 'pdf') {
+          const pdfDataUrl = await generateBillPDF(billData.billNumber, invoiceProps);
+          const link = document.createElement('a');
+          link.download = `Bill_${billData.billNumber}.pdf`;
+          link.href = pdfDataUrl;
+          document.body.appendChild(link);
+          link.click();
+          document.body.removeChild(link);
+          toast.success(isEditMode ? 'Bill PDF updated successfully' : 'Bill PDF generated successfully');
+        } else {
+          const dataUrl = await generateBillJPEG(billData.billNumber, invoiceProps);
+          const link = document.createElement('a');
+          link.download = `Bill_${billData.billNumber}.jpg`;
+          link.href = dataUrl;
+          document.body.appendChild(link);
+          link.click();
+          document.body.removeChild(link);
+          toast.success(isEditMode ? 'Bill JPEG updated successfully' : 'Bill JPEG generated successfully');
+        }
         // Add a delay before navigating to ensure user sees the success message
         setTimeout(() => {
-          navigate("/bill-book"); // Redirect to BillBook instead of Billing home to see the update? Or keep same.
-          // The requested behavior: "make sure after update do all required chnages"
-          // Redirecting to billing home or bill book is fine.
+          navigate("/bill-book");
         }, 1000);
       } catch (error) {
-        console.error('Error generating bill JPEG:', error);
-        toast.error('Failed to generate bill JPEG');
-        // Navigate even if JPEG generation fails
+        console.error('Error generating bill file:', error);
+        toast.error('Failed to generate bill file');
+        // Navigate even if file generation fails
         setTimeout(() => {
           navigate("/bill-book");
         }, 1000);

@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import Navbar from '../components/Navbar';
 import { useLanguage } from '../contexts/LanguageContext';
 import { useSettings } from '../contexts/SettingsContext';
-import { Settings as SettingsIcon, Globe, Layers, CheckCircle, Download, Type, Lock, Unlock, Shield, Fingerprint, Key, Share2, CalendarClock, LayoutGrid, ChevronRight, Building2, Construction, TreePine } from 'lucide-react';
+import { Settings as SettingsIcon, Globe, Layers, CheckCircle, Download, Type, Lock, Unlock, Shield, Fingerprint, Key, Share2, CalendarClock, LayoutGrid, ChevronRight, Building2, Construction, TreePine, FileText, Image as ImageIcon } from 'lucide-react';
 import toast, { Toaster } from 'react-hot-toast';
 import { supabase } from '../utils/supabase';
 import { DEFAULT_BUSINESS_INFO, getBusinessInfo } from '../utils/businessInfo';
@@ -53,11 +53,32 @@ const Settings: React.FC = () => {
     setBusinessPhone,
     businessAddress,
     setBusinessAddress,
+    businessSubtitle,
+    setBusinessSubtitle,
+    enableCategoryBusinessInfo,
+    setEnableCategoryBusinessInfo,
+    categoryBusinessInfo,
+    setCategoryBusinessInfoItem,
+    defaultBillFormat,
+    setDefaultBillFormat,
+    categoryBillFormats,
+    setCategoryBillFormat,
   } = useSettings();
 
+  const [selectedPreviewCategory, setSelectedPreviewCategory] = React.useState<string>('shuttering');
+
   const resolvedBusinessInfo = getBusinessInfo(
-    { useCustomBusinessInfo, businessName, businessPhone, businessAddress },
-    language
+    {
+      useCustomBusinessInfo,
+      businessName,
+      businessPhone,
+      businessAddress,
+      businessSubtitle,
+      enableCategoryBusinessInfo,
+      categoryBusinessInfo,
+    },
+    language,
+    enableCategoryBusinessInfo ? selectedPreviewCategory : null
   );
 
   const [securityEnabled, setSecurityEnabled] = React.useState(() => localStorage.getItem('security_lock_enabled') === 'true');
@@ -777,53 +798,198 @@ const Settings: React.FC = () => {
                 </div>
 
                 {useCustomBusinessInfo && (
-                  <div className="grid gap-4 sm:grid-cols-2 pt-2 border-t border-gray-100">
-                    <div className="sm:col-span-2">
-                      <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1.5">
-                        {language === 'gu' ? 'વ્યવસાયનું નામ' : 'Business Name'}
-                      </label>
-                      <input
-                        type="text"
-                        value={businessName}
-                        onChange={(e) => setBusinessName(e.target.value)}
-                        placeholder={DEFAULT_BUSINESS_INFO[language].name}
-                        className="w-full py-2.5 px-3.5 text-gray-900 border border-gray-300 rounded-xl focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 focus:outline-none"
-                      />
+                  <div className="space-y-4 pt-2 border-t border-gray-100">
+                    {/* Separate Business Information for Each Category Option */}
+                    <div className="p-3.5 bg-gray-50/80 rounded-xl border border-gray-200">
+                      <div className="flex items-center justify-between">
+                        <div>
+                          <span className="font-bold text-xs sm:text-sm text-gray-900 block">
+                            {language === 'gu'
+                              ? 'દરેક વિભાગ (Shuttering, Jack, Cuplock) માટે અલગ વ્યવસાય વિગતો'
+                              : 'Separate Business Information for Each Category'}
+                          </span>
+                          <span className="text-[11px] text-gray-500">
+                            {language === 'gu'
+                              ? 'શટરિંગ, જેક, કપલોક માટે અલગ-અલગ દુકાન/પેઢીનું નામ, ફોન, સરનામું અને પેટા શીર્ષક સેટ કરો.'
+                              : 'Configure independent business name, phone, address, and subtitle per category.'}
+                          </span>
+                        </div>
+                        <button
+                          type="button"
+                          onClick={() => setEnableCategoryBusinessInfo(!enableCategoryBusinessInfo)}
+                          className={`relative inline-flex h-6 w-11 flex-shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out ${
+                            enableCategoryBusinessInfo ? 'bg-blue-600' : 'bg-gray-300'
+                          }`}
+                        >
+                          <span
+                            className={`inline-block h-5 w-5 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out ${
+                              enableCategoryBusinessInfo ? 'translate-x-5' : 'translate-x-0'
+                            }`}
+                          />
+                        </button>
+                      </div>
                     </div>
-                    <div>
-                      <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1.5">
-                        {language === 'gu' ? 'ફોન નંબર' : 'Phone Number'}
-                      </label>
-                      <input
-                        type="text"
-                        value={businessPhone}
-                        onChange={(e) => setBusinessPhone(e.target.value)}
-                        placeholder={DEFAULT_BUSINESS_INFO[language].phone}
-                        className="w-full py-2.5 px-3.5 text-gray-900 border border-gray-300 rounded-xl focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 focus:outline-none"
-                      />
-                    </div>
-                    <div>
-                      <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1.5">
-                        {language === 'gu' ? 'સરનામું' : 'Address'}
-                      </label>
-                      <input
-                        type="text"
-                        value={businessAddress}
-                        onChange={(e) => setBusinessAddress(e.target.value)}
-                        placeholder={DEFAULT_BUSINESS_INFO[language].address}
-                        className="w-full py-2.5 px-3.5 text-gray-900 border border-gray-300 rounded-xl focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 focus:outline-none"
-                      />
-                    </div>
+
+                    {/* Category Selector Tabs when Category Business Info is Enabled */}
+                    {enableCategoryBusinessInfo ? (
+                      <div>
+                        <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">
+                          {language === 'gu' ? 'વિભાગ પસંદ કરો જેની વિગતો બદલવી છે' : 'Select Category to Edit Details'}
+                        </label>
+                        <div className="flex gap-2 p-1 bg-gray-100 rounded-xl mb-4 overflow-x-auto">
+                          {[
+                            { id: 'shuttering', label: language === 'gu' ? 'શટરિંગ' : 'Shuttering' },
+                            { id: 'jack', label: language === 'gu' ? 'જેક / ટેકા' : 'Jack' },
+                            { id: 'cuplock', label: language === 'gu' ? 'કપલોક' : 'Cuplock' },
+                            { id: 'other', label: language === 'gu' ? 'અન્ય' : 'Other' },
+                          ].map(cat => (
+                            <button
+                              key={cat.id}
+                              type="button"
+                              onClick={() => setSelectedPreviewCategory(cat.id)}
+                              className={`flex-1 min-w-[80px] py-2 px-3 rounded-lg text-xs font-bold transition-all ${
+                                selectedPreviewCategory === cat.id
+                                  ? 'bg-white text-blue-600 shadow-xs'
+                                  : 'text-gray-600 hover:text-gray-900'
+                              }`}
+                            >
+                              {cat.label}
+                            </button>
+                          ))}
+                        </div>
+
+                        <div className="grid gap-4 sm:grid-cols-2">
+                          <div className="sm:col-span-2">
+                            <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1.5">
+                              {language === 'gu' ? `વ્યવસાયનું નામ (${selectedPreviewCategory})` : `Business Name (${selectedPreviewCategory})`}
+                            </label>
+                            <input
+                              type="text"
+                              value={categoryBusinessInfo[selectedPreviewCategory]?.name ?? businessName}
+                              onChange={(e) => setCategoryBusinessInfoItem(selectedPreviewCategory, 'name', e.target.value)}
+                              placeholder={businessName || DEFAULT_BUSINESS_INFO[language].name}
+                              className="w-full py-2.5 px-3.5 text-gray-900 border border-gray-300 rounded-xl focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 focus:outline-none"
+                            />
+                          </div>
+
+                          <div className="sm:col-span-2">
+                            <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1.5">
+                              {language === 'gu' ? 'પેટા શીર્ષક / ટેગલાઇન (Subtitle Line)' : 'Subtitle / Tagline Line'}
+                            </label>
+                            <input
+                              type="text"
+                              value={categoryBusinessInfo[selectedPreviewCategory]?.subtitle ?? businessSubtitle}
+                              onChange={(e) => setCategoryBusinessInfoItem(selectedPreviewCategory, 'subtitle', e.target.value)}
+                              placeholder={businessSubtitle || DEFAULT_BUSINESS_INFO[language].subtitle}
+                              className="w-full py-2.5 px-3.5 text-gray-900 border border-gray-300 rounded-xl focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 focus:outline-none"
+                            />
+                            <p className="text-[11px] text-gray-400 mt-1">
+                              {language === 'gu'
+                                ? 'બિલમાં મુખ્ય નામની નીચે છપાતી લાઇન (દા.ત. જેક ટેકા * સ્પેન * પ્લેટ * ઝુલા)'
+                                : 'Prints right under the company name on bills (e.g. Jack Teka * Span * Plate * Jhula)'}
+                            </p>
+                          </div>
+
+                          <div>
+                            <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1.5">
+                              {language === 'gu' ? 'ફોન નંબર' : 'Phone Number'}
+                            </label>
+                            <input
+                              type="text"
+                              value={categoryBusinessInfo[selectedPreviewCategory]?.phone ?? businessPhone}
+                              onChange={(e) => setCategoryBusinessInfoItem(selectedPreviewCategory, 'phone', e.target.value)}
+                              placeholder={businessPhone || DEFAULT_BUSINESS_INFO[language].phone}
+                              className="w-full py-2.5 px-3.5 text-gray-900 border border-gray-300 rounded-xl focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 focus:outline-none"
+                            />
+                          </div>
+
+                          <div>
+                            <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1.5">
+                              {language === 'gu' ? 'સરનામું' : 'Address'}
+                            </label>
+                            <input
+                              type="text"
+                              value={categoryBusinessInfo[selectedPreviewCategory]?.address ?? businessAddress}
+                              onChange={(e) => setCategoryBusinessInfoItem(selectedPreviewCategory, 'address', e.target.value)}
+                              placeholder={businessAddress || DEFAULT_BUSINESS_INFO[language].address}
+                              className="w-full py-2.5 px-3.5 text-gray-900 border border-gray-300 rounded-xl focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 focus:outline-none"
+                            />
+                          </div>
+                        </div>
+                      </div>
+                    ) : (
+                      <div className="grid gap-4 sm:grid-cols-2">
+                        <div className="sm:col-span-2">
+                          <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1.5">
+                            {language === 'gu' ? 'વ્યવસાયનું નામ' : 'Business Name'}
+                          </label>
+                          <input
+                            type="text"
+                            value={businessName}
+                            onChange={(e) => setBusinessName(e.target.value)}
+                            placeholder={DEFAULT_BUSINESS_INFO[language].name}
+                            className="w-full py-2.5 px-3.5 text-gray-900 border border-gray-300 rounded-xl focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 focus:outline-none"
+                          />
+                        </div>
+
+                        <div className="sm:col-span-2">
+                          <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1.5">
+                            {language === 'gu' ? 'પેટા શીર્ષક / ટેગલાઇન (Subtitle Line)' : 'Subtitle / Tagline Line'}
+                          </label>
+                          <input
+                            type="text"
+                            value={businessSubtitle}
+                            onChange={(e) => setBusinessSubtitle(e.target.value)}
+                            placeholder={DEFAULT_BUSINESS_INFO[language].subtitle}
+                            className="w-full py-2.5 px-3.5 text-gray-900 border border-gray-300 rounded-xl focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 focus:outline-none"
+                          />
+                          <p className="text-[11px] text-gray-400 mt-1">
+                            {language === 'gu'
+                              ? 'બિલમાં મુખ્ય નામની નીચે છપાતી લાઇન (દા.ત. જેક ટેકા * સ્પેન * પ્લેટ * ઝુલા)'
+                              : 'Prints right under the company name on bills (e.g. Jack Teka * Span * Plate * Jhula)'}
+                          </p>
+                        </div>
+
+                        <div>
+                          <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1.5">
+                            {language === 'gu' ? 'ફોન નંબર' : 'Phone Number'}
+                          </label>
+                          <input
+                            type="text"
+                            value={businessPhone}
+                            onChange={(e) => setBusinessPhone(e.target.value)}
+                            placeholder={DEFAULT_BUSINESS_INFO[language].phone}
+                            className="w-full py-2.5 px-3.5 text-gray-900 border border-gray-300 rounded-xl focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 focus:outline-none"
+                          />
+                        </div>
+
+                        <div>
+                          <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1.5">
+                            {language === 'gu' ? 'સરનામું' : 'Address'}
+                          </label>
+                          <input
+                            type="text"
+                            value={businessAddress}
+                            onChange={(e) => setBusinessAddress(e.target.value)}
+                            placeholder={DEFAULT_BUSINESS_INFO[language].address}
+                            className="w-full py-2.5 px-3.5 text-gray-900 border border-gray-300 rounded-xl focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 focus:outline-none"
+                          />
+                        </div>
+                      </div>
+                    )}
                   </div>
                 )}
 
                 {/* Live preview */}
                 <div className="p-4 rounded-xl border border-dashed border-gray-200 bg-gray-50">
-                  <p className="text-[11px] text-gray-400 mb-1.5 font-medium uppercase tracking-wide">
-                    {t('preview') || 'Preview'}
-                  </p>
-                  <p className="text-sm font-bold text-gray-800 leading-snug">{resolvedBusinessInfo.name}</p>
-                  <p className="text-xs text-gray-500 mt-0.5 leading-snug">{resolvedBusinessInfo.address}</p>
+                  <div className="flex items-center justify-between mb-1.5">
+                    <p className="text-[11px] text-gray-400 font-medium uppercase tracking-wide">
+                      {t('preview') || 'Preview'} {enableCategoryBusinessInfo ? `(${selectedPreviewCategory.toUpperCase()})` : ''}
+                    </p>
+                  </div>
+                  <p className="text-base font-bold text-gray-800 leading-snug">{resolvedBusinessInfo.name}</p>
+                  <p className="text-xs text-blue-600 font-medium mt-0.5 leading-snug">{resolvedBusinessInfo.subtitle || DEFAULT_BUSINESS_INFO[language].subtitle}</p>
+                  <p className="text-xs text-gray-500 mt-1 leading-snug">{resolvedBusinessInfo.address}</p>
                   <p className="text-xs text-gray-500 leading-snug">{resolvedBusinessInfo.phone}</p>
                 </div>
               </div>
@@ -1171,6 +1337,132 @@ const Settings: React.FC = () => {
                         )}
                       </div>
                     </button>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Bill Generation Format Settings Card (PDF vs Photo JPG) */}
+            <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
+              <div className="p-4 sm:p-6 border-b border-gray-100 bg-gray-50/50 flex items-center gap-3">
+                <FileText className="w-5 h-5 text-blue-600" />
+                <h3 className="font-bold text-gray-900 text-base sm:text-lg">
+                  {t('billGenerationFormatSettings')}
+                </h3>
+              </div>
+              <div className="p-4 sm:p-6 space-y-6">
+                <div>
+                  <label className="block text-sm font-semibold text-gray-700 mb-1.5">
+                    {language === 'gu' ? 'મુખ્ય (ડિફોલ્ટ) બિલ ફોર્મેટ' : 'Default Bill Generation Format'}
+                  </label>
+                  <p className="text-xs text-gray-500 mb-4 leading-relaxed">
+                    {t('billGenerationFormatDesc')}
+                  </p>
+                  <div className="grid gap-4 sm:grid-cols-2">
+                    {/* Default JPG */}
+                    <button
+                      type="button"
+                      onClick={() => setDefaultBillFormat('jpg')}
+                      className={`relative p-4 rounded-xl border text-left transition-all ${defaultBillFormat === 'jpg'
+                          ? 'border-blue-600 bg-blue-50/40 ring-1 ring-blue-500'
+                          : 'border-gray-200 hover:border-gray-300 bg-white'
+                        }`}
+                    >
+                      <div className="flex justify-between items-start mb-2">
+                        <span className="font-bold text-sm sm:text-base text-gray-900 flex items-center gap-2">
+                          <ImageIcon className="w-4 h-4 text-gray-500" />
+                          {t('billFormatJPG')}
+                        </span>
+                        {defaultBillFormat === 'jpg' && (
+                          <CheckCircle className="w-5 h-5 text-blue-600" />
+                        )}
+                      </div>
+                      <p className="text-xs text-gray-500 leading-relaxed">
+                        {language === 'gu'
+                          ? 'બિલ સીધું .jpg ફોટો તરીકે ડાઉનલોડ થશે (વોટ્સએપ અને ગેલેરી માટે અનુકૂળ).'
+                          : 'Bill downloads directly as a .jpg photo image (optimal for WhatsApp and phone gallery).'}
+                      </p>
+                    </button>
+
+                    {/* Default PDF */}
+                    <button
+                      type="button"
+                      onClick={() => setDefaultBillFormat('pdf')}
+                      className={`relative p-4 rounded-xl border text-left transition-all ${defaultBillFormat === 'pdf'
+                          ? 'border-blue-600 bg-blue-50/40 ring-1 ring-blue-500'
+                          : 'border-gray-200 hover:border-gray-300 bg-white'
+                        }`}
+                    >
+                      <div className="flex justify-between items-start mb-2">
+                        <span className="font-bold text-sm sm:text-base text-gray-900 flex items-center gap-2">
+                          <FileText className="w-4 h-4 text-gray-500" />
+                          {t('billFormatPDF')}
+                        </span>
+                        {defaultBillFormat === 'pdf' && (
+                          <CheckCircle className="w-5 h-5 text-blue-600" />
+                        )}
+                      </div>
+                      <p className="text-xs text-gray-500 leading-relaxed">
+                        {language === 'gu'
+                          ? 'બિલ .pdf ડોક્યુમેન્ટ તરીકે ડાઉનલોડ થશે (પ્રિન્ટિંગ અને ઓફિશિયલ રેકોર્ડ માટે ઉત્તમ).'
+                          : 'Bill downloads as a clean vector .pdf document (great for printing and official records).'}
+                      </p>
+                    </button>
+                  </div>
+                </div>
+
+                {/* Per Category Bill Format Configuration */}
+                <div className="pt-4 border-t border-gray-100">
+                  <div className="mb-3">
+                    <span className="font-bold text-xs sm:text-sm text-gray-900 block">
+                      {language === 'gu' ? 'દરેક કેટેગરી માટે અલગ બિલ ફોર્મેટ (Different for all categories)' : 'Custom Bill Format per Business Category'}
+                    </span>
+                    <p className="text-xs text-gray-500">
+                      {language === 'gu'
+                        ? 'શટરિંગ, જેક કે કપલોક માટે અલગ-અલગ PDF અથવા JPG ફોટો ફોર્મેટ નક્કી કરો.'
+                        : 'Choose whether Shuttering, Jack, or Cuplock generates as PDF or JPG Photo independently.'}
+                    </p>
+                  </div>
+
+                  <div className="grid gap-3 sm:grid-cols-3">
+                    {[
+                      { id: 'shuttering', name: language === 'gu' ? 'શટરિંગ (Shuttering)' : 'Shuttering' },
+                      { id: 'jack', name: language === 'gu' ? 'જેક / ટેકા (Jack)' : 'Jack / Teka' },
+                      { id: 'cuplock', name: language === 'gu' ? 'કપલોક (Cuplock)' : 'Cuplock' },
+                    ].map(cat => {
+                      const currentFormat = categoryBillFormats[cat.id] || defaultBillFormat;
+                      return (
+                        <div key={cat.id} className="p-3 bg-gray-50/80 rounded-xl border border-gray-200 flex flex-col justify-between gap-2.5">
+                          <span className="font-bold text-xs text-gray-800">{cat.name}</span>
+                          <div className="flex gap-1.5 p-1 bg-white rounded-lg border border-gray-200">
+                            <button
+                              type="button"
+                              onClick={() => setCategoryBillFormat(cat.id, 'jpg')}
+                              className={`flex-1 py-1.5 px-2 rounded text-[11px] font-bold flex items-center justify-center gap-1 transition-all ${
+                                currentFormat === 'jpg'
+                                  ? 'bg-blue-600 text-white shadow-xs'
+                                  : 'text-gray-600 hover:text-gray-900'
+                              }`}
+                            >
+                              <ImageIcon className="w-3 h-3" />
+                              <span>JPG</span>
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => setCategoryBillFormat(cat.id, 'pdf')}
+                              className={`flex-1 py-1.5 px-2 rounded text-[11px] font-bold flex items-center justify-center gap-1 transition-all ${
+                                currentFormat === 'pdf'
+                                  ? 'bg-blue-600 text-white shadow-xs'
+                                  : 'text-gray-600 hover:text-gray-900'
+                              }`}
+                            >
+                              <FileText className="w-3 h-3" />
+                              <span>PDF</span>
+                            </button>
+                          </div>
+                        </div>
+                      );
+                    })}
                   </div>
                 </div>
               </div>

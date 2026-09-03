@@ -604,7 +604,7 @@ const StockManagement: React.FC = () => {
         if (sortField === "available_stock" || sortField === "on_rent_stock" || sortField === "borrowed_stock") {
           const calcA = calculatedStocks.get(a.size) || { rent: 0, borrowed: 0 };
           const calcB = calculatedStocks.get(b.size) || { rent: 0, borrowed: 0 };
-          
+
           if (sortField === "on_rent_stock") {
             aVal = calcA.rent;
             bVal = calcB.rent;
@@ -841,28 +841,27 @@ const StockManagement: React.FC = () => {
                       { key: 'cuplock', label: language === 'gu' ? 'કપલોક' : 'Cuplock', color: 'indigo' },
                       { key: 'other', label: t('other'), color: 'gray' },
                     ] as const)
-                    .map(({ key, label, color }) => {
-                      const isActive = selectedCategory === key;
-                      const activeStyles: Record<string, string> = {
-                        blue: 'bg-blue-600 text-white shadow-md shadow-blue-200',
-                        amber: 'bg-amber-500 text-white shadow-md shadow-amber-200',
-                        indigo: 'bg-indigo-600 text-white shadow-md shadow-indigo-200',
-                        gray: 'bg-gray-600 text-white shadow-md shadow-gray-200',
-                      };
-                      return (
-                        <button
-                          key={key}
-                          onClick={() => setSelectedCategory(key)}
-                          className={`px-4 py-2 text-xs sm:text-sm font-semibold rounded-full transition-all whitespace-nowrap active:scale-95 ${
-                            isActive
-                              ? activeStyles[color]
-                              : 'bg-gray-100 text-gray-500 hover:bg-gray-200 hover:text-gray-800'
-                          }`}
-                        >
-                          {label}
-                        </button>
-                      );
-                    })}
+                      .map(({ key, label, color }) => {
+                        const isActive = selectedCategory === key;
+                        const activeStyles: Record<string, string> = {
+                          blue: 'bg-blue-600 text-white shadow-md shadow-blue-200',
+                          amber: 'bg-amber-500 text-white shadow-md shadow-amber-200',
+                          indigo: 'bg-indigo-600 text-white shadow-md shadow-indigo-200',
+                          gray: 'bg-gray-600 text-white shadow-md shadow-gray-200',
+                        };
+                        return (
+                          <button
+                            key={key}
+                            onClick={() => setSelectedCategory(key)}
+                            className={`px-4 py-2 text-xs sm:text-sm font-semibold rounded-full transition-all whitespace-nowrap active:scale-95 ${isActive
+                                ? activeStyles[color]
+                                : 'bg-gray-100 text-gray-500 hover:bg-gray-200 hover:text-gray-800'
+                              }`}
+                          >
+                            {label}
+                          </button>
+                        );
+                      })}
                   </div>
                 </div>
               </div>
@@ -1083,216 +1082,216 @@ const StockManagement: React.FC = () => {
               </table>
             </div>
 
-          {/* Mobile/Tablet Table - Horizontal Scroll */}
-          <div className="overflow-x-auto lg:hidden">
-            <table className="min-w-full border-collapse">
-              <thead>
-                <tr className="bg-gray-100 border-b-2 border-gray-300">
-                  <th className="sticky left-0 z-10 px-1 py-1.5 text-xs font-bold text-center text-gray-700 bg-gray-100 border-r-2 border-gray-300 w-12 sm:px-2 sm:text-xs">
-                    {t("size")}
-                  </th>
-                  <th className="px-1 py-1.5 text-xs sm:text-sm font-semibold text-center text-gray-700 border-r border-gray-200 min-w-[60px] sm:min-w-[80px]">
-                    {t("total_stock")}
-                  </th>
-                  <th className="px-1 py-1.5 text-xs sm:text-sm font-semibold text-center text-gray-700 border-r border-gray-200 min-w-[70px] sm:min-w-[90px]">
-                    {t("available_stock")}
-                  </th>
-                  <th className="px-1 py-1.5 text-xs sm:text-sm font-semibold text-center text-gray-700 border-r border-gray-200 min-w-[60px] sm:min-w-[80px]">
-                    {t("on_rent_stock")}
-                  </th>
-                  <th className="px-1 py-1.5 text-xs sm:text-sm font-semibold text-center text-gray-700 border-r border-gray-200 min-w-[60px] sm:min-w-[80px]">
-                    {t("borrowed_stock")}
-                  </th>
-                  <th className="px-1 py-1.5 text-xs sm:text-sm font-semibold text-center text-amber-600 border-r border-gray-200 min-w-[60px] sm:min-w-[80px]">
-                    {t('lost_stock')}
-                  </th>
-                  <th className="px-1 py-1.5 text-xs sm:text-sm font-semibold text-center text-rose-600 min-w-[60px] sm:min-w-[80px]">
-                    {t('damaged_stock')}
-                  </th>
-                </tr>
-              </thead>
-              <tbody className="bg-white divide-y divide-gray-200">
-                {loading ? (
-                  <>
-                    {[1, 2, 3].map((i) => (
-                      <tr key={i} className="animate-pulse">
-                        <td className="sticky left-0 z-10 px-2 py-2 bg-white border-r-2 border-gray-300 sm:px-3">
-                          <div className="w-8 h-4 bg-gray-200 rounded"></div>
-                        </td>
-                        <td className="px-2 py-2 border-r border-gray-200">
-                          <div className="w-12 h-4 mx-auto bg-gray-200 rounded"></div>
-                        </td>
-                        <td className="px-2 py-2 border-r border-gray-200">
-                          <div className="w-16 h-6 mx-auto bg-gray-200 rounded-full"></div>
-                        </td>
-                        <td className="px-2 py-2 border-r border-gray-200">
-                          <div className="w-12 h-4 mx-auto bg-gray-200 rounded"></div>
-                        </td>
-                        <td className="px-2 py-2">
-                          <div className="w-12 h-4 mx-auto bg-gray-200 rounded"></div>
-                        </td>
-                      </tr>
-                    ))}
-                  </>
-                ) : filteredAndSortedStocks.length === 0 ? (
-                  <tr>
-                    <td colSpan={7} className="px-2 py-8 text-center">
-                      <Package
-                        size={32}
-                        className="mx-auto mb-2 text-gray-300"
-                      />
-                      <p className="text-xs font-medium text-gray-500">
-                        {t("noStockFound")}
-                      </p>
-                    </td>
+            {/* Mobile/Tablet Table - Horizontal Scroll */}
+            <div className="overflow-x-auto lg:hidden">
+              <table className="min-w-full border-collapse">
+                <thead>
+                  <tr className="bg-gray-100 border-b-2 border-gray-300">
+                    <th className="sticky left-0 z-10 px-1 py-1.5 text-xs font-bold text-center text-gray-700 bg-gray-100 border-r-2 border-gray-300 w-12 sm:px-2 sm:text-xs">
+                      {t("size")}
+                    </th>
+                    <th className="px-1 py-1.5 text-xs sm:text-sm font-semibold text-center text-gray-700 border-r border-gray-200 min-w-[60px] sm:min-w-[80px]">
+                      {t("total_stock")}
+                    </th>
+                    <th className="px-1 py-1.5 text-xs sm:text-sm font-semibold text-center text-gray-700 border-r border-gray-200 min-w-[70px] sm:min-w-[90px]">
+                      {t("available_stock")}
+                    </th>
+                    <th className="px-1 py-1.5 text-xs sm:text-sm font-semibold text-center text-gray-700 border-r border-gray-200 min-w-[60px] sm:min-w-[80px]">
+                      {t("on_rent_stock")}
+                    </th>
+                    <th className="px-1 py-1.5 text-xs sm:text-sm font-semibold text-center text-gray-700 border-r border-gray-200 min-w-[60px] sm:min-w-[80px]">
+                      {t("borrowed_stock")}
+                    </th>
+                    <th className="px-1 py-1.5 text-xs sm:text-sm font-semibold text-center text-amber-600 border-r border-gray-200 min-w-[60px] sm:min-w-[80px]">
+                      {t('lost_stock')}
+                    </th>
+                    <th className="px-1 py-1.5 text-xs sm:text-sm font-semibold text-center text-rose-600 min-w-[60px] sm:min-w-[80px]">
+                      {t('damaged_stock')}
+                    </th>
                   </tr>
-                ) : (
-                  filteredAndSortedStocks.map((stock, index) => {
-                    const calculated = calculatedStocks.get(stock.size) || { rent: 0, borrowed: 0 };
-                    const rentStock = calculated.rent;
-                    const borrowedStock = calculated.borrowed;
-                    const availableStock = Math.max(0, stock.total_stock - rentStock - stock.lost_stock - (stock.damaged_stock || 0));
+                </thead>
+                <tbody className="bg-white divide-y divide-gray-200">
+                  {loading ? (
+                    <>
+                      {[1, 2, 3].map((i) => (
+                        <tr key={i} className="animate-pulse">
+                          <td className="sticky left-0 z-10 px-2 py-2 bg-white border-r-2 border-gray-300 sm:px-3">
+                            <div className="w-8 h-4 bg-gray-200 rounded"></div>
+                          </td>
+                          <td className="px-2 py-2 border-r border-gray-200">
+                            <div className="w-12 h-4 mx-auto bg-gray-200 rounded"></div>
+                          </td>
+                          <td className="px-2 py-2 border-r border-gray-200">
+                            <div className="w-16 h-6 mx-auto bg-gray-200 rounded-full"></div>
+                          </td>
+                          <td className="px-2 py-2 border-r border-gray-200">
+                            <div className="w-12 h-4 mx-auto bg-gray-200 rounded"></div>
+                          </td>
+                          <td className="px-2 py-2">
+                            <div className="w-12 h-4 mx-auto bg-gray-200 rounded"></div>
+                          </td>
+                        </tr>
+                      ))}
+                    </>
+                  ) : filteredAndSortedStocks.length === 0 ? (
+                    <tr>
+                      <td colSpan={7} className="px-2 py-8 text-center">
+                        <Package
+                          size={32}
+                          className="mx-auto mb-2 text-gray-300"
+                        />
+                        <p className="text-xs font-medium text-gray-500">
+                          {t("noStockFound")}
+                        </p>
+                      </td>
+                    </tr>
+                  ) : (
+                    filteredAndSortedStocks.map((stock, index) => {
+                      const calculated = calculatedStocks.get(stock.size) || { rent: 0, borrowed: 0 };
+                      const rentStock = calculated.rent;
+                      const borrowedStock = calculated.borrowed;
+                      const availableStock = Math.max(0, stock.total_stock - rentStock - stock.lost_stock - (stock.damaged_stock || 0));
 
-                    return (
-                      <tr
-                        key={stock.size}
-                        className={index % 2 === 0 ? "bg-white" : "bg-gray-50"}
-                      >
-                        <td className="sticky left-0 z-10 px-1 py-1.5 text-xs font-bold text-center text-gray-900 border-r-2 border-gray-300 sm:px-2 sm:text-base bg-inherit">
-                          {(plateSizes.find(p => p.id === stock.size)?.name || `Size ${stock.size}`)}
-                        </td>
-                        <td className="px-1 py-1.5 text-center border-r border-gray-200">
-                          <span className="text-xs font-semibold sm:text-sm">
-                            {stock.total_stock}
-                          </span>
-                        </td>
-                        <td className="px-1 py-1.5 text-center border-r border-gray-200">
-                          {getAvailabilityBadge(availableStock)}
-                        </td>
-                        <td className="px-1 py-1.5 text-center border-r border-gray-200">
-                          <button
-                            onClick={() => fetchDistribution(stock.size, "rent")}
-                            className="text-orange-600 hover:underline font-bold text-xs sm:text-sm focus:outline-none"
-                          >
-                            {rentStock}
-                          </button>
-                        </td>
-                        <td className="px-1 py-1.5 text-center border-r border-gray-200">
-                          <button
-                            onClick={() => fetchDistribution(stock.size, "borrowed")}
-                            className="text-purple-600 hover:underline font-bold text-xs sm:text-sm focus:outline-none"
-                          >
-                            {borrowedStock}
-                          </button>
-                        </td>
-                        <td className="px-1 py-1.5 text-center border-r border-gray-200">
-                          <span className="text-amber-600 font-bold text-xs sm:text-sm">
-                            {stock.lost_stock}
-                          </span>
-                        </td>
-                        <td className="px-1 py-1.5 text-center">
-                          <span className="text-rose-600 font-bold text-xs sm:text-sm">
-                            {stock.damaged_stock || 0}
-                          </span>
-                        </td>
-                      </tr>
-                    );
-                  })
-                )}
-                {!loading && filteredAndSortedStocks.length > 0 && (
-                  <tr className="bg-gray-100 border-t-2 border-gray-300">
-                    <td className="sticky left-0 z-10 px-1 py-2 text-xs font-bold text-center text-gray-900 border-r-2 border-gray-300 sm:px-2 sm:text-base bg-gray-100">
-                      {t("total") || "Total"}
-                    </td>
-                    <td className="px-1 py-2 text-center border-r border-gray-200">
-                      <span className="text-xs font-bold sm:text-sm">
-                        {filteredAndSortedStocks.reduce(
-                          (sum, stock) => sum + stock.total_stock,
-                          0
-                        )}
+                      return (
+                        <tr
+                          key={stock.size}
+                          className={index % 2 === 0 ? "bg-white" : "bg-gray-50"}
+                        >
+                          <td className="sticky left-0 z-10 px-1 py-1.5 text-xs font-bold text-center text-gray-900 border-r-2 border-gray-300 sm:px-2 sm:text-base bg-inherit">
+                            {(plateSizes.find(p => p.id === stock.size)?.name || `Size ${stock.size}`)}
+                          </td>
+                          <td className="px-1 py-1.5 text-center border-r border-gray-200">
+                            <span className="text-xs font-semibold sm:text-sm">
+                              {stock.total_stock}
+                            </span>
+                          </td>
+                          <td className="px-1 py-1.5 text-center border-r border-gray-200">
+                            {getAvailabilityBadge(availableStock)}
+                          </td>
+                          <td className="px-1 py-1.5 text-center border-r border-gray-200">
+                            <button
+                              onClick={() => fetchDistribution(stock.size, "rent")}
+                              className="text-orange-600 hover:underline font-bold text-xs sm:text-sm focus:outline-none"
+                            >
+                              {rentStock}
+                            </button>
+                          </td>
+                          <td className="px-1 py-1.5 text-center border-r border-gray-200">
+                            <button
+                              onClick={() => fetchDistribution(stock.size, "borrowed")}
+                              className="text-purple-600 hover:underline font-bold text-xs sm:text-sm focus:outline-none"
+                            >
+                              {borrowedStock}
+                            </button>
+                          </td>
+                          <td className="px-1 py-1.5 text-center border-r border-gray-200">
+                            <span className="text-amber-600 font-bold text-xs sm:text-sm">
+                              {stock.lost_stock}
+                            </span>
+                          </td>
+                          <td className="px-1 py-1.5 text-center">
+                            <span className="text-rose-600 font-bold text-xs sm:text-sm">
+                              {stock.damaged_stock || 0}
+                            </span>
+                          </td>
+                        </tr>
+                      );
+                    })
+                  )}
+                  {!loading && filteredAndSortedStocks.length > 0 && (
+                    <tr className="bg-gray-100 border-t-2 border-gray-300">
+                      <td className="sticky left-0 z-10 px-1 py-2 text-xs font-bold text-center text-gray-900 border-r-2 border-gray-300 sm:px-2 sm:text-base bg-gray-100">
+                        {t("total") || "Total"}
+                      </td>
+                      <td className="px-1 py-2 text-center border-r border-gray-200">
+                        <span className="text-xs font-bold sm:text-sm">
+                          {filteredAndSortedStocks.reduce(
+                            (sum, stock) => sum + stock.total_stock,
+                            0
+                          )}
+                        </span>
+                      </td>
+                      <td className="px-1 py-2 text-center border-r border-gray-200">
+                        <span className="text-xs font-bold sm:text-sm text-green-700">
+                          {filteredAndSortedStocks.reduce((sum, stock) => {
+                            const calculated = calculatedStocks.get(stock.size) || { rent: 0, borrowed: 0 };
+                            const available = Math.max(0, stock.total_stock - calculated.rent - stock.lost_stock - (stock.damaged_stock || 0));
+                            return sum + available;
+                          }, 0)}
+                        </span>
+                      </td>
+                      <td className="px-1 py-2 text-center border-r border-gray-200">
+                        <span className="text-xs font-bold sm:text-sm text-orange-600">
+                          {filteredAndSortedStocks.reduce((sum, stock) => {
+                            const calculated = calculatedStocks.get(stock.size) || { rent: 0, borrowed: 0 };
+                            return sum + calculated.rent;
+                          }, 0)}
+                        </span>
+                      </td>
+                      <td className="px-1 py-2 text-center border-r border-gray-200">
+                        <span className="text-xs font-bold sm:text-sm text-purple-600">
+                          {filteredAndSortedStocks.reduce((sum, stock) => {
+                            const calculated = calculatedStocks.get(stock.size) || { rent: 0, borrowed: 0 };
+                            return sum + calculated.borrowed;
+                          }, 0)}
+                        </span>
+                      </td>
+                      <td className="px-1 py-2 text-center border-r border-gray-200">
+                        <span className="text-xs font-bold sm:text-sm text-amber-600">
+                          {filteredAndSortedStocks.reduce(
+                            (sum, stock) => sum + stock.lost_stock,
+                            0
+                          )}
+                        </span>
+                      </td>
+                      <td className="px-1 py-2 text-center">
+                        <span className="text-xs font-bold sm:text-sm text-rose-600">
+                          {filteredAndSortedStocks.reduce(
+                            (sum, stock) => sum + (stock.damaged_stock || 0),
+                            0
+                          )}
+                        </span>
+                      </td>
+                    </tr>
+                  )}
+                </tbody>
+              </table>
+            </div>
+            {/* Footer */}
+            {stocks.length > 0 && !loading && (
+              <div className="px-3 py-3 border-t border-gray-200 sm:px-4 sm:py-4 lg:px-6 bg-gray-50">
+                {/* Legend Container */}
+                <div className="p-3 bg-white border border-gray-200 rounded-lg sm:p-4">
+                  <div className="flex flex-col gap-2 sm:flex-row sm:gap-4">
+                    <div className="flex items-center gap-2">
+                      <div className="w-2.5 h-2.5 rounded-full bg-orange-500 flex-shrink-0"></div>
+                      <span className="text-xs text-orange-600">ભાડે ગયેલા નંગ</span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <div className="w-2.5 h-2.5 rounded-full bg-purple-500 flex-shrink-0"></div>
+                      <span className="text-xs text-purple-600">
+                        બીજા ડેપો ના નંગ
                       </span>
-                    </td>
-                    <td className="px-1 py-2 text-center border-r border-gray-200">
-                      <span className="text-xs font-bold sm:text-sm text-green-700">
-                        {filteredAndSortedStocks.reduce((sum, stock) => {
-                          const calculated = calculatedStocks.get(stock.size) || { rent: 0, borrowed: 0 };
-                          const available = Math.max(0, stock.total_stock - calculated.rent - stock.lost_stock - (stock.damaged_stock || 0));
-                          return sum + available;
-                        }, 0)}
-                      </span>
-                    </td>
-                    <td className="px-1 py-2 text-center border-r border-gray-200">
-                      <span className="text-xs font-bold sm:text-sm text-orange-600">
-                        {filteredAndSortedStocks.reduce((sum, stock) => {
-                          const calculated = calculatedStocks.get(stock.size) || { rent: 0, borrowed: 0 };
-                          return sum + calculated.rent;
-                        }, 0)}
-                      </span>
-                    </td>
-                    <td className="px-1 py-2 text-center border-r border-gray-200">
-                      <span className="text-xs font-bold sm:text-sm text-purple-600">
-                        {filteredAndSortedStocks.reduce((sum, stock) => {
-                          const calculated = calculatedStocks.get(stock.size) || { rent: 0, borrowed: 0 };
-                          return sum + calculated.borrowed;
-                        }, 0)}
-                      </span>
-                    </td>
-                    <td className="px-1 py-2 text-center border-r border-gray-200">
-                      <span className="text-xs font-bold sm:text-sm text-amber-600">
-                        {filteredAndSortedStocks.reduce(
-                          (sum, stock) => sum + stock.lost_stock,
-                          0
-                        )}
-                      </span>
-                    </td>
-                    <td className="px-1 py-2 text-center">
-                      <span className="text-xs font-bold sm:text-sm text-rose-600">
-                        {filteredAndSortedStocks.reduce(
-                          (sum, stock) => sum + (stock.damaged_stock || 0),
-                          0
-                        )}
-                      </span>
-                    </td>
-                  </tr>
-                )}
-              </tbody>
-            </table>
-          </div>
-          {/* Footer */}
-          {stocks.length > 0 && !loading && (
-            <div className="px-3 py-3 border-t border-gray-200 sm:px-4 sm:py-4 lg:px-6 bg-gray-50">
-              {/* Legend Container */}
-              <div className="p-3 bg-white border border-gray-200 rounded-lg sm:p-4">
-                <div className="flex flex-col gap-2 sm:flex-row sm:gap-4">
-                  <div className="flex items-center gap-2">
-                    <div className="w-2.5 h-2.5 rounded-full bg-orange-500 flex-shrink-0"></div>
-                    <span className="text-xs text-orange-600">ભાડે ગયેલા નંગ</span>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <div className="w-2.5 h-2.5 rounded-full bg-purple-500 flex-shrink-0"></div>
-                    <span className="text-xs text-purple-600">
-                      બીજા ડેપો ના નંગ
-                    </span>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <div className="w-2.5 h-2.5 rounded-full bg-green-500 flex-shrink-0"></div>
-                    <span className="text-xs text-green-600">ઉપલબ્ધ સ્ટોક</span>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <div className="w-2.5 h-2.5 rounded-full bg-amber-500 flex-shrink-0"></div>
-                    <span className="text-xs text-amber-600">ગુમ થયેલા નંગ</span>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <div className="w-2.5 h-2.5 rounded-full bg-rose-500 flex-shrink-0"></div>
-                    <span className="text-xs text-rose-600">નુકસાન થયેલા નંગ (રિપેર શક્ય)</span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <div className="w-2.5 h-2.5 rounded-full bg-green-500 flex-shrink-0"></div>
+                      <span className="text-xs text-green-600">ઉપલબ્ધ સ્ટોક</span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <div className="w-2.5 h-2.5 rounded-full bg-amber-500 flex-shrink-0"></div>
+                      <span className="text-xs text-amber-600">ગુમ થયેલા નંગ</span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <div className="w-2.5 h-2.5 rounded-full bg-rose-500 flex-shrink-0"></div>
+                      <span className="text-xs text-rose-600">નુકસાન થયેલા નંગ (રિપેર શક્ય)</span>
+                    </div>
                   </div>
                 </div>
               </div>
-            </div>
-          )}
+            )}
+          </div>
         </div>
-      </div>
-    </main>
+      </main>
 
       {/* Mobile Bottom Action Bar */}
       <div
@@ -1782,27 +1781,26 @@ const StockManagement: React.FC = () => {
               <p className="text-xs text-gray-500">
                 સાઈઝનો જે ક્રમ અહીં રાખશો, તે જ ક્રમ આખા એપ્લીકેશનમાં (ચલણ બુક, સ્ટોક લિસ્ટ, વગેરે) બતાવશે.
               </p>
-              
+
               <div className="space-y-2 max-h-[50vh] overflow-y-auto pr-1">
                 {tempSizes.map((size, index) => (
-                  <div 
-                    key={size.id} 
+                  <div
+                    key={size.id}
                     draggable={editingId !== size.id}
                     onDragStart={(e) => handleDragStart(e, index)}
                     onDragOver={handleDragOver}
                     onDragEnter={() => handleDragEnter(index)}
                     onDragEnd={handleDragEnd}
-                    className={`flex items-center justify-between p-3 border rounded-lg transition-all ${
-                      draggedIndex === index
+                    className={`flex items-center justify-between p-3 border rounded-lg transition-all ${draggedIndex === index
                         ? "border-dashed border-2 border-indigo-400 bg-indigo-50/50 opacity-60"
                         : "border-gray-100 bg-gray-50 hover:bg-gray-100/70"
-                    }`}
+                      }`}
                   >
                     <div className="flex-1 flex items-center gap-2 mr-2 min-w-0">
                       <div className="cursor-grab active:cursor-grabbing p-0.5 text-gray-400 hover:text-gray-600 flex-shrink-0">
                         <GripVertical className="w-4 h-4" />
                       </div>
-                      
+
                       {editingId === size.id ? (
                         <input
                           type="text"
@@ -1818,7 +1816,7 @@ const StockManagement: React.FC = () => {
                           onClick={(e) => e.stopPropagation()}
                         />
                       ) : (
-                        <div 
+                        <div
                           onClick={() => handleStartEdit(size.id, size.name)}
                           className="flex items-center gap-1 cursor-pointer group hover:text-blue-600 truncate min-w-[70px]"
                           title="Click to rename"
